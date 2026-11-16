@@ -29,6 +29,8 @@ function gCultist(){const b=new Geo(.07),a=new Geo(.07),aw=new Geo(.07),robe=H('
   return{body:mesh(b),arm:mesh(a),armW:mesh(aw),leg:null};}
 const CH={hero:gHero(),v:[0,1,2,3].map(gVillager),c:gCultist()};
 const M_blob=(()=>{const g=new Geo(0);g.cyl(0,0,0,.55,.55,.01,10,[0,0,0,0]);return mesh(g);})();
+const mkRing=c=>{const g=new Geo(0),p=(a,r)=>[cos(a)*r,0,sin(a)*r];for(let i=0;i<48;i+=2){const a0=i/48*2*PI,a1=(i+1.2)/48*2*PI;g.quad(p(a0,.98),p(a1,.98),p(a1,1),p(a0,1),c);g.quad(p(a0,.98),p(a0,1),p(a1,1),p(a1,.98),c);}return mesh(g);};
+const M_ringR=mkRing(H('#ff5a48',1)),M_ringY=mkRing(H('#f0c060',1));
 const M_beacon=(()=>{const g=new Geo(.02);g.cyl(0,0,0,.28,0,.45,4,H('#7fffe0',1));g.cyl(0,-.45,0,0,.28,.45,4,H('#5fd6c0',1));return mesh(g);})();
 const M_egg=(()=>{const g=new Geo(.02);g.bx(0,-.15,0,.26,.32,.03,H('#f1e3b0',.85));return mesh(g);})();
 const M_med=(()=>{const g=new Geo(.02);g.bx(0,0,0,.5,.32,.34,H('#e8e2d0',.5));g.bx(0,.1,.18,.3,.08,.02,H('#d0352a',.9));g.bx(0,.1,.18,.08,.24,.02,H('#d0352a',.9));return mesh(g);})();
@@ -72,7 +74,7 @@ EGGS.forEach(e=>{W;addInter(e.x,e.z,e.r,'Осмотреть: '+e.t,()=>{if(!S.eg
 
 // --- enemies
 const EN=[];let grpN=0;
-function mkE(kind,x,z,wp,o={}){const e=Object.assign({kind,x,z,hx:x,hz:z,rot:0,ph:rnd()*6,wp,wi:0,state:'patrol',aw:0,hp:4,wind:0,cd:0,stun:0,lose:0,st:0,active:false,v:floor(rnd()*3),sp:kind=='c'?5.2:4.5,mv:0,grp:++grpN,ls:[x,z],F:null},o);EN.push(e);return e;}
+function mkE(kind,x,z,wp,o={}){const e=Object.assign({kind,x,z,hx:x,hz:z,rot:0,ph:rnd()*6,wp,wi:0,state:'patrol',aw:0,hp:4,wind:0,cd:0,stun:0,lose:0,st:0,active:false,v:floor(rnd()*3),sp:kind=='c'?2.7:2.4,mv:0,grp:++grpN,ls:[x,z],F:null},o);EN.push(e);return e;}
 const owner=mkE('v',-43.5,-35,[[-44,-23],[-36,-14],[-52,-18]],{v:3,rot:0});
 const con=mkE('v',-46.5,-22.6,[[-47,-22],[-66,-22],[-66,-34]],{v:1,rot:1});
 const loaf=mkE('v',-40.6,-21.2,[[-40,-14],[-31.5,-20],[-34,-10]],{v:0,rot:-1.2});
@@ -80,7 +82,7 @@ mkE('v',-20,-8,[[-27,-8],[-8,-8],[8,-8]]);mkE('v',10,4,[[10,0],[10,20],[10,35]])
 {const a=mkE('c',-10,-8,[[-18,-8],[10,-8],[36,-8],[10,-8]]);mkE('c',-11,-7,null,{leader:a,off:[-1.3,-1.2],grp:a.grp});
  const b=mkE('c',10,30,[[10,30],[30,22.5],[44,24],[30,22.5]]);mkE('c',9,29,null,{leader:b,off:[1.3,-1.3],grp:b.grp});mkE('c',11,29,null,{leader:b,off:[-1.3,-1.3],grp:b.grp});
  mkE('c',-28,20,[[-28,20],[-28,39.5],[-5,40],[-5,22],[-11,21]]);mkE('c',35,2,[[34,2],[35.5,11],[33,24]]);}
-function alertE(e){for(const o of EN)if(o.grp===e.grp&&o.active&&o.state!=='ko'&&o.state!=='chase'){o.state='chase';o.aw=1;o.lose=0;}SFX.alert();}
+function alertE(e){for(const o of EN)if(o.grp===e.grp&&o.active&&o.state!=='ko'&&o.state!=='chase'){o.state='chase';o.aw=1;o.lose=0;o.ls=[P.x,P.z];}SFX.alert();}
 function faceTo(e,a,dt,k=8){let d=a-e.rot;while(d>PI)d-=2*PI;while(d<-PI)d+=2*PI;e.rot+=d*min(1,dt*k);}
 function goDir(e,tx,tz,sp,dt){const dx=tx-e.x,dz=tz-e.z,d=hypot(dx,dz);if(d<.05)return;const s=min(d,sp*dt);const ox=e.x,oz=e.z;moveC(e,dx/d*s,dz/d*s,.34);e.mv=1;e.ph+=dt*sp*2.3;faceTo(e,atan2(dx,dz),dt);return hypot(e.x-ox,e.z-oz)>s*.3;}
 function goField(e,F,sp,dt){const i=cellI(e.x),j=cellJ(e.z);let best=F[j*GW+i];if(best<0)best=32000;let bi=0,bj=0;
@@ -92,11 +94,11 @@ function updEnemy(e,dt){
   if(e.stun>0){e.stun-=dt;e.wind=0;return;}
   const dx=P.x-e.x,dz=P.z-e.z,d=hypot(dx,dz)||.01;
   // perception
-  const Rv=(e.kind==='c'?14:11)*S.diff*(S.crouch?.55:1),fx=sin(e.rot),fz=cos(e.rot),dt_=(dx*fx+dz*fz)/d;
+  const Rv=(e.kind==='c'?14:11)*S.diff*(S.crouch?.55:1);e.rv=Rv;e.lr=(e.kind==='c'?16:12.5)*S.diff;const fx=sin(e.rot),fz=cos(e.rot),dt_=(dx*fx+dz*fz)/d;
   let sees=d<Rv&&dt_>.3&&los(e.x,e.z,P.x,P.z,S.crouch);if(d<2.3&&los(e.x,e.z,P.x,P.z,S.crouch))sees=true;if(P.lie)sees=false;
   if(e.state!=='chase'){if(sees)e.aw+=dt*(2.4*(1-d/Rv)+.45)*S.diff;else e.aw-=dt*.3;if(P.running&&d<7.5){e.aw+=dt*.55;faceTo(e,atan2(dx,dz),dt,3);}e.aw=clamp(e.aw,0,1);if(e.aw>=1)alertE(e);}
   if(e.state==='chase'){S.chased=.6;
-    if(sees){e.ls=[P.x,P.z];e.lose=0;}else{e.lose+=dt;if(e.lose>(e.kind==='c'?4.5:3.5)){e.state='search';e.st=4;e.F=field(e.ls[0],e.ls[1]);e.aw=.5;return;}}
+    const out=d>e.lr;if(sees&&!out){e.ls=[P.x,P.z];e.lose=0;}else{e.lose+=dt;if(out||e.lose>2.5){e.state='search';e.st=4;e.F=field(e.ls[0],e.ls[1]);e.aw=.2;e.wind=0;if(!EN.some(o=>o.active&&o.state==='chase'))toast('Вас потеряли из виду. Не попадайтесь снова.',3);return;}}
     if(e.wind>0){e.wind-=dt;faceTo(e,atan2(dx,dz),dt,10);if(e.wind<=0){strike(e,d);}return;}
     const reach=e.kind==='c'?1.55:1.45;
     if(d<reach&&sees){if(e.cd<=0){e.wind=e.kind==='c'?.45:.6;}faceTo(e,atan2(dx,dz),dt,10);return;}
