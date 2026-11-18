@@ -1,9 +1,8 @@
 // ================= SCENES: intro drive, motel, finale, credits, main loop =================
-const M_car=(()=>{const g=new Geo(.04),c=H('#80858a'),d=H('#5e6367'),k=H('#15191b');g.bx(0,.35,0,1.8,.62,4.2,c);g.bx(0,.97,-.35,1.62,.62,2.2,d);g.bx(0,1.03,-.35,1.66,.36,1.9,H('#2a4248',.25));g.bx(0,1.6,-.35,1.5,.07,2.1,c);
+const M_car=modelMesh('car')||(()=>{const g=new Geo(.04),c=H('#80858a'),d=H('#5e6367'),k=H('#15191b');g.bx(0,.35,0,1.8,.62,4.2,c);g.bx(0,.97,-.35,1.62,.62,2.2,d);g.bx(0,1.03,-.35,1.66,.36,1.9,H('#2a4248',.25));g.bx(0,1.6,-.35,1.5,.07,2.1,c);
   for(const sx of[-.92,.92])for(const sz of[-1.35,1.35])g.at(mM(mT(sx,.36,sz),mRz(PI/2)),()=>g.cyl(0,-.13,0,.36,.36,.26,8,k));
   g.bx(-.6,.62,2.11,.32,.2,.05,H('#ffe9a8',1));g.bx(.6,.62,2.11,.32,.2,.05,H('#ffe9a8',1));g.bx(-.65,.62,-2.11,.3,.14,.05,H('#d0352a',.9));g.bx(.65,.62,-2.11,.3,.14,.05,H('#d0352a',.9));g.bx(0,.32,2.15,1.84,.14,.1,k);g.bx(0,.32,-2.15,1.84,.14,.1,k);return mesh(g);})();
-const M_fogb=(()=>{const g=new Geo(0);g.sph(0,0,0,1,.5,1,[.55,.78,.76,1],8,4);return mesh(g);})();
-const M_door=(()=>{const g=new Geo(.04);g.bx(0,0,0,1.2,1.9,.12,PAL.woodD);return mesh(g);})();
+const M_door=modelMesh('door')||(()=>{const g=new Geo(.04);g.bx(0,0,0,1.2,1.9,.12,PAL.woodD);return mesh(g);})();
 const CAR={x:-28,z:-292,rot:0,parked:false,wp:[[-28,-34],[-28.6,-25],[-31,-20],[-34.5,-18.2],[-38,-18]],wi:0,sp:4.4};
 function updCar(dt){if(CAR.parked)return;const w=CAR.wp[CAR.wi],dx=w[0]-CAR.x,dz=w[1]-CAR.z,d=hypot(dx,dz);if(d<.7){if(++CAR.wi>=CAR.wp.length){parkCar();return;}return;}
   const sp=CAR.wi>0?2.6:CAR.sp;faceTo(CAR,atan2(dx,dz),dt,CAR.wi>0?2.2:4);CAR.x+=sin(CAR.rot)*sp*dt;CAR.z+=cos(CAR.rot)*sp*dt;}
@@ -49,95 +48,212 @@ function story(dt){
     await say(HERO,'Ну и дыра. Сыростью и рыбой несёт… Постой. Голоса за стеной?',VO.hero);setObj('Осмотрите дыру в стене справа.');S.mode='play';})();}
 }
 
-// --- Cthulhu
-const CTH=(()=>{const g=new Geo(.12),c=H('#143233'),c2=H('#0f2729'),c3=H('#1d4543');
-  const parts=[[0,20,2,14,18,11],[0,36,0,17,12,12],[0,43,6,13,9,10],[0,53,-5,8.5,8,9.5]];
-  g.sph(0,20,2,14,18,11,c,9,6);g.sph(0,36,0,17,12,12,c2,9,6);g.sph(0,43,6,13,9,10,c2,8,5);g.sph(0,4,3,15,10,12,c2,8,4);
-  for(const s of[-1,1]){g.sph(s*17,40,0,7.5,6.5,7,c,7,5);g.at(mM(mT(s*20,38,-1),mRz(s*.22),mRx(.2)),()=>g.sph(0,-9,0,5,11.5,5.2,c2,7,5));g.at(mM(mT(s*24,20,-4),mRx(.55)),()=>g.sph(0,-8,0,4.2,10.5,4.4,c,7,5));
-    g.sph(s*24,4,-12,4.6,3.6,5.2,c2,6,4);for(let k=-1;k<=1;k++)g.at(mM(mT(s*24+k*2.6,2.5,-15),mRx(-2.3)),()=>g.cyl(0,0,0,1.1,0,6.5,5,c3));
-    g.at(mM(mT(s*3.7,52.3,-13.9),mRz(-s*.4)),()=>g.sph(0,0,0,1.9,.75,.9,H('#ff3018',1),6,4));
-    const A=[s*8,44,10],B=[s*13,26,11],T=[[s*30,92,22],[s*48,66,24],[s*46,36,20]];const mem=H('#11302f'),pts=[T[0],T[1],T[2],B];
-    for(let k=0;k<3;k++){g.tri(A,pts[k],pts[k+1],mem);g.tri(A,pts[k+1],pts[k],mem);}
-    for(const t of T){const d=[t[0]-A[0],t[1]-A[1],t[2]-A[2]],len=hypot(d[0],d[1],d[2]);g.at(mM(mT(A[0],A[1],A[2]),mAlignY(d)),()=>g.cyl(0,0,0,1.5,.1,len*1.05,5,c2));}}
-  g.sph(0,53,-5,8.5,8,9.5,c,8,6);g.sph(0,58.5,-.5,7.6,6.4,9.2,c3,8,5);g.at(mT(0,54.6,-13.2),()=>g.box(0,0,0,12,1.5,2.4,c2));
-  for(let i=0;i<64;i++){const p=parts[floor(rnd()*4)],th=rr(.5,2.3),ph=rr(0,2*PI),d=[sin(th)*cos(ph),cos(th),sin(th)*sin(ph)],q=[p[0]+d[0]*p[3]*.95,p[1]+d[1]*p[4]*.95,p[2]+d[2]*p[5]*.95];if(q[2]<-9&&q[1]>44)continue;
-    if(rnd()<.6)g.at(mM(mT(q[0],q[1],q[2]),mAlignY([d[0],d[1]-.5,d[2]])),()=>g.cyl(0,-.5,0,rr(.8,1.5),0,rr(3,7.5),5,c3));else g.sph(q[0],q[1],q[2],rr(1.2,2.4),rr(1.2,2.4),rr(1.2,2.4),c3,5,4);}
-  for(let i=0;i<12;i++){const s=i%2?1:-1;let x=s*rr(8,21),y=rr(28,42),z=rr(-9,8);let r=rr(1.3,2);for(let k=0;k<7;k++){g.sph(x,y,z,r,r*1.5,r,k%2?c:c2,5,4);y-=r*2.1;x+=s*rr(-.3,1);z+=rr(-.9,.5);r*=.86;}}
-  const sg=new Geo(.1);sg.cyl(0,-4,0,.82,1,4,6,c);sg.sph(0,0,0,1,1,1,c2,6,4);
-  const h=new Geo(.1);h.sph(0,0,0,4.6,2.2,5,c2,7,5);for(let f=-1.5;f<=1.5;f++){let y=-.5,z=-4.5;for(let k=0;k<3;k++){h.sph(f*2.3,y,z,1.2,1.3,1.6,c,5,4);y-=1.6+k*.5;z-=1.6-k*.9;}h.at(mM(mT(f*2.3,y,z+.6),mRx(PI+.5)),()=>h.cyl(0,0,0,.8,0,3,5,c3));}
-  h.at(mM(mT(0,1,3),mAlignY([0,.52,.85])),()=>h.cyl(0,0,0,4,6,85,7,c2));
-  return{body:mesh(g),seg:mesh(sg),hand:mesh(h)};})();
-const FIN={on:false,rise:0,hand:-1,grab:false,shake:0,t:0,cult:[],armUp:0,hx:10,hy:60,hz:110};
-function drawCthulhu(){const y=-76+70*(FIN.rise<1?1-Math.pow(1-FIN.rise,2):1)+sin(S.t*.5)*.6,base=mM(mT(10,y,150),mRz(sin(S.t*.33)*.02));draw(CTH.body,base,.3);
-  for(let i=0;i<8;i++){let M=mM(base,mT((i-3.5)*1.9,48.2-abs(i-3.5)*.35,-12.6-(i%2)*1.2),mRz((i-3.5)*.07),mRx(-.28));const L=6+(i%3);
-    for(let k=0;k<L;k++){M=mM(M,mRx(sin(S.t*.9+i*1.3+k*.6)*.16+(k>3?.14*(i%2?1:-1):.03)),mRz(sin(S.t*.7+i+k*.5)*.12));const sc=1.25-k*.12;draw(CTH.seg,mMul(M,mS(sc,1,sc)),.25);M=mMul(M,mT(0,-3.9,0));}}
-  light(10,y+53,132,70,[.9,.12,.06]);
-  if(FIN.hand>=0)draw(CTH.hand,mT(FIN.hx,FIN.hy,FIN.hz),.25);}
-async function finale(){S.mode='finale';S.fear=2;await say(HERO,'Они ждали меня с самого начала… Нужно бежать. Сейчас же —',VO.hero);
-  SFX.thud();S.shake=.8;$('flash').style.opacity=1;$('fade').style.transitionDuration='90ms';$('fade').style.opacity=1;await wait(.4);toast('Удар по лбу. Темнота.',2.5);await wait(2.8);
-  // stage
-  S.hud=false;$('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='none';const f=$('face');f.style.width=f.style.height='150px';f.style.left='auto';f.style.right='16px';f.style.bottom='auto';f.style.top='16px';
-  for(const e of EN)e.active=false;owner.show=con.show=loaf.show=false;FIN.on=true;P.vis=false;pierGate.off=true;
-  for(let i=0;i<10;i++){const a=.55+i/9*(2*PI-1.1);FIN.cult.push({x:10+sin(a)*5.6,z:76+cos(a)*5.2,rot:a+PI,ph:i*1.7});}
-  let ang=2.7;S.camFn=()=>{CAM.ge=[10,1.75,76.4];CAM.gt=[10+sin(ang)*4,2.1+cos(ang*.5)*.6,76.4+cos(ang)*4];};CAM.fp=true;CAM.fov=.95;camSnap();S.focus=()=>CAM.eye;FIN.pan=dt=>{ang=max(.12,ang-dt*.3);};
-  fade(0,3000);await wait(1.2);await say(HERO,'Голова… Где я? Верёвки… Я не могу пошевелиться!',VO.hero);
-  FIN.chant=true;await say('Культисты','Пх\'нглуи мглв\'нафх Ктулху Р\'льех вгах\'нагл фхтагн!',VO.cult);FIN.armUp=1;
+// ================= CTHULHU: part rig (Blender models, primitive fallback) =================
+const CTHC={a:H('#143233'),b:H('#0f2729'),c:H('#1d4543'),m:H('#11302f'),eye:H('#ff3018',1)};
+function cthPart(name,fb){return modelMesh(name)||(()=>{const g=new Geo(.12);fb(g);return mesh(g);})();}
+const CTH={
+  torso:cthPart('cth_torso',g=>{g.sph(0,0,1,13,9,10,CTHC.b,8,5);g.sph(0,12,0,14,12,11,CTHC.a,9,6);g.sph(0,24,1,17,10,12,CTHC.b,9,6);for(const s of[-1,1])g.sph(s*15,28,0,7.5,6.5,7,CTHC.a,7,5);g.sph(0,32,0,7,5,6,CTHC.a,7,4);
+    for(let i=0;i<40;i++){const th=rr(.4,2.4),ph=rr(0,6.28),y=rr(-4,30);g.sph(sin(th)*cos(ph)*13,y,sin(th)*sin(ph)*11,rr(1,2.2),rr(1,2.2),rr(1,2.2),CTHC.c,5,4);}}),
+  head:cthPart('cth_head',g=>{g.sph(0,8,-1,8.5,8,9.5,CTHC.a,8,6);g.sph(0,13.5,3.5,7.6,6.4,9.2,CTHC.c,8,5);g.box(0,9.4,-8.4,12,1.5,2.4,CTHC.b);for(const s of[-1,1])g.sph(s*7.8,8,-2,2.4,3,3,CTHC.b,6,4);}),
+  eye:cthPart('cth_eye',g=>g.sph(0,0,0,1.9,.75,.9,CTHC.eye,6,4)),
+  tent:cthPart('cth_tent',g=>{g.cyl(0,-4,0,.82,1,4,6,CTHC.a);g.sph(0,0,0,1,1,1,CTHC.b,6,4);}),
+  uarm:cthPart('cth_uarm',g=>{g.sph(0,-13,0,5.4,14,5.6,CTHC.a,8,6);g.sph(0,-1,0,6,5,6,CTHC.b,7,4);}),
+  farm:cthPart('cth_farm',g=>{g.sph(0,-12,0,4.6,13,4.8,CTHC.b,8,6);for(let i=0;i<4;i++)g.at(mM(mT(0,-6-i*4,3.6),mRx(-.9)),()=>g.cyl(0,0,0,.9,0,3.2,4,CTHC.c));}),
+  palm:cthPart('cth_palm',g=>{g.sph(0,-2.8,0,3.8,3.4,1.9,CTHC.a,7,5);}),
+  fa:cthPart('cth_finger_a',g=>{g.cyl(0,-3.7,0,.75,.95,3.7,6,CTHC.a);g.sph(0,0,0,1,1,1,CTHC.b,5,4);}),
+  fb:cthPart('cth_finger_b',g=>{g.cyl(0,-3.2,0,.5,.75,3.2,6,CTHC.a);g.sph(0,0,0,.78,.78,.78,CTHC.b,5,4);g.at(mM(mT(0,-3,0),mRx(.35)),()=>g.cyl(0,-2.6,0,0,.5,2.6,5,H('#1b1814')));}),
+  wingL:cthPart('cth_wing_L',g=>wingFb(g,-1)),wingR:cthPart('cth_wing_R',g=>wingFb(g,1)),
+  thigh:cthPart('cth_thigh',g=>g.sph(0,-12,0,6.5,14,7,CTHC.b,8,6)),
+};
+function wingFb(g,s){const A=[0,0,0],B=[s*8,-16,4],T=[[s*22,46,12],[s*42,30,16],[s*44,4,14]];const pts=[T[0],T[1],T[2],B];
+  for(let k=0;k<3;k++){g.tri(A,pts[k],pts[k+1],CTHC.m);g.tri(A,pts[k+1],pts[k],CTHC.m);}
+  for(const t of T){const d=vSub(t,A),len=vLen(d);g.at(mM(mT(0,0,0),mAlignY(d)),()=>g.cyl(0,0,0,1.6,.15,len*1.04,5,CTHC.b));}}
+const GRB={hov:[1.5,13,85],grab:[4.2,3.78,78.5],lift:[7,32,103],sea:[14,-26,104],cam:[3.6,-5.8,-2.0]};
+const CL={sh:[16,29,0],neck:[0,33,-1],wing:[6,31,6.5],hip:[7,-2,0],L1:26,L2:24,eyes:[[-3.6,8.4,-9.7],[3.6,8.4,-9.7]],tip:[0,-6.6,0]};
+const FIN={on:false,t:0,u:-1,cult:[],armUp:0,chant:false,look:null,lx:0,ly:0,mx:0,my:0,grab:0,fp:true,eyesOn:0,ph:'',pose:null,wet:{}};
+addEventListener('mousemove',e=>{FIN.mx=e.clientX/innerWidth*2-1;FIN.my=e.clientY/innerHeight*2-1;});
+const eas=t=>{t=clamp(t,0,1);return t*t*(3-2*t);},kf=(u,a,b)=>eas((u-a)/(b-a));
+// JS copy of the shader wave height, for underwater tests and spray placement
+function waveH(x,z){const t=R.t,a=(.1+R.wave*1.1)*lerp(.35,1,sstep(48,62,z));let h=a*(sin(x*.11+t*.8)*.55+sin(z*.19-t*1.15+x*.06)*.38+sin((x+z)*.33+t*1.9)*.16+sin((x*.7-z)*.61-t*2.7)*.09*(.3+R.wave));
+  const d=hypot(x-R.rip[0],z-R.rip[1]);h+=R.rip[2]*sin(d*.21-t*2.6)*exp(-d*.018)*sstep(R.rip[3]*30+20,R.rip[3]*30,d);return h-.55;}
+// pose of the creature as a function of time since the sea started boiling (u)
+function cthPose(u){const P={};const br=sin(R.t*.55);
+  P.z=lerp(140,127,kf(u,27,31.5));P.x=10;
+  P.y=u<4?-98:u<9?lerp(-98,-40,eas((u-4)/5)):u<14?lerp(-40,-34,kf(u,9,14)):u<19?lerp(-34,-27,kf(u,14,19)):lerp(-27,-7,kf(u,19,25))+sin(R.t*.4)*.6;
+  P.lean=lerp(.08,0,kf(u,19,25))+.36*kf(u,26,31)-.18*kf(u,35,38);P.br=br;
+  P.hyaw=sin(R.t*.23)*.12*(1-kf(u,26,29));P.hpitch=lerp(-.25,.05,kf(u,6,12))+.42*kf(u,25,29)-.3*kf(u,34,37)+sin(R.t*.31)*.05;
+  P.wing=kf(u,9.5,14);P.flap=sin(R.t*.9)*.05*P.wing+sin(u*9)*.06*kf(u,9.5,11)*(1-kf(u,13,14));
+  P.eyes=kf(u,6,8.5);
+  // hand targets in creature space (later turned to world), plus finger curl
+  const up=kf(u,14,18.5),down=kf(u,21,25);P.curl=[0,0];P.hand=[];
+  for(const s of[-1,1]){let t=[s*24,-6,-6];t=vLerp(t,[s*30,66,-8],up);t=vLerp(t,[s*38,30,-14],down);t[1]+=sin(R.t*.7+s)*1.5*up;P.hand.push(t);}
+  P.curl=[lerp(.35,-.25,up)+sin(R.t*1.3)*.08*up+.5*down*(.5+.5*sin(R.t*.8)),lerp(.35,-.25,up)+sin(R.t*1.1+1)*.08*up+.5*down*(.5+.5*sin(R.t*.8+1))];
+  P.reach=kf(u,27,31.5);P.close=kf(u,31.6,32.6);P.lift=kf(u,33,38);P.plunge=kf(u,38.5,41.5);return P;}
+function cthMats(P){const root=mM(mT(P.x,P.y,P.z),mRy(0));const T=mM(root,mRx(-P.lean),mS(1+P.br*.018,1+P.br*.012,1+P.br*.02));
+  const head=mM(T,mT(...CL.neck),mRy(P.hyaw),mRx(-P.hpitch));const M={root,T,head,arms:[],wings:[]};
+  [-1,1].forEach((s,i)=>{const S=mP(T,[s*CL.sh[0],CL.sh[1],CL.sh[2]]);let tgt=mP(root,P.hand[i]),hdir,back;
+    // the grabbing hand (s=-1) leaves the pose, reaches for the altar, closes round the body and lifts it to the face
+    let grab=null,camP=null;if(i===0&&P.reach>0){const r=eas(P.reach);let g=vLerp(tgt,GRB.hov,r);g=vLerp(g,GRB.grab,P.close);tgt=g;grab=r;
+      if(P.lift>0){// authored camera path; the fist (thumb up) is kept just below the hero's eyes
+        const l=eas(P.lift),face=mP(head,[0,8,-10]);camP=vLerp(ALTAR_EYE,vAdd(face,[-3,-4,-24]),l);camP[1]+=sin(PI*l)*7;
+        if(P.plunge>0){const q=eas(P.plunge);camP=vLerp(camP,[14,-24,108],q);camP[1]+=sin(PI*q)*4;}
+        const hd=vNorm(vLerp(vLerp([1,0,0],[0,-.12,-1],l),[0,-1,.35],eas(P.plunge))),bk=vNorm(vLerp(vLerp([0,1,0],[1,0,.05],l),[1,0,.1],eas(P.plunge)));
+        const Y=vSc(hd,-1),Z=vNorm(vSub(bk,vSc(Y,vDot(bk,Y)))),fc=vSub(camP,P.plunge>0?vSc(vCross(Y,Z),4.6):[0,4.6,0]);tgt=vAdd(fc,vAdd(vSc(Y,6),vSc(Z,2.5)));FIN.camPath=camP;}}
+    const pole=mP(T,vLerp([s*48,8,22],[s*34,-34,-4],grab!=null?eas(P.lift)*(1-eas(P.plunge)*.5):0));const k=ik2(S,tgt,CL.L1,CL.L2,pole);const E=k.e,Wr=k.t;
+    const fa=vNorm(vSub(Wr,E));const up=kf(FIN.u,14,18.5);
+    hdir=vNorm(vLerp(fa,[0,1,-.15],up*.7));back=vNorm(vLerp([s*.3,0,1],[0,0,1],up));
+    if(grab!=null){hdir=vNorm(vLerp(hdir,[1,0,0],grab));back=vNorm(vLerp(back,[0,1,0],grab));
+      if(P.lift>0){const l=eas(P.lift);hdir=vNorm(vLerp(hdir,[0,-.12,-1],l));back=vNorm(vLerp(back,[1,0,.05],l));}
+      if(P.plunge>0){const l=eas(P.plunge);hdir=vNorm(vLerp(hdir,[0,-1,.35],l));back=vNorm(vLerp(back,[1,0,.1],l));}}
+    const U=mBasis(S,vSub(E,S),[0,0,1]),F=mBasis(E,vSub(Wr,E),[0,0,1]),Hm=mBasis(Wr,hdir,back);
+    const curl=i===0&&P.reach>0?lerp(lerp(P.curl[0],-.2,P.reach),1.0,P.close):P.curl[i];
+    M.arms.push({s,S,E,W:Wr,U,F,H:Hm,curl,hideThumb:i===0&&P.close>.4});if(camP)M.camP=camP;});
+  [-1,1].forEach(s=>{const f=P.wing;M.wings.push({s,m:mM(T,mT(s*CL.wing[0],CL.wing[1],CL.wing[2]),mRy(-s*lerp(1.3,.05,f)),mRz(s*(lerp(-.45,0,f)+P.flap)),mRx(lerp(-.25,0,f)),mS(lerp(.3,1,f),lerp(.72,1,f),1))});});
+  return M;}
+function drawHand(a){const H_=a.H;draw(CTH.palm,H_,.25,1,5);const kn=[-2.5,-.85,.85,2.5];
+  kn.forEach((x,i)=>{const sp=(i-1.5)*.13*(1-clamp(a.curl,0,1)*.6);let m=mM(H_,mT(x,-5.3,.2),mRz(sp),mRx(a.curl*.95+abs(i-1.5)*.05));draw(CTH.fa,m,.22,1,5);m=mM(m,mT(0,-3.7,0),mRx(a.curl*1.1+.12));draw(CTH.fb,m,.2,1,5);});
+  if(a.hideThumb)return;let t=mM(H_,mT(-a.s*3.4,-1.6,-.6),mRz(-a.s*(.95-a.curl*.4)),mRx(.3+a.curl*.6),mS(.92,.85,.92));draw(CTH.fa,t,.22,1,5);t=mM(t,mT(0,-3.7,0),mRx(a.curl*.8));draw(CTH.fb,t,.2,1,5);}
+function drawCthulhu(){const P=FIN.pose;if(!P)return;const M=FIN.M;
+  draw(CTH.torso,M.T,.3,1,5);for(const s of[-1,1])draw(CTH.thigh,mM(M.root,mT(s*CL.hip[0],CL.hip[1],CL.hip[2]),mRx(sin(R.t*.3+s)*.08-.1)),.3,1,5);
+  draw(CTH.head,M.head,.3,1,5);
+  for(const w of M.wings)draw(w.s<0?CTH.wingL:CTH.wingR,w.m,.25,1,5);
+  for(const a of M.arms){draw(CTH.uarm,a.U,.28,1,5);draw(CTH.farm,a.F,.26,1,5);drawHand(a);}
+  // face tentacles: chains that writhe; they lash out when the hero is close
+  const close=P.lift>0?1-P.plunge:0;
+  for(let i=0;i<9;i++){let m=mM(M.head,mT((i-4)*1.75,2.4-abs(i-4)*.38,-7.4-(i%2)*1.1),mRz((i-4)*.08),mRx(-.3-close*.22));const L=7+(i%3);
+    for(let k=0;k<L;k++){m=mM(m,mRx(sin(R.t*(1+close)+i*1.3+k*.6)*(.17+close*.15)+(k>3?.12*(i%2?1:-1):.03)),mRz(sin(R.t*.8+i+k*.5)*.13));const sc=1.35*pow(.9,k);draw(CTH.tent,mMul(m,mS(sc,1,sc)),.22,1,5);m=mMul(m,mT(0,-3.9,0));}}
+  if(P.eyes>.02){const g=P.eyes*(1+sin(R.t*7)*.06);for(const e of CL.eyes){const m=mM(M.head,mT(...e),mRz(e[0]<0?.4:-.4),mS(g,g,g));draw(CTH.eye,m,0);}
+    const ep=mP(M.head,[0,8.4,-12]);light(ep[0],ep[1],ep[2],45*P.eyes,[.95*P.eyes,.12*P.eyes,.05*P.eyes]);}}
+// water pouring off the body while it rises
+const DRIP=[['T',[0,31,4],10],['T',[-15,29,0],8],['T',[15,29,0],8],['T',[0,18,-10],8],['head',[0,15,2],7],['head',[0,9,-9],5]];
+function cthWater(dt){const P=FIN.pose,M=FIN.M,u=FIN.u;if(!P||u<4)return;const rate=clamp((u-4)/2,0,1)*clamp(1.2-(u-26)/10,.15,1.2);
+  const emit=(p,spread,n)=>{for(let i=0;i<n;i++){if(p[1]<R.surf+.5)continue;PT.add(3,p[0]+(Math.random()-.5)*spread,p[1],p[2]+(Math.random()-.5)*spread,(Math.random()-.5)*2,-2-Math.random()*4,(Math.random()-.5)*2,1.2+Math.random(),2.4,[.6,.72,.74,.55],22);}};
+  for(const[b,lp,sp]of DRIP)emit(mP(M[b],lp),sp,floor(rate*5+Math.random()));
+  for(const a of M.arms){if(u>14)emit(a.E,4,floor(rate*3+Math.random()));if(u>14)emit(a.W,3,floor(rate*2+Math.random()));}
+  if(P.wing>.1)for(const w of M.wings)for(const lp of[[w.s*30,25,14],[w.s*40,6,14],[w.s*18,40,10]])emit(mP(w.m,lp),5,floor(rate*2*P.wing+Math.random()));
+  // churning foam where it breaks the surface
+  const n=floor((u<26?6:2)*Math.random()+1);for(let i=0;i<n;i++){const a=Math.random()*6.28,r=10+Math.random()*16;PT.add(4,P.x+cos(a)*r,R.surf+.3,P.z+sin(a)*r*.8,cos(a)*1.5,1.2+Math.random()*2.5,sin(a)*1.5,5+Math.random()*7,2.6,[.5,.6,.62,.22],.2);}}
+
+// ================= STORM =================
+const STORM={k:0,next:3,dist:0};
+function strike(x,z,yEnd=R.surf,near=false){PT.bolt(x+(Math.random()-.5)*30,170,z+20+(Math.random()-.5)*30,x,yEnd,z,near?2:1.3);R.flash=max(R.flash,near?1.5:.7);STORM.fl2=.09;
+  const d=hypot(x-R.eye[0],z-R.eye[2]);SFX.thunder(clamp(d/120,0,2),min(2.2,d/150));S.shake=max(S.shake,near?.6:.15);}
+function updStorm(dt){const k=STORM.k;R.flash=max(0,R.flash-dt*(R.flash>1?6:4.5));if(STORM.fl2>0){STORM.fl2-=dt;if(STORM.fl2<=0)R.flash=max(R.flash,.55+Math.random()*.4);}
+  R.rain=R.uw?0:k;R.wind=[1+k*2.4,.35+k*.8];R.wave=k*.9+(FIN.u>4?.3*kf(FIN.u,4,20):0);R.wet=k;stormAudio(k,R.uw>0);
+  if(k>0){STORM.next-=dt;if(STORM.next<=0){const u=FIN.u;let x=rr(-60,80),z=rr(110,220),near=false;if(u>6&&u<40&&Math.random()<.45){const P=FIN.pose;x=P.x+rr(-35,35);z=P.z+rr(5,30);near=true;}strike(x,z,R.surf,near);STORM.next=(u>4&&u<40?rr(1.2,3.2):rr(4,8))/(.4+k*.6);}}
+  else if(S.solved&&S.solved.filter(v=>v).length>=3&&S.mode==='play'){STORM.dist-=dt;if(STORM.dist<=0){STORM.dist=rr(22,40);R.flash=.3;SFX.thunder(2.2,1.6);}}}
+
+// ================= FINALE (first person from the safe to the end) =================
+function lids(open,ms=900){const L=$('lids');L.style.display='block';for(const e of L.children){e.style.transitionDuration=ms+'ms';e.style.transform=open?(e.className==='t'?'translateY(-100%)':'translateY(100%)'):'translateY(0)';}}
+function fpTarget(eye,tgt){const d=vNorm(vSub(tgt,eye));let yaw=atan2(d[0],d[2]),pit=Math.asin(clamp(d[1],-1,1));yaw+=FIN.lx;pit=clamp(pit+FIN.ly,-1.5,1.5);return vAdd(eye,[sin(yaw)*cos(pit)*10,sin(pit)*10,cos(yaw)*cos(pit)*10]);}
+const ALTAR_EYE=[10,1.78,74.9];
+async function finale(){S.mode='finale';S.fear=1;S.hud=false;$('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='none';{const f=$('face');f.style.width=f.style.height='150px';f.style.left='auto';f.style.right='16px';f.style.bottom='auto';f.style.top='16px';}for(const e of EN)e.active=false;
+  const z=PZ[5],eye=[z.ix,1.62,z.iz];FIN.attacker={x:eye[0]-1.9,z:eye[2]+.5,rot:atan2(1.9,-.5),arm:-1.2};
+  FIN.look=[z.x,z.y,z.z];CAM.fp=true;CAM.rate=4;S.camFn=()=>{CAM.ge=eye;CAM.gt=fpTarget(eye,FIN.look);};
+  await say(HERO,'Ключи от катера… и моё имя в их книге. Они ждали меня с самого начала…',VO.hero);
+  SFX.creak();await wait(.5);await say(HERO,'Кто здесь?!',VO.hero);FIN.look=[FIN.attacker.x,1.7,FIN.attacker.z];CAM.rate=3.2;await wait(1.1);S.fear=3;
+  FIN.atkSwing=1;SFX.swing();await wait(.32);SFX.thud();S.shake=1;$('flash').style.opacity=1;FIN.look=vAdd(eye,[-2,-1.4,1]);CAM.rate=9;S.camFn=()=>{CAM.ge=[eye[0],lerp(CAM.ge[1],.35,.08),eye[2]];CAM.gt=fpTarget(CAM.ge,FIN.look);};
+  await wait(.35);lids(false,250);await wait(.5);$('fade').style.transitionDuration='300ms';$('fade').style.opacity=1;$('flash').style.opacity=0;FIN.attacker=null;
+  noise(2.5,{f:200,vol:.25,att:1,delay:.6});await wait(3.2);
+  // --- the pier at night: storm, torches, altar
+  FIN.on=true;P.vis=false;pierGate.off=true;owner.show=con.show=loaf.show=false;STORM.k=.55;R.rain=.55;PT.update(0,ALTAR_EYE);
+  for(let i=0;i<10;i++){const a=1.05+i/9*(2*PI-2.1);FIN.cult.push({x:10+sin(a)*6.2,z:76+cos(a)*5.6,rot:a+PI,ph:i*1.7,kneel:0});}
+  FIN.priest={x:6.2,z:80.6,rot:.5,ph:.3};
+  S.camFn=()=>{const e=ALTAR_EYE;CAM.ge=e;CAM.gt=fpTarget(e,FIN.look);};FIN.look=[10.4,14,77.5];CAM.rate=2.2;CAM.fov=1.05;camSnap();
+  S.fear=1;cv.style.filter='blur(7px)';lids(false,10);await wait(.2);$('fade').style.transitionDuration='1800ms';$('fade').style.opacity=0;
+  await wait(1);lids(true,1300);await wait(1.5);lids(false,260);await wait(.4);lids(true,700);cv.style.transition='filter 3s';cv.style.filter='blur(1.2px)';
+  await say(HERO,'Голова… Дождь… Где я? Верёвки — я не могу пошевелиться!',VO.hero);cv.style.filter='';
+  FIN.look=[4,1.8,76];await wait(1.6);FIN.look=[16,1.8,77];FIN.chant=true;await wait(1.8);FIN.look=[10,2.4,80];
+  await say('Культисты','Пх\'нглуи мглв\'нафх Ктулху Р\'льех вгах\'нагл фхтагн!',VO.cult);FIN.armUp=1;
   await say('Жрец','Звёзды встали верно! Спящий в глубине — прими чужую кровь и восстань!',{pitch:58,vol:.24});
-  // the rise
-  SFX.rumble(16);FIN.shake=.25;await wait(1.6);await fade(1,350);FIN.pan=null;CAM.fp=false;CAM.fov=.98;FIN.rising=true;
-  S.camFn=()=>{const r=FIN.rise;CAM.ge=[5.5,1.4,56];CAM.gt=[10,4+r*19,110];};camSnap();await fade(0,500);
-  say(HERO,'Море… оно поднимается… Господи, что это?!',VO.hero);await wait(4.2);SFX.roar();FIN.shake=.7;S.fear=3;await wait(5.5);FIN.shake=.35;
-  say('Культисты','Ктулху фхтагн! Ктулху фхтагн!',VO.cult);await wait(3.2);SFX.roar();FIN.shake=.6;
-  // the hand
-  FIN.hand=0;if(AU.ctx){tone(520,2.6,{type:'sawtooth',vol:.14,to:880,lp:2400});tone(540,2.6,{type:'sawtooth',vol:.1,to:820,lp:2400});}say(HERO,'НЕТ! НЕ-Е-ЕТ!..',{dur:3});
-  await wait(3.4);FIN.grab=true;S.shake=1;SFX.thud();FIN.hand=1;await wait(4.4);SFX.splash();await fade(1,1400);FIN.shake=0;await wait(1.2);credits();}
-function updFinale(dt){if(!FIN.on)return;FIN.t+=dt;if(FIN.pan)FIN.pan(dt);if(FIN.rising)FIN.rise=min(1,FIN.rise+dt/13);S.shake=max(S.shake,FIN.shake);
-  if(FIN.chant){FIN.ct=(FIN.ct||0)-dt;if(FIN.ct<=0){FIN.ct=2.2;for(const p of[58,66,74])mumble(2,p,false,.07,true);}}
-  if(FIN.hand>=0&&!FIN.grab){FIN.hand=min(1,FIN.hand+dt/3.2);const t=FIN.hand*FIN.hand*(3-2*FIN.hand);FIN.hx=10;FIN.hy=lerp(46,4.4,t);FIN.hz=lerp(112,77.5,t);}
-  else if(FIN.grab){FIN.gt=(FIN.gt||0)+dt/4.2;const t=min(1,FIN.gt)**2;FIN.hy=lerp(4.4,-14,t)+sin(min(1,FIN.gt)*PI)*16;FIN.hz=lerp(77.5,118,t);}}
-function drawFinale(){if(!FIN.on)return;drawCthulhu();
-  for(const c of FIN.cult){const u=FIN.armUp?-2.75+sin(S.t*2+c.ph)*.12:-1.25;const m=drawChar(CH.c,c.x,0,c.z,c.rot,{armed:true,aR:u,aL:FIN.armUp?u+.1:-.2});const f=mP(m,[0,-.74,.9]);light(f[0],f[1],f[2],8.5+sin(S.t*11+c.ph),[1,.5,.18]);}
-  if(FIN.grab)drawChar(CH.hero,FIN.hx,FIN.hy-2.6,FIN.hz-2.5,PI,{lie:true,aR:-2.6,aL:-2.4});else if(!CAM.fp)drawChar(CH.hero,10,1.14,75.1,0,{lie:true,noBlob:true,aR:-2.9+sin(S.t*9)*.15,aL:-2.9});}
-function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
+  // --- the awakening
+  FIN.look=[10,6,140];CAM.rate=1.6;FIN.u=0;STORM.k=1;R.rip=[10,140,0,0];SFX.rumble(18);S.fear=2;await wait(1.5);
+  say(HERO,'Море… оно кипит… Что-то поднимается со дна!',VO.hero);await wait(4.5);
+  FIN.look=[10,10,138];await wait(1.2);SFX.roar(4,1.25);S.fear=3;await wait(3.8);   // eyes ignite (u≈7..9)
+  FIN.look=[10,22,140];SFX.roar(5,1);S.shake=.8;await wait(5);                     // wings unfold
+  FIN.look=[10,30,138];SFX.roar(5.5,.85);await wait(5);                             // arms rise, claws bared
+  FIN.look=[10,26,132];SFX.rumble(8);SFX.roar(6.5,.7);S.shake=1.1;await wait(4.5);  // full rise, wave
+  say(HERO,'Господи… Нет… Не смотри на меня!',{dur:2.8,pitch:150});await wait(2.2);
+  // --- the reach
+  FIN.look=null;CAM.rate=3.5;await wait(2.4);say(HERO,'НЕТ! НЕ-Е-ЕТ!..',{dur:3});if(AU.ctx){tone(520,2.6,{type:'sawtooth',vol:.14,to:880,lp:2400});tone(540,2.6,{type:'sawtooth',vol:.1,to:820,lp:2400});}
+  FIN.hands=1;await wait(2.6);SFX.thud();S.shake=1.2;FIN.grab=1;await wait(1.2);                                   // fingers close (u≈32.6)
+  SFX.roar(4.5,.6);await wait(4.6);                                                  // lifted up to the face
+  await wait(1.6);SFX.bigSplash();S.shake=1.4;                                       // plunge
+  await wait(2.2);SFX.bubbles();FIN.dying=1;await wait(2.5);SFX.bubbles();await wait(3);
+  $('fade').style.transitionDuration='2500ms';$('fade').style.opacity=1;await wait(3);FIN.on=false;STORM.k=0;R.rain=0;R.uw=0;$('uw').style.opacity=0;$('tun').style.opacity=0;stormAudio(0,false);await wait(.6);credits();}
+function updFinale(dt){
+  if(FIN.on){FIN.t+=dt;if(FIN.u>=0)FIN.u+=dt;const u=FIN.u;
+    FIN.lx=lerp(FIN.lx,-FIN.mx*.5,min(1,dt*3));FIN.ly=lerp(FIN.ly,-FIN.my*.35,min(1,dt*3));
+    if(FIN.chant){FIN.ct=(FIN.ct||0)-dt;if(FIN.ct<=0){FIN.ct=2.2;for(const p of[58,66,74])mumble(2,p,false,.07,true);}}
+    FIN.pose=cthPose(max(u,0));FIN.M=cthMats(FIN.pose);if(u>=0)cthWater(dt);
+    if(u>=0){R.rip=[10,140,(u>4?1.4:0)+1.6*kf(u,19,24)*(1-kf(u,30,40)),max(0,u-3)*.9];}
+    for(const c of FIN.cult){c.kneel=lerp(c.kneel,u>8?1:0,dt*.8);}
+    // first-person camera: watches the descending hand; fingers close (darkness); then the hero is held above the fist, face to face
+    if(u>=27){const a=FIN.M.arms[0],pz=FIN.pose;FIN.camP=FIN.M.camP||ALTAR_EYE;
+      if(pz.close>.6&&pz.lift<.08){if(!FIN.dark){FIN.dark=1;$('fade').style.transitionDuration='140ms';$('fade').style.opacity=.95;SFX.thud();}}
+      if(pz.lift>=.08){if(!FIN.held){FIN.held=1;$('fade').style.transitionDuration='600ms';$('fade').style.opacity=0;CAM.eye=FIN.camP.slice();}
+        S.camFn=()=>{const e=FIN.camP;CAM.ge=e;const face=mP(FIN.M.head,[0,8,-16]);let lk=face;
+          if(pz.plunge>0)lk=vLerp(face,vAdd(e,[0,-14,7]),eas(min(1,pz.plunge*1.7)));if(u>41.8)lk=vLerp(lk,mP(FIN.M.head,[0,8,-10]),kf(u,41.8,44));CAM.gt=fpTarget(e,lk);};CAM.rate=14;}
+      else{S.camFn=()=>{CAM.ge=ALTAR_EYE;CAM.gt=fpTarget(ALTAR_EYE,mP(FIN.M.arms[0].H,[0,-5,-1]));};}}
+    // underwater
+    const e=CAM.eye,uw=e[1]<waveH(e[0],e[2]);R.uw=uw?1:0;$('uw').style.opacity=uw?1:0;
+    if(uw){R.surf=waveH(e[0],e[2]);if(Math.random()<.6)PT.add(2,e[0]+(Math.random()-.5)*4,e[1]-1-Math.random()*3,e[2]+(Math.random()-.5)*4,(Math.random()-.5)*.6,2+Math.random()*3,(Math.random()-.5)*.6,.15+Math.random()*.3,3,[.6,.8,.82,.6],-1.5);}
+    if(FIN.dying){FIN.dying+=dt;$('tun').style.opacity=1;$('tun').style.setProperty('--r',max(0,62-FIN.dying*12)+'%');FIN.hb=(FIN.hb||0)-dt;if(FIN.hb<=0){SFX.heart(max(.2,1-FIN.dying*.15));FIN.hb=.8+FIN.dying*.35;}}}
+  updStorm(dt);}
+function drawFinale(){if(FIN.attacker){const a=FIN.attacker;if(FIN.atkSwing)FIN.atkSwing=min(2,FIN.atkSwing+.05);const sw=FIN.atkSwing?lerp(-2.9,-.4,clamp(FIN.atkSwing-1,0,1)):-2.4;
+    const m=drawChar(CH.c,a.x,0,a.z,a.rot,{armed:true,aR:sw});torchFx(m,0);}
+  if(!FIN.on)return;drawCthulhu();
+  for(const c of FIN.cult){const u=FIN.armUp?-2.75+sin(S.t*2+c.ph)*.12:-1.25;const m=drawChar(CH.c,c.x,0,c.z,c.rot,{armed:true,aR:u,aL:FIN.armUp?u+.1:-.2,crouch:c.kneel>.5});torchFx(m,c.ph,true);}
+  {const p=FIN.priest,m=drawChar(CH.c,p.x,0,p.z,p.rot,{armed:true,aR:-2.9+sin(S.t*1.4)*.1,aL:-2.9});torchFx(m,p.ph,true);}
+  for(const b of BRAZ){light(b[0],2.3,b[1],9+sin(S.t*13+b[0])*.8,[1,.55,.22]);if(Math.random()<.4)PT.add(5,b[0],2.2,b[1],R.wind[0]*.7,1.8,R.wind[1]*.7,.08,1.2,[1,.6,.2,.9],-.3);}
+  // hero's own body and, later, panicked hands in view
+  if(FIN.hands&&!FIN.grab){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f);for(const s of[-1,1]){const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.32),vSc(up,-.42)),vSc(f,.05)));
+    const tip=vAdd(sp,vAdd(vAdd(vSc(f,.75),vSc(up,.42+sin(S.t*14+s)*.05)),vSc(r,-s*.08)));draw(CH.hero.arm,mBasis(sp,vSub(tip,sp),vSc(f,-1)),0);}}}
+function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';$('lids').style.display='none';cv.style.filter='';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
   $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Эдварда Крейна больше никто не видел.<br>Через неделю в редакцию пришло письмо от «старого моряка» —<br>на имя нового репортёра.</div>'+
    '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, журналист<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Жители Грейхейвена<br>Жрец и братья в робах<br>и Тот, кто спит в Р\'льехе'+
    '<h4>Ваше расследование</h4>Знаков культа найдено: 5 / 5<br>Находок-отсылок: '+n+' / '+EGGS.length+'<br>Потерь сознания: '+S.deaths+'<br>Время в деревне: ~'+mins+' мин'+
-   '<h4>Прототип</h4>Графика, звук и код собраны процедурно, без единого файла ассетов<br><br><br><span class="hand" style="font-size:34px">«Не мертво то, что в вечности пребудет…»</span><br><br><br>Спасибо за игру';
+   '<h4>Прототип</h4>Модели — Blender, графика — WebGL, звук синтезирован в браузере<br><br><br><span class="hand" style="font-size:34px">«Не мертво то, что в вечности пребудет…»</span><br><br><br>Спасибо за игру';
   const r=$('roll');let y=innerHeight;const hgt=r.offsetHeight;const step=()=>{y-=innerHeight/900*1.6;r.style.top=y+'px';if(y>-hgt+innerHeight*.55)requestAnimationFrame(step);else $('again').style.display='block';};step();setTimeout(()=>$('again').style.display='block',12000);}
 $('again').onclick=()=>{try{location.reload();}catch(e){}};
 
 // --- frame
 function drawAll(){
-  draw(M_ground,null,0);draw(M_world,null,.035);draw(M_sea,mT(0,-.55+sin(S.t*.6)*.06,0),0);
+  draw(M_ground,null,0,1,1);draw(M_world,null,.035);draw(M_far,null,0);R.items[R.items.length-1].nodepth=1;draw(M_veg,null,0,1,3);draw(M_sea,mT(0,-.55,0),0,1,2);
   for(const l of LAMPS)light(l[0],l[1],l[2],l[3]*(1+sin(S.t*8+l[0])*.03),l[4]);
-  for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;const c=e.kind==='c';
+  for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
     let aR=c?-1.25:e.state==='chase'?-.7:null;if(e.wind>0)aR=-2.7;if(e.atk>0){e.atk-=.016;aR=lerp(.4,-2.6,e.atk/.3);}
     const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
     if(e.active&&e.state!=='ko'&&e.rv&&S.mode==='play'){const ch=e.state==='chase',r=ch?e.lr:e.rv;if(ch||hypot(e.x-P.x,e.z-P.z)<r+4)draw(ch?M_ringR:M_ringY,mM(mT(e.x,.07,e.z),mRy(S.t*.15),mS(r,1,r)),0,ch?.6:.22);}
-    if(c&&e.state!=='ko'){const f=mP(m,[0,-.74,.9]);light(f[0],f[1],f[2],9+sin(S.t*12+e.ph)*.7,[1,.52,.2]);}}
+    if(c&&e.state!=='ko')torchFx(m,e.ph);}
   if(P.vis&&!CAM.fp){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}
   draw(M_car,mM(mT(CAR.x,0,CAR.z),mRy(CAR.rot)),.04);if(!CAR.parked){const fx=CAR.x+sin(CAR.rot)*7,fz=CAR.z+cos(CAR.rot)*7;light(fx,1.5,fz,15,[1,.9,.6]);light(CAR.x,3,CAR.z,7,[.5,.5,.45]);}
   if(doorShut)draw(M_door,mT(-58.5,0,-29),.03);
-  if(S.escaped&&!FIN.on){for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
+  if(S.escaped&&!FIN.on&&S.mode!=='finale'){for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
     for(const z of PZ){if(S.solved[z.i])continue;const dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);draw(M_beacon,mM(mT(z.x,2.7+sin(S.t*2+z.i)*.15,z.z),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(z.x,2.2,z.z+.8,6.5,[.25,.8,.7]);}}
-  for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.escaped)||FIN.on)continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
-  drawFinale();
-  if(!FIN.on){const f=R.focus;for(let i=0;i<16;i++){const bx=((i*37.7+S.t*(.5+i%3*.25))%56)-28,bz=((i*23.3+S.t*.18*(i%2?1:-1))%44+44)%44-24;draw(M_fogb,mM(mT(f[0]+bx,1.2+i%4*.5,f[2]+bz),mS(7+i%5*2,1,4+i%3*2)),0,.05+.02*(i%3));}}}
+  for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.escaped)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
+  drawFinale();}
+function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
+  if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
+  R.sunC=[.34,.42,.46];
+  if(FIN.on){const g=FIN.u>0?kf(FIN.u,4,20):0;R.fog=[lerp(.06,.13,g),lerp(.13,.25,g),lerp(.145,.27,g)];R.fogD=S.fogK/lerp(80,108,g);R.fogMin=.03;R.fogH=.04;R.amb=[.3,.41,.45];
+    M.den=.75*S.fogK;M.top=6.5;M.col=[.22,.32,.34];M.maxD=80;return;}
+  R.fog=[.075,.15,.165];R.amb=[.36,.47,.5];R.fogH=.15;M.col=[.3,.42,.43];M.maxD=90;
+  if(S.mode==='drive'||S.mode==='title'){R.fogD=S.fogK/30;R.fogMin=.03;M.den=.75*S.fogK;M.top=3.2;}else{R.fogD=S.fogK/25;R.fogMin=.05*S.fogK;M.den=1.05*S.fogK;M.top=3.5;}}
 let last=0;
-function frame(now){const dt=min(.05,(now-last)/1000||.016);last=now;
-  if(!S.pause){S.t+=dt;tickWaits(dt);tickSub(dt);
+function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
+  if(!S.pause){S.t+=dt;R.t=S.t;tickWaits(dt);tickSub(dt);
     if(S.mode==='drive')updCar(dt);
     if(S.mode==='play'){updPlayer(dt);story(dt);PFt-=dt;if(PFt<=0){PFt=.3;PF=EN.some(e=>e.active&&e.state==='chase')?field(P.x,P.z):null;}for(const e of EN)updEnemy(e,dt);}
-    updFinale(dt);if(S.hud||S.mode==='finale')updHud(dt);}
+    updFinale(dt);PT.update(dt,CAM.eye);if(S.hud||S.mode==='finale')updHud(dt);}
   camGoal();const k=S.fast?1:1-exp(-dt*CAM.rate);for(let i=0;i<3;i++){CAM.eye[i]=lerp(CAM.eye[i],CAM.ge[i],k);CAM.tgt[i]=lerp(CAM.tgt[i],CAM.gt[i],k);}
-  S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*.55:0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
-  if(FIN.on){const g=FIN.rising?min(1,FIN.rise*3):0;R.fogMin=0;R.fog=[lerp(.09,.17,g),lerp(.19,.34,g),lerp(.2,.35,g)];R.fogD=S.fogK/105;R.amb=[.42,.56,.58];}else{R.fogD=S.fogK/(S.mode==='drive'?30:23);R.fogMin=.07*S.fogK;}
-  R.focus=S.focus?S.focus():[P.x,0,P.z];drawAll();render(eye,CAM.tgt,CAM.fov);hud2d();requestAnimationFrame(frame);}
+  S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*(CAM.fp?.22:.55):0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
+  atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();render(eye,CAM.tgt,CAM.fov);hud2d();requestAnimationFrame(frame);}
 // title backdrop
 $('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
 // debug / test hooks
-window.DBG={R,S,P,EN,CAM,FIN,PB,PZ,cols,blocked,field,finale,solvePuzzle,openPuzzle,closePuzzle,
+window.DBG={R,S,P,EN,CAM,FIN,PB,PZ,PT,STORM,cols,blocked,field,finale,solvePuzzle,openPuzzle,closePuzzle,cthPose,waveH,
   toPlay(){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;S.booked=S.inRoom=S.peeked=S.escaped=true;P.x=-58.5;P.z=-40.5;for(const e of EN){e.active=true;}owner.x=-44;owner.z=-27.6;$('fade').style.opacity=0;setObj('Найдите знаки культа: 0 / 5');},300);}};
 </script>
 </body>

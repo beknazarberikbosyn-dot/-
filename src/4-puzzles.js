@@ -33,7 +33,7 @@ function openPuzzle(i){if(i===5&&S.solved.slice(0,5).some(v=>!v)){toast('Зам�
   for(const e of EN)if(e.active&&e.state==='chase'){toast('Не сейчас — за вами гонятся!',2);return;}
   const z=PZ[i];curPz=i;S.pause=true;CAM.fp=true;CAM.rate=3.5;S.camFn=()=>{CAM.ge=[z.ix,1.62,z.iz];CAM.gt=[z.x,z.y,z.z];};SFX.page();
   clearTimeout(pzTimer);pzTimer=setTimeout(()=>{if(curPz!==i)return;$('pzT').textContent=z.name;const b=$('pzB');b.innerHTML='';$('pzD').innerHTML='';PB[i](b,$('pzD'));$('pzX').textContent='Отойти (Esc)';$('puz').style.display='flex';},S.fast?0:950);}
-function closePuzzle(){const was=curPz;curPz=-1;clearTimeout(pzTimer);$('puz').style.display='none';S.camFn=null;CAM.fp=false;CAM.rate=5;S.pause=false;if(was===5&&S.solved[5])finale();}
+function closePuzzle(){const was=curPz;curPz=-1;clearTimeout(pzTimer);$('puz').style.display='none';S.pause=false;if(was===5&&S.solved[5]){finale();return;}S.camFn=null;CAM.fp=false;CAM.rate=5;}
 $('pzX').onclick=closePuzzle;
 function solvePuzzle(i){S.solved[i]=1;S.lore.push(i);SFX.solve();const z=PZ[i];S.cp=[z.ix,z.iz];const b=$('pzB');$('pzD').innerHTML='';
   setTimeout(()=>{b.innerHTML='';b.append(el('h2',{textContent:'«'+LORE[i][0]+'»',style:'margin-top:4px'}),el('div',{className:'hand',html:LORE[i][1],style:'text-align:left'}));

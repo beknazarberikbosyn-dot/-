@@ -17,6 +17,11 @@ canvas#hud2d{pointer-events:none}
 #peek{background:radial-gradient(ellipse 44% 52% at 50% 50%,transparent 55%,#000 82%);opacity:0;transition:opacity .6s}
 #fade{background:#000;opacity:1;transition:opacity 1.2s}
 #flash{background:radial-gradient(ellipse at center,transparent 40%,rgba(160,20,10,.75));opacity:0}
+#lids{display:none}#lids i{position:absolute;left:-12%;right:-12%;height:64%;background:#000;transition:transform .9s cubic-bezier(.6,0,.3,1)}
+#lids .t{top:0;border-radius:0 0 50% 50%/0 0 46% 46%}#lids .b{bottom:0;border-radius:50% 50% 0 0/46% 46% 0 0}
+#uw{background:radial-gradient(ellipse at 50% 22%,rgba(40,110,105,.18),rgba(2,22,26,.82) 75%);opacity:0;transition:opacity .35s}
+#tun{background:radial-gradient(circle at 50% 50%,transparent var(--r,70%),#000 calc(var(--r,70%) + 18%));opacity:0}
+canvas#gl{transition:filter .2s}
 #hud{position:fixed;inset:0;pointer-events:none;display:none}
 #gear{position:fixed;left:12px;top:12px;width:44px;height:44px;border-radius:50% 46% 52% 48%;border:2.5px solid var(--paper);background:rgba(11,20,22,.8);color:var(--paper);font-size:24px;cursor:pointer;pointer-events:auto;z-index:30;display:none;line-height:1}
 #gear:hover{background:#1d3a3c;transform:rotate(25deg)}
@@ -75,7 +80,7 @@ button.b:hover{background:#efe6cc;transform:translate(-1px,-1px)}
 </head>
 <body>
 <canvas id="gl"></canvas><canvas id="hud2d"></canvas>
-<div id="grain" class="ov"></div><div id="vig" class="ov"></div><div id="peek" class="ov"></div><div id="flash" class="ov"></div>
+<div id="grain" class="ov"></div><div id="vig" class="ov"></div><div id="peek" class="ov"></div><div id="flash" class="ov"></div><div id="uw" class="ov"></div><div id="tun" class="ov"></div><div id="lids" class="ov"><i class="t"></i><i class="b"></i></div>
 <div id="hud">
   <div id="bars"><div class="bar" id="bhp"><i></i><b>Здоровье</b></div><div class="bar" id="bst"><i></i><b>Выносливость</b></div><div id="items"></div></div>
   <div id="obj"></div><div id="prompt"></div>

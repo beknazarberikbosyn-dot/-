@@ -27,7 +27,15 @@ function gCultist(){const b=new Geo(.07),a=new Geo(.07),aw=new Geo(.07),robe=H('
   for(const g of[a,aw]){g.bx(0,-.68,0,.22,.72,.24,robe);g.sph(0,-.76,0,.09,.09,.09,H('#8f8f7a'),5,3);}
   aw.bx(0,-.76,.4,.07,.07,.9,PAL.woodD);aw.sph(0,-.74,.9,.13,.13,.2,H('#ff8a2a',1),5,3);aw.sph(0,-.72,.98,.07,.07,.14,H('#ffe08a',1),4,3);
   return{body:mesh(b),arm:mesh(a),armW:mesh(aw),leg:null};}
-const CH={hero:gHero(),v:[0,1,2,3].map(gVillager),c:gCultist()};
+// Blender part models (origin conventions: body at the feet facing +Z, arms hang from the shoulder along -Y, legs hang from the hip)
+const VCOL=[['#5a6b4a','#33302c'],['#6b5346','#3a342e'],['#4f5d6b','#2e2c2a'],['#77705f','#33302c']];
+function partSet(prefix,fb,opt={}){const b=modelMesh(opt.bodyName||prefix+'_body',opt.body),a=modelMesh(opt.arm||prefix+'_arm',opt.armO),aw=modelMesh(opt.armW||prefix+'_armW',opt.armO),l=opt.noLeg?null:modelMesh(opt.leg||prefix+'_leg',opt.legO);
+  if(!b||!a)return fb();return{body:b,arm:a,armW:aw||a,leg:l,sh:opt.sh||[.27,1.47],hip:[.11,.9],model:true};}
+const CH={hero:partSet('hero',gHero),
+  v:[0,1,2,3].map(v=>partSet('vill',()=>gVillager(v),{sh:[[.29,1.47],[.27,1.47],[.25,1.52],[.31,1.47]][v],body:{},arm:'vill_arm',armW:'vill_armW',leg:'vill_leg',armO:{pal:{cloth:H(VCOL[v][0])}},legO:{pal:{trousers:H(VCOL[v][1])}},bodyName:'vill_body_'+v})),
+  c:partSet('cult',gCultist,{armW:'cult_armT',noLeg:true,sh:[.3,1.45]})};
+const M_flame=modelMesh('flame')||(()=>{const g=new Geo(0);g.sph(0,.1,0,.13,.2,.13,H('#ff8a2a',1),5,3);g.sph(0,.15,0,.07,.13,.07,H('#ffe08a',1),4,3);return mesh(g);})();
+const TORCH_TIP=[0,-.74,.9];
 const M_blob=(()=>{const g=new Geo(0);g.cyl(0,0,0,.55,.55,.01,10,[0,0,0,0]);return mesh(g);})();
 const mkRing=c=>{const g=new Geo(0),p=(a,r)=>[cos(a)*r,0,sin(a)*r];for(let i=0;i<48;i+=2){const a0=i/48*2*PI,a1=(i+1.2)/48*2*PI;g.quad(p(a0,.98),p(a1,.98),p(a1,1),p(a0,1),c);g.quad(p(a0,.98),p(a0,1),p(a1,1),p(a1,.98),c);}return mesh(g);};
 const M_ringR=mkRing(H('#ff5a48',1)),M_ringY=mkRing(H('#f0c060',1));
@@ -36,12 +44,14 @@ const M_egg=(()=>{const g=new Geo(.02);g.bx(0,-.15,0,.26,.32,.03,H('#f1e3b0',.85
 const M_med=(()=>{const g=new Geo(.02);g.bx(0,0,0,.5,.32,.34,H('#e8e2d0',.5));g.bx(0,.1,.18,.3,.08,.02,H('#d0352a',.9));g.bx(0,.1,.18,.08,.24,.02,H('#d0352a',.9));return mesh(g);})();
 const M_wpn=(()=>{const g=new Geo(.02);g.bx(0,.2,0,.1,.1,1.3,H('#aab0b4',.45));g.bx(0,.2,.6,.3,.1,.12,H('#aab0b4',.45));return mesh(g);})();
 function drawChar(ch,x,y,z,rot,p={}){let base=mM(mT(x,y,z),mRy(rot));if(p.lie)base=mM(base,mT(0,.22,0),mRx(-PI/2));else if(p.crouch)base=mMul(base,mS(1,.68,1));
-  const o=p.out==null?.03:p.out;draw(ch.body,base,o);const sw=sin(p.ph||0)*(p.mv||0);
-  const aR=mM(base,mT(-.42,1.55,0),mRx(p.aR!=null?p.aR:sw*.7));draw(p.armed?ch.armW:ch.arm,aR,o);
-  draw(ch.arm,mM(base,mT(.42,1.55,0),mRx(p.aL!=null?p.aL:-sw*.7)),o);
-  if(ch.leg){draw(ch.leg,mM(base,mT(-.16,.8,0),mRx(-sw*.75)),o);draw(ch.leg,mM(base,mT(.16,.8,0),mRx(sw*.75)),o);}
+  const o=p.out==null?.03:p.out,sh=ch.sh||[.42,1.55],hp=ch.hip||[.16,.8];draw(ch.body,base,o);const sw=sin(p.ph||0)*(p.mv||0);
+  const aR=mM(base,mT(-sh[0],sh[1],0),mRx(p.aR!=null?p.aR:sw*.7),mRz(p.aRz||0));draw(p.armed?ch.armW:ch.arm,aR,o);
+  draw(ch.arm,mM(base,mT(sh[0],sh[1],0),mRx(p.aL!=null?p.aL:-sw*.7),mRz(p.aLz||0)),o);
+  if(ch.leg){draw(ch.leg,mM(base,mT(-hp[0],hp[1],0),mRx(-sw*.75)),o);draw(ch.leg,mM(base,mT(hp[0],hp[1],0),mRx(sw*.75)),o);}
   if(!p.lie&&!p.noBlob)draw(M_blob,mT(x,.03,z),0,.38);return aR;}
-
+// torch flame + embers for a cultist arm matrix
+function torchFx(m,ph,big){const f=mP(m,TORCH_TIP),k=1+sin(S.t*17+ph)*.12+sin(S.t*29+ph*2)*.08;draw(M_flame,mM(mT(f[0],f[1],f[2]),mRy(S.t*3+ph),mS(k*(big?1.3:1),k*(1.2+sin(S.t*11+ph)*.2)*(big?1.4:1),k*(big?1.3:1))),0);
+  light(f[0],f[1]+.2,f[2],(big?10:9)+sin(S.t*12+ph)*.7,[1,.52,.2]);if(Math.random()<(big?.5:.18))PT.add(5,f[0]+(Math.random()-.5)*.1,f[1]+.25,f[2]+(Math.random()-.5)*.1,R.wind[0]*.8+(Math.random()-.5)*.4,1.4+Math.random(),R.wind[1]*.8+(Math.random()-.5)*.4,.06+Math.random()*.05,.9+Math.random()*.6,[1,.55+Math.random()*.25,.2,.9],-.4);return f;}
 // --- UI helpers
 let toastT=0;function toast(t,d=4.5){const e=$('toast');e.innerHTML=t;e.style.opacity=1;toastT=d;}
 function setObj(t){S.obj=t;$('obj').innerHTML='<small>Цель</small>'+t;}
