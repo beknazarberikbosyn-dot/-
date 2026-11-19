@@ -14,28 +14,29 @@ function glyphEl(i,size=40,color='#0b1416'){const c=document.createElement('canv
 function el(tag,props,...kids){const e=document.createElement(tag);if(props)for(const k in props){if(k==='style')e.style.cssText=props[k];else if(k==='html')e.innerHTML=props[k];else e[k]=props[k];}for(const k of kids)if(k)e.append(k);return e;}
 const SG=[2,1,4,0,3],ROM=['I','II','III','IV','V'];
 const PZ=[
- {i:0,x:3,z:-12.5,y:1.15,ix:3,iz:-11.3,g:2,name:'Стол скульптора',label:'Осмотреть глиняные осколки'},
- {i:1,x:26,z:-12.9,y:1.3,ix:26,iz:-11.5,g:1,name:'Дверь часовни',label:'Осмотреть замок на двери часовни'},
- {i:2,x:46.2,z:35.4,y:1.1,ix:45.7,iz:33.9,g:4,name:'Маяк',label:'Прочесть судовой журнал'},
+ // room: the puzzle stands inside that building (interiors and their doors: src/5-story.js); the HUD arrow then points at the door
+ {i:0,x:240,z:-2.1,y:1.15,ix:240,iz:-.9,g:2,name:'Стол скульптора',label:'Осмотреть глиняные осколки',room:'work'},
+ {i:1,x:295,z:-6.75,y:1.3,ix:295,iz:-5.35,g:1,name:'Дверь ризницы',label:'Осмотреть замок на двери ризницы',room:'chapel'},
+ {i:2,x:140,z:-38,y:1.1,ix:140,iz:-36.6,g:4,name:'Маяк',label:'Прочесть судовой журнал',room:'light'},
  {i:3,x:48,z:5,y:1.6,ix:48,iz:7,g:0,name:'Обелиск на кладбище',label:'Осмотреть обелиск'},
- {i:4,x:-8.6,z:30,y:1.2,ix:-7.5,iz:30,g:3,name:'Рыбный склад',label:'Осмотреть полку с идолами'},
- {i:5,x:14.7,z:35.2,y:.6,ix:13.8,iz:36,g:7,name:'Контора начальника порта',label:'Открыть сейф начальника порта'}];
+ {i:4,x:190,z:-40.6,y:1.2,ix:190,iz:-39.3,g:3,name:'Рыбный склад',label:'Осмотреть полку с идолами',room:'ware'},
+ {i:5,x:244.4,z:-35,y:.6,ix:243.5,iz:-34.2,g:7,name:'Контора начальника порта',label:'Открыть сейф начальника порта',room:'office'}];
 const LORE=[
  ['Сны скульптора','На обороте барельефа — записка: <i>«1 марта 1925 года. Я вылепил это во сне. Мне снились исполинские города из зелёного камня, покрытого слизью, и голос из-под земли, повторявший одно: „Ктулху фхтагн“».</i><br>В те же ночи художники и поэты по всему миру видели один и тот же сон. Кто-то сошёл с ума. Здесь, в Грейхейвене, этот сон считают <b>благословением</b>.'],
  ['Песнь культа','На двери проступила надпись и её перевод, сделанный чьей-то дрожащей рукой: <i>«В своём доме в Р\'льехе мёртвый Ктулху ждёт и видит сны».</i><br>Этот культ старше человечества. Ему поклонялись в льдах Гренландии и на болотах Луизианы, где в 1907 году полиция застала сотню безумцев, плясавших вокруг костра с человеческими жертвами. Теперь он здесь.'],
  ['Город со дна','Весной 1925 года землетрясение подняло из Тихого океана затонувший город Р\'льех. Матросы «Эммы» открыли в нём исполинскую дверь — и <b>нечто</b> вышло наружу. «Гора шла, спотыкаясь», — записал Йохансен. Двое умерли от одного взгляда на него. Потом город снова ушёл под воду. <i>Но тот, кто спит, не умер.</i>'],
  ['Когда звёзды встанут верно','На обелиске высечено: Великие Древние пришли со звёзд задолго до людей. Они не из плоти и крови; когда звёзды стоят неверно, они не могут жить — и лежат в каменных домах, храня себя чарами Ктулху. Но <b>когда звёзды встанут верно</b>, культ освободит своего жреца, и он восстанет из моря.<br>Под текстом — свежая зарубка: сегодняшняя дата.'],
  ['Чужая кровь','Под идолами — приходная книга «улова». Но в ней не рыба: имена, даты, пометки «приезжий», «один», «никто не хватится». Двадцать три строки за десять лет. Жертв приносят с пирса, ночью, при факелах — тому, чьё изображение стоит на полке: голова спрута, крылья, когти. Местные зовут его ласково: <b>Спящий</b>.'],
- ['Последняя строка','В сейфе — ключи от катера. И та самая книга, раскрытая на последней странице. Двадцать четвёртая строка, чернила ещё не высохли:<br><b>«Эдвард Крейн, журналист. Приедет сам. Письмо отправлено»</b>.<br>Письмо старого моряка… было приманкой.']];
+ ['Последняя строка','В сейфе — ключи от катера. И та самая книга, раскрытая на последней странице. Двадцать четвёртая строка, чернила ещё не высохли:<br><b>«Эдвард Крейн, приезжий. Снимает на камеру. Был в подвале „Рифа“. — На алтарь, этой ночью»</b>.<br>Строку вписали час назад.']];
 let curPz=-1,pzTimer=0;
 PZ.forEach(z=>addInter(z.x,z.z,2.6,z.label,()=>openPuzzle(z.i),()=>S.escaped&&!S.solved[z.i]));
 function openPuzzle(i){if(i===5&&S.solved.slice(0,5).some(v=>!v)){toast('Замок с пятью барабанами, на каждом — странные знаки. Нужно узнать все <b>пять знаков культа</b>.',4);return;}
   for(const e of EN)if(e.active&&e.state==='chase'){toast('Не сейчас — за вами гонятся!',2);return;}
   const z=PZ[i];curPz=i;S.pause=true;CAM.fp=true;CAM.rate=3.5;S.camFn=()=>{CAM.ge=[z.ix,1.62,z.iz];CAM.gt=[z.x,z.y,z.z];};SFX.page();
   clearTimeout(pzTimer);pzTimer=setTimeout(()=>{if(curPz!==i)return;$('pzT').textContent=z.name;const b=$('pzB');b.innerHTML='';$('pzD').innerHTML='';PB[i](b,$('pzD'));$('pzX').textContent='Отойти (Esc)';$('puz').style.display='flex';},S.fast?0:950);}
-function closePuzzle(){const was=curPz;curPz=-1;clearTimeout(pzTimer);$('puz').style.display='none';S.pause=false;if(was===5&&S.solved[5]){finale();return;}S.camFn=null;CAM.fp=false;CAM.rate=5;}
+function closePuzzle(){if(LP.on){lpClose(false);return;}const was=curPz;curPz=-1;clearTimeout(pzTimer);$('puz').style.display='none';S.pause=false;if(was===5&&S.solved[5]){finale();return;}S.camFn=null;CAM.fp=false;CAM.rate=5;}
 $('pzX').onclick=closePuzzle;
-function solvePuzzle(i){S.solved[i]=1;S.lore.push(i);SFX.solve();const z=PZ[i];S.cp=[z.ix,z.iz];const b=$('pzB');$('pzD').innerHTML='';
+function solvePuzzle(i){S.solved[i]=1;S.lore.push(i);SFX.solve();const z=PZ[i];S.cp=z.room?roomCp(z.room):[z.ix,z.iz];const b=$('pzB');$('pzD').innerHTML='';
   setTimeout(()=>{b.innerHTML='';b.append(el('h2',{textContent:'«'+LORE[i][0]+'»',style:'margin-top:4px'}),el('div',{className:'hand',html:LORE[i][1],style:'text-align:left'}));
     if(i<5){const s=el('div',{className:'lore',style:'text-align:center;font-size:20px'},'Найден знак '+ROM[i]+': ');s.append(glyphEl(SG[i],44),' «'+GN[SG[i]]+'»');b.append(s);}
     $('pzX').textContent=i<5?'Записать в блокнот':'…';const n=S.solved.slice(0,5).filter(v=>v).length;
@@ -93,7 +94,8 @@ function drawRelief(c){c.fillStyle='#9a8a68';c.fillRect(0,0,300,300);for(let i=0
   c.lineWidth=1.5;c.beginPath();c.moveTo(30,60);c.lineTo(80,120);c.lineTo(60,200);c.moveTo(250,30);c.lineTo(230,140);c.lineTo(270,220);c.stroke();}
 function renderJournal(){const j=$('jbody');j.innerHTML='';j.append(el('p',{html:'<b>Цель:</b> '+S.obj}));
   const s=el('p',{html:'<b>Знаки культа:</b> '});SG.forEach((g,k)=>{const sp=el('span',{className:'sign'},ROM[k]+' ');sp.append(glyphEl(S.solved[k]?g:-1,34));s.append(sp);});j.append(s);
-  if(!S.lore.length)j.append(el('p',{className:'hand',html:'<i>Записей пока нет. Что бы ни происходило в этой деревне — ответы где-то рядом.</i>'}));
+  if(S.notes.length){const n=el('div',{className:'lore'},el('b',{textContent:'Заметки к выпуску',style:'font-size:20px'}));S.notes.forEach(t=>n.append(el('div',{className:'hand',html:'— '+t})));j.append(n);}
+  if(!S.lore.length&&!S.notes.length)j.append(el('p',{className:'hand',html:'<i>Записей пока нет. Что бы ни происходило в этой деревне — ответы где-то рядом.</i>'}));
   S.lore.forEach(i=>j.append(el('div',{className:'lore'},el('b',{textContent:LORE[i][0],style:'font-size:20px'}),el('div',{className:'hand',html:LORE[i][1]}))));
   const eg=EGGS.filter(e=>S.eggs[e.id]);j.append(el('p',{className:'lore',html:'<b>Находки ('+eg.length+' / '+EGGS.length+'):</b> '+(eg.map(e=>e.t).join(', ')||'—')}));
   j.append(el('p',{style:'font-size:16px',html:'<b>Памятка:</b> жителей можно бить (ЛКМ, ЛКМ, затем F — нокаут; ПКМ вовремя — парирование). От культистов в робах — только бежать. Враги медленнее вас: оторвитесь подальше или скройтесь из виду на пару секунд — и вас потеряют. Пригнувшись (C) за ящиками, бочками и лодками, вы невидимы.'}));}

@@ -75,6 +75,17 @@ button.b:hover{background:#efe6cc;transform:translate(-1px,-1px)}
 #roll h1{font-family:var(--head);font-weight:400;font-size:64px;margin:0 0 10px}
 #roll h4{font-family:var(--head);font-weight:400;color:var(--teal);margin:34px 0 0;font-size:18px;letter-spacing:.15em;text-transform:uppercase}
 #again{position:absolute;bottom:24px;display:none}
+#chap{display:flex;align-items:center;justify-content:center;text-align:center;opacity:0;transition:opacity 1.4s;z-index:45}
+#chap small{display:block;font-size:16px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal)}
+#chap b{display:block;font-family:var(--head);font-weight:400;font-size:clamp(44px,8vw,84px);color:#cfe9e2;letter-spacing:.12em;text-shadow:0 0 30px rgba(127,214,200,.3)}
+#chap i{display:block;font-family:var(--hand);font-style:normal;font-size:clamp(28px,4vw,42px);color:var(--paper2)}
+#rec{position:fixed;inset:20px;display:none;pointer-events:none;z-index:15}
+#rec:before,#rec:after{content:'';position:absolute;width:54px;height:54px;border:3px solid rgba(232,226,208,.85)}
+#rec:before{left:0;top:0;border-right:0;border-bottom:0}#rec:after{right:0;bottom:0;border-left:0;border-top:0}
+#rec b{position:absolute;left:22px;top:16px;font-family:var(--head);font-weight:400;font-size:22px;color:#ff4a3a;animation:blink 1s steps(2) infinite}
+#rec span{position:absolute;right:22px;top:16px;font-family:var(--head);font-size:20px;color:#e8e2d0}
+#rec i{position:absolute;left:22px;bottom:16px;font-style:normal;font-size:16px;color:#e8e2d0;letter-spacing:.08em}
+@keyframes blink{50%{opacity:.25}}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:99;background:#061012;font-size:22px;padding:30px;text-align:center}
 #touch{position:fixed;inset:0;pointer-events:none;z-index:25;display:none}
 body.touch #touch.on{display:block}
@@ -98,6 +109,8 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
   <canvas id="face" width="104" height="104"></canvas><div id="det"></div>
 </div>
 <div id="fade" class="ov"></div>
+<div id="chap" class="ov"><div><small>«За гранью» · выпуск первый</small><b>ГЛАВА I</b><i>Зов из тумана</i></div></div>
+<div id="rec"><b>● REC</b><span id="recT">00:00:00</span><i>«ЗА ГРАНЬЮ» · ГРЕЙХЕЙВЕН</i></div>
 <button id="gear" title="Настройки" aria-label="Настройки">⚙</button>
 <div id="touch"><div id="joy"><i></i></div>
 <div id="tbtn2"><b data-k="Tab">Блок-<br>нот</b><b data-k="KeyQ">Апте-<br>чка</b></div>
@@ -109,7 +122,8 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
 <div id="title" class="screen">
   <svg viewBox="0 0 200 120" fill="none" stroke="#7fd6c8" stroke-width="2.2" stroke-linecap="round"><path d="M60 50c0-30 80-30 80 0c0 14-8 22-14 26M60 50c0 14 8 22 14 26"/><path d="M82 70c-6 20-22 18-20 34M94 74c-3 22-10 26-6 40M106 74c3 22 10 26 6 40M118 70c6 20 22 18 20 34M100 76c0 16 2 26 0 38"/><path d="M80 52l10 4M120 52l-10 4" stroke="#c8463a" stroke-width="3.5"/><path d="M58 44C40 30 30 14 16 8c6 14 10 30 30 46M142 44c18-14 28-30 42-36c-6 14-10 30-30 46"/></svg>
   <h1>ЗОВ ИЗ ТУМАНА</h1>
-  <h3>по мотивам рассказа Г. Ф. Лавкрафта «Зов Ктулху» · прототип</h3>
+  <h3>Глава I · по мотивам рассказа Г. Ф. Лавкрафта «Зов Ктулху» · прототип</h3>
+  <p class="hand" style="margin:-14px 0 22px;color:#9fb6b0;font-size:clamp(18px,2.4vw,24px)">«За гранью» — путешествия Эдварда Крейна по местам, о которых не принято говорить</p>
   <button class="b" id="start" style="font-size:26px;padding:8px 34px">Начать</button>
   <div class="keys"><span class="kb">WASD</span>движение · <span class="kb">Shift</span>бег · <span class="kb">C</span>пригнуться · <span class="kb">E</span>действие · <span class="kb">ЛКМ / J</span>удар · <span class="kb">ПКМ / K</span>блок · <span class="kb">F</span>толчок · <span class="kb">Q</span>аптечка · <span class="kb">Tab</span>блокнот · <span class="kb">Esc</span>настройки<br>Лучше играть со звуком и на весь экран. На телефоне — держите горизонтально: слева джойстик, справа кнопки действий.</div>
 </div>
@@ -129,7 +143,7 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
   <div style="text-align:center;margin-top:10px"><button class="b" id="sClose">Продолжить</button></div>
 </div></div>
 
-<div id="journal" class="screen"><div class="panel" style="min-width:min(560px,94vw)"><h2>Блокнот журналиста</h2><div id="jbody"></div><div style="text-align:center;margin-top:10px"><button class="b" id="jClose">Закрыть (Tab)</button></div></div></div>
+<div id="journal" class="screen"><div class="panel" style="min-width:min(560px,94vw)"><h2>Блокнот Эдварда Крейна</h2><div id="jbody"></div><div style="text-align:center;margin-top:10px"><button class="b" id="jClose">Закрыть (Tab)</button></div></div></div>
 <div id="puz" class="screen"><div class="panel"><h2 id="pzT"></h2><p id="pzD"></p><div id="pzB"></div><div style="margin-top:12px"><button class="b" id="pzX">Отойти (Esc)</button></div></div></div>
 <div id="note" class="screen"><div class="panel" style="max-width:min(560px,94vw)"><h2 id="ntT"></h2><div id="ntB" class="hand"></div><div style="text-align:center;margin-top:12px"><button class="b" id="ntX">Закрыть (E)</button></div></div></div>
 <div id="credits" class="screen"><div id="roll"></div><button class="b" id="again">Играть снова</button></div>

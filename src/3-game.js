@@ -1,6 +1,7 @@
 // ================= GAME: state, characters, player, enemies, HUD =================
 const S={mode:'title',t:0,pause:false,fast:false,escaped:false,booked:false,inRoom:false,peeked:false,solved:[0,0,0,0,0,0],lore:[],eggs:{},hp:100,st:100,tired:false,weapon:null,med:0,crouch:false,cp:[-58.5,-40.5],
-  fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0};
+  fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0,
+  explore:false,hunt:false,inside:null,notes:[],asked:0,ints:0,mark:null};
 const P={x:-37,z:-15.6,y:0,rot:PI,ph:0,atk:0,cd:0,block:false,combo:0,comboT:0,hurt:0,vis:false,lie:false,stepT:0,armsUp:0};
 const CAM={eye:[-25,15,-278],tgt:[-28,0,-290],ge:[0,0,0],gt:[0,0,0],fov:.72,rate:5,zoom:1,fp:false};
 const K={};const TJ={on:false,x:0,y:0};let waits=[];
@@ -80,7 +81,7 @@ const EGGS=[
 ];
 function openNote(t,b){$('ntT').textContent=t;$('ntB').innerHTML=b;$('note').style.display='flex';S.pause=true;SFX.page();}
 function closeNote(){$('note').style.display='none';S.pause=false;if(S.noteCb){const f=S.noteCb;S.noteCb=null;f();}}
-EGGS.forEach(e=>{W;addInter(e.x,e.z,e.r,'Осмотреть: '+e.t,()=>{if(!S.eggs[e.id]){S.eggs[e.id]=1;}openNote(e.t,e.b);},()=>e.id=='book'?S.inRoom:S.escaped);});
+EGGS.forEach(e=>{W;addInter(e.x,e.z,e.r,'Осмотреть: '+e.t,()=>{if(!S.eggs[e.id]){S.eggs[e.id]=1;}openNote(e.t,e.b);},()=>e.id=='book'?S.inRoom:S.explore&&!S.inside);});
 
 // --- enemies
 const EN=[];let grpN=0;
@@ -103,6 +104,7 @@ let PF=null,PFt=0;
 function updEnemy(e,dt){
   if(!e.active||e.state==='ko')return;e.mv=0;e.cd-=dt;
   if(e.stun>0){e.stun-=dt;e.wind=0;return;}
+  if(e.flee){fleeE(e,dt);return;}
   const dx=P.x-e.x,dz=P.z-e.z,d=hypot(dx,dz)||.01;
   // perception
   const Rv=(e.kind==='c'?14:11)*S.diff*(S.crouch?.55:1);e.rv=Rv;e.lr=(e.kind==='c'?16:12.5)*S.diff;const fx=sin(e.rot),fz=cos(e.rot),dt_=(dx*fx+dz*fz)/d;
@@ -138,7 +140,7 @@ function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return
     if(best.hp<=0){best.state='ko';best.aw=0;toast('Житель без сознания.',1.8);}}
   if(best.state!=='ko'&&best.state!=='chase')alertE(best);}
 async function die(){S.mode='dead';S.deaths++;P.lie=true;SFX.thud();toast('Удар… темнота.',3);await fade(1,900);await wait(1.2);
-  P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active)continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
+  S.inside=null;P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active)continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
   toast('Вы очнулись в тени. Кажется, вас потеряли из виду…',4);S.mode='play';camSnap();await fade(0,900);}
 
 // --- input
@@ -149,6 +151,7 @@ addEventListener('mouseup',e=>{if(e.button===2)K.RMB=0;});addEventListener('cont
 addEventListener('wheel',e=>{CAM.zoom=clamp(CAM.zoom+Math.sign(e.deltaY)*.08,.7,1.3);},{passive:true});
 function curInter(){let b=null,bd=1e9;for(const o of inter){if(!o.on())continue;const d=hypot(o.x-P.x,o.z-P.z);if(d<o.r&&d<bd){bd=d;b=o;}}return b;}
 function onKey(c){
+  if(LP.on){if(c==='KeyE'||c==='Space'||c==='Enter'||c==='KeyJ')lpPress();else if(c==='Escape')lpClose(false);return;}
   if(c==='Escape'){if($('puz').style.display==='flex')return closePuzzle();if($('note').style.display==='flex')return closeNote();if($('journal').style.display==='flex')return toggleJournal();return toggleSettings();}
   if($('note').style.display==='flex'){if(c==='KeyE'||c==='Enter'||c==='Space')closeNote();return;}
   if(c==='Tab'&&S.hud&&$('puz').style.display!=='flex'&&$('settings').style.display!=='flex')return toggleJournal();
@@ -176,9 +179,9 @@ function updPlayer(dt){
   if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);if(P.atk<=0)faceTo(P,atan2(mx,mz),dt,12);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
   P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
   P.atk-=dt;P.cd-=dt;P.hurt-=dt;if(P.comboT>0){P.comboT-=dt;if(P.comboT<=0)P.combo=0;}
-  for(const p of pickups){if(p.taken||!S.escaped)continue;if(hypot(p.x-P.x,p.z-P.z)<1.1){if(p.t==='m'){p.taken=1;S.med++;toast('Аптечка (+1). <span class="kb">Q</span>— использовать.',3);SFX.pick();}
+  for(const p of pickups){if(p.taken||!S.explore||S.inside)continue;if(hypot(p.x-P.x,p.z-P.z)<1.1){if(p.t==='m'){p.taken=1;S.med++;toast('Аптечка (+1). <span class="kb">Q</span>— использовать.',3);SFX.pick();}
     else if(!S.weapon||S.weapon.dmg<=p.dmg){p.taken=1;S.weapon={name:p.name,dmg:p.dmg,dur:p.dur};toast('Подобрано: <b>'+p.name+'</b>. Удары сильнее, но оно не вечно.',3.5);SFX.pick();}}}
-  if(!S.escaped&&(P.x>-24.6||P.z>-6.4)){P.x=min(P.x,-24.6);P.z=min(P.z,-6.4);if(toastT<=0)toast(S.peeked?'Через главную дорогу нельзя — увидят. Сначала окно!':'Ночь, туман… Сначала нужно снять комнату в мотеле.',3);}
+  if(!S.explore&&!S.inside&&(P.x>-24.6||P.z>-6.4)){P.x=min(P.x,-24.6);P.z=min(P.z,-6.4);if(toastT<=0)toast(S.booked?'Сначала — в номер: занести вещи и записать вступление к выпуску.':'Ночь, туман… Сначала нужно снять комнату в мотеле.',3);}
 }
 // --- HUD
 const hctx=$('hud2d').getContext('2d'),fctx=$('face').getContext('2d');
@@ -198,7 +201,7 @@ function updHud(dt){$('bhp').firstChild.style.width=S.hp+'%';$('bst').firstChild
   $('items').innerHTML='🩹 Аптечки: '+S.med+' &nbsp; 🔧 '+(S.weapon?S.weapon.name+' ('+S.weapon.dur+')':'кулаки')+(S.crouch?' &nbsp; ▾ пригнулся':'');
   const o=S.mode==='play'&&!S.pause?curInter():null,p=$('prompt');if(o){p.style.display='block';p.innerHTML='<kbd>E</kbd>'+o.label;}else p.style.display='none';
   let mx=0;for(const e of EN)if(e.active&&e.state!=='ko')mx=max(mx,e.state==='chase'?2:e.aw);
-  $('det').innerHTML=!S.escaped?'':S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':'';
+  $('det').innerHTML=!S.hunt?'':S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':'';
   const f=S.mode==='finale'?S.fear:S.chased>0||S.hp<30?2:mx>.15?1:0;faceT-=dt;if(f!==S.fear||f>=2&&faceT<=0||faceT<-5){if(S.mode!=='finale')S.fear=f;drawFace();faceT=.08;}
   $('flash').style.opacity=clamp(P.hurt*1.6,0,.8)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
   if(S.chased>0){S.chased-=dt;S.hbT=(S.hbT||0)-dt;if(S.hbT<=0){SFX.heart();S.hbT=.75;}}}
@@ -206,8 +209,12 @@ function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0
   for(const e of EN){if(!e.active||e.state==='ko')continue;const ch=e.state==='chase';if(!ch&&e.aw<.06&&e.state!=='search'&&e.stun<=0&&e.wind<=0)continue;const p=proj(e.x,2.5,e.z);if(p.w<=0)continue;const x=p.x*w,y=p.y*h;
     if(e.wind>0){c.fillStyle='#fff';c.font='bold 30px Georgia';c.fillText('⚔',x,y-4);continue;}if(e.stun>0){c.fillStyle='#f0c060';c.font='22px Georgia';c.fillText('✶✶',x,y);continue;}
     if(!ch)continue;c.font='bold 30px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText('!',x,y);c.fillStyle='#ff5a48';c.fillText('!',x,y);}
-  if(S.escaped&&S.mode==='play')for(const z of PZ){if(S.solved[z.i]||(z.i===5&&S.solved.slice(0,5).some(v=>!v)))continue;const p=proj(z.x,1.5,z.z);let x=(p.x-.5),y=(p.y-.5);if(p.w<=0){x=-x;y=-y;}
-    if(p.w>0&&abs(x)<.44&&abs(y)<.42)continue;const a=atan2(y*h,x*w),rx=w/2-46,ry=h/2-86,k=1/max(abs(cos(a))/rx,abs(sin(a))/ry),px=w/2+cos(a)*k,py=h/2+sin(a)*k;
-    c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle='#7fd6c8';c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();glyph(c,z.g,0,0,11,'#7fd6c8');c.rotate(a);c.fillStyle='#7fd6c8';c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}}
+  if(S.escaped&&S.mode==='play')for(const z of PZ){if(S.solved[z.i]||(z.i===5&&S.solved.slice(0,5).some(v=>!v)))continue;const T=pzTarget(z);if(T)edgeArrow(c,w,h,T[0],T[1],'#7fd6c8',()=>glyph(c,z.g,0,0,11,'#7fd6c8'));}
+  if(!S.escaped&&S.mode==='play'){const T=markTarget();if(T)edgeArrow(c,w,h,T[0],T[1],'#f0c060',()=>{c.fillStyle='#f0c060';c.font='bold 24px Georgia';c.fillText('!',0,1);});}
+  storyHud(c,w,h);}
+// arrow at the screen edge towards an off-screen world point (x,z)
+function edgeArrow(c,w,h,wx,wz,col,icon){const p=proj(wx,1.5,wz);let x=(p.x-.5),y=(p.y-.5);if(p.w<=0){x=-x;y=-y;}
+  if(p.w>0&&abs(x)<.44&&abs(y)<.42)return;const a=atan2(y*h,x*w),rx=w/2-46,ry=h/2-86,k=1/max(abs(cos(a))/rx,abs(sin(a))/ry),px=w/2+cos(a)*k,py=h/2+sin(a)*k;
+  c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();icon();c.rotate(a);c.fillStyle=col;c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}
 function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();}
 function camGoal(){if(S.camFn){S.camFn();return;}CAM.ge=[P.x,17.5*CAM.zoom,P.z+12.5*CAM.zoom];CAM.gt=[P.x,1,P.z];}

@@ -94,13 +94,9 @@ fence(-30,-3.5,-26,-3.5);fence(-8,7,-8,11);fence(27,8,34,8);fence(-24,20.5,-20,2
 // quay clutter (no collision: small)
 [[-17,43.4,0],[-6.5,43.6,1],[22,43.2,2],[29,43.5,0],[4,43.8,1],[-27,43,2]].forEach(([x,z,v])=>prop(['ropecoil','trap','buoy'][v],x,0,z,rnd()*6.28,1,null,null));
 prop('anchor',16.5,0,43.6,.4,1,null,null);prop('cart',-20.5,0,-10.2,.3,1,null,null);col(-21.6,-11,-19.4,-9.4,1);prop('bench',-1.5,0,-6.2,0,1,null,null);
-// --- puzzle & easter-egg props
-prop('sculptor_table',3,0,-12.4,0,1,null,()=>{W.bx(0,0,0,1.7,.9,.7,PAL.wood);W.at(mM(mT(0,1.2,-.15),mRx(-.35)),()=>W.box(0,0,0,.75,.62,.08,H('#9a8a68')));});col(2.1,-12.8,3.9,-12,1);
+// --- puzzle & easter-egg props (the table, lectern, idol shelf and safe now stand inside the buildings: src/5-story.js)
 if(!hasModel('chapel'))W.cyl(26,1.05,-12.86,.34,.34,.5,8,H('#b08d3c',.25));
-prop('lectern',46.2,0,35.4,-.9,1,null,()=>{W.bx(0,0,0,.5,1.05,.5,PAL.woodD);W.bx(0,1.05,0,.6,.08,.5,H('#d9cdb0',.3));});col(45.95,35.15,46.45,35.65,1);
 for(let i=0;i<5;i++){const a=i/5*2*PI;W.bx(48+cos(a)*.62,1.3+i%2*.5,5+sin(a)*.62,.14,.14,.14,H('#7fffe0',.9));}
-prop('idol_shelf',-8.6,0,30,PI/2,1,null,()=>{W.bx(0,0,0,2.8,1,.6,PAL.stone);for(let i=0;i<4;i++){W.cyl(-1+i*.66,1,0,.16,.1,.42,5,H('#5c8a6a',.25));W.sph(-1+i*.66,1.5,0,.13,.13,.13,H('#5c8a6a',.25),5,3);}});col(-8.9,28.6,-8.3,31.4,1.1);
-prop('safe',14.7,0,35.2,-PI/2,1,null,()=>{W.bx(1.3,0,-.25,.9,1.9,.1,PAL.woodD);W.bx(0,0,0,.55,.8,.55,H('#3a4448'));W.cyl(0,.4,.28,.1,.1,.06,6,H('#b08d3c',.3));});col(14.4,34.9,15,35.5,1);
 prop('mailbox',-6.6,0,-11.8,0,1,null,()=>{W.bx(0,0,0,.1,1.1,.1,PAL.dark);W.bx(0,1.1,0,.3,.24,.46,H('#7a3a30'));});
 prop('noticeboard',15.6,0,-14.4,0,1,null,()=>{W.bx(-.8,0,0,.1,1.9,.1,PAL.woodD);W.bx(.8,0,0,.1,1.9,.1,PAL.woodD);W.bx(0,1,0,1.7,.9,.07,PAL.wood);W.bx(-.2,1.3,.06,.4,.5,.03,H('#e8dfc4',.35));W.bx(.4,1.4,.06,.3,.3,.03,H('#d8cfa4',.3));});col(14.7,-14.5,16.5,-14.3,1.9);
 prop('idol',17.5,1.2,5.14,PI,1,null,()=>{W.cyl(0,0,0,.1,.07,.3,5,H('#5c9a72',.5));W.sph(0,.38,0,.09,.09,.09,H('#5c9a72',.5),5,3);});
@@ -115,7 +111,7 @@ const BRAZ=[[3.2,69.2],[16.8,69.2],[3.2,80.8],[16.8,80.8]];
 const pierGate=col(7,48.3,13,48.9,2.2);
 for(const r of[[-300,47,7,400],[13,47,300,68],[-300,68,2,400],[18,68,300,400],[2,82,18,400]])col(r[0],r[1],r[2],r[3],0);
 // world bounds
-col(-300,-400,-71.5,400,0);col(63.5,-400,300,400,0);col(-300,-400,300,-47.5,0);
+col(-300,-400,-71.5,400,0);col(63.5,-400,112,400,0);col(112,18,300,400,0);col(-300,-400,300,-47.5,0);// x 112..300, z -47.5..18 is left for the interiors (src/5-story.js)
 
 // --- MOTEL (roofless, Sims-style cutaway)
 const MW=H('#7f7462'),MW2=H('#71675a'),WAIN=H('#4f3d2c'),PAPER=H('#6d6a55');

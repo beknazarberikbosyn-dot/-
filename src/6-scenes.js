@@ -7,16 +7,20 @@ const CAR={x:-28,z:-292,rot:0,parked:false,wp:[[-28,-34],[-28.6,-25],[-31,-20],[
 function updCar(dt){if(CAR.parked)return;const w=CAR.wp[CAR.wi],dx=w[0]-CAR.x,dz=w[1]-CAR.z,d=hypot(dx,dz);if(d<.7){if(++CAR.wi>=CAR.wp.length){parkCar();return;}return;}
   const sp=CAR.wi>0?2.6:CAR.sp;faceTo(CAR,atan2(dx,dz),dt,CAR.wi>0?2.2:4);CAR.x+=sin(CAR.rot)*sp*dt;CAR.z+=cos(CAR.rot)*sp*dt;}
 function parkCar(){CAR.parked=true;CAR.x=-38;CAR.z=-18;CAR.rot=-PI/2;const c=col(-40.2,-19,-35.8,-17,1.4);blockRect(c);if(AU.eng){AU.eng.gain.setTargetAtTime(0,AU.ctx.currentTime,.4);}}
-const DRIVE=[['col','Эдвард, ты хоть понимаешь, который час? Куда тебя понесло на ночь глядя?'],['hero','В Грейхейвен. Рыбацкая деревушка на побережье — её даже на новых картах нет.'],['col','И что там такого, ради чего стоит гнать сквозь этот туман?'],
- ['hero','За десять лет в тех краях пропало двадцать три человека. Все — приезжие. И все следы обрываются у этой деревни.'],['hero','Мне написал старый моряк. Говорит, местные — не просто нелюдимые рыбаки. Это секта.'],['col','Секта? Брось. Очередная байка для туристов.'],
- ['hero','Он пишет, что чужаков там приносят в жертву. Какому-то демону из моря… Они зовут его «Спящий».'],['col','Господи… Тогда разворачивайся. Никакая статья не стоит —'],['hero','Письмо пришло неделю назад, Уолтер. А вчера моряка нашли на берегу. Мёртвым. Я должен увидеть всё сам.'],
- ['col','Эдв… тебя… плохо слыш… ш-ш-ш…'],['hero','Уолтер? Алло?.. Связь пропала. Ну и туман. А вот и мотель.']];
+const DRIVE=[['col','Эдвард, ты меня слышишь? Связь в этих лесах — просто кошмар.'],['hero','Слышу, Уолтер. Камера пишет, батареи заряжены. Ещё полчаса — и я в Грейхейвене.'],
+ ['col','Слушай… я поднял всё, что смог найти. За десять лет там пропали двадцать три человека. А живыми оттуда выбрались только четверо.'],['hero','Четверо из двадцати трёх. Для первого выпуска нового сезона — лучше не придумаешь.'],
+ ['col','Не смешно. Все четверо — в психушке или у мозгоправов на сеансах. Ведут себя как безумцы. И несут одно и то же — слово в слово.'],['hero','И что же они несут?'],
+ ['col','Что их схватили, едва они приехали. Держали в подвале местного паба — в клетках, в кандалах. Пытали. Ставили на них какие-то опыты.'],
+ ['col','А сбежали они только потому, что кандалы проржавели, а клетки сварены кое-как. Им просто повезло, Эдвард.'],
+ ['hero','Четыре человека, не знакомых друг с другом, рассказывают одну и ту же историю. Это уже не бред, Уолтер. Это — сюжет.'],
+ ['col','Это повод развернуться! Ты хоть свои отмычки не взял?'],['hero','Обижаешь. Какой же выпуск без пары запертых дверей. Я просто осмотрюсь: пара кадров, пара интервью — и назад.'],
+ ['col','В том-то и де… Эдв… плохо слыш… ш-ш-ш…'],['hero','Уолтер? Алло?.. Пропала связь. А вот и мотель.']];
 async function intro(){S.mode='drive';$('skip').style.display='block';$('gear').style.display='block';S.camFn=()=>{CAM.ge=[CAR.x+6,21,CAR.z+16];CAM.gt=[CAR.x,0,CAR.z+2];};S.focus=()=>[CAR.x,0,CAR.z+3];camSnap();
   if(AU.ctx){const c=AU.ctx,o=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o.frequency.value=58;f.type='lowpass';f.frequency.value=190;g.gain.value=.11;o.connect(f);f.connect(g);g.connect(AU.sfx);o.start();AU.eng=g;}
-  fade(0,2200);await wait(2);
+  fade(0,2200);{const c=$('chap');c.style.opacity=1;setTimeout(()=>c.style.opacity=0,S.fast?0:4200);}await wait(4.6);
   for(const[w,t]of DRIVE)await say(w==='hero'?HERO:'Уолтер (по телефону)',t,VO[w]);
   while(!CAR.parked&&!S.fast)await wait(.2);
-  if(S.fast){$('fade').style.transitionDuration='0ms';$('fade').style.opacity=1;if(sub)sub.res();}
+  if(S.fast){$('fade').style.transitionDuration='0ms';$('fade').style.opacity=1;$('chap').style.opacity=0;if(sub)sub.res();}
   if(!CAR.parked)parkCar();await wait(.8);
   S.fast=false;$('skip').style.display='none';P.vis=true;P.x=-37;P.z=-15.8;P.rot=2.4;S.camFn=null;S.focus=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2500);
   S.hud=true;$('hud').style.display='block';setObj('Войдите в мотель и снимите комнату на ночь.');S.mode='play';SFX.door();fade(0,900);
@@ -24,29 +28,7 @@ async function intro(){S.mode='drive';$('skip').style.display='block';$('gear').
 $('skip').onclick=()=>{S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());};
 $('start').onclick=()=>{auInit();$('title').style.display='none';intro();};
 
-// --- motel story
-let doorShut=false;
-addInter(-43.5,-32.1,1.8,'Поговорить с хозяином мотеля',async()=>{S.mode='talk';P.rot=PI;
-  await say(HERO,'Добрый вечер. Мне нужна комната на одну ночь.',VO.hero);await say('Хозяин мотеля','…Приезжий. Мы тут приезжих не жалуем.',VO.own);await say(HERO,'Я заплачу вперёд.',VO.hero);
-  await say('Хозяин мотеля','Все вы платите. Третья комната, в конце коридора. И ночью по деревне не шляйтесь. Туман… мало ли что.',VO.own);
-  S.booked=true;S.mode='play';setObj('Идите в комнату №3 — налево, в конец коридора.');SFX.pick();},()=>!S.booked);
-addInter(-55.6,-34,1.5,'Заглянуть в дыру в стене',async()=>{S.mode='talk';await fade(1,500);owner.x=-50.3;owner.z=-33;owner.rot=-2.4;con.x=-51.6;con.z=-35.4;con.rot=.7;
-  CAM.fp=true;S.camFn=()=>{CAM.ge=[-54.7,1.42,-34];CAM.gt=[-51.4,1.3,-34.2];};camSnap();$('peek').style.opacity=1;await fade(0,700);
-  await say('Хозяин мотеля','Он один. Никто не знает, что он здесь.',VO.own);await say('Житель','Звёзды встанут сегодня. Жрец сказал: жертва нужна до рассвета.',VO.vil);
-  await say('Хозяин мотеля','Значит, газетчик и ляжет на алтарь. Спящий получит своё.',VO.own);await say('Житель','Берём его сейчас, пока не лёг. Я позову остальных.',VO.vil);
-  await fade(1,500);$('peek').style.opacity=0;CAM.fp=false;S.camFn=null;camSnap();S.peeked=true;await fade(0,600);SFX.door();S.shake=.2;
-  await say(HERO,'Они говорят обо мне… В дверь уже ломятся. Окно!',VO.hero);setObj('Бегите через окно в дальней стене!');S.mode='play';},()=>S.inRoom&&!S.peeked);
-addInter(-58.5,-37.4,1.6,'Вылезти в окно',async()=>{S.mode='talk';await fade(1,450);P.x=-58.5;P.z=-39.5;P.rot=PI;S.escaped=true;S.cp=[-58.5,-40.5];
-  owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;for(const e of EN){if(e.stay){e.show=false;continue;}e.active=true;e.hx=e.x;e.hz=e.z;}camSnap();noise(.4,{f:1800,vol:.2,to:400});await fade(0,600);S.mode='play';
-  setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Машина выведена из строя. Единственный путь из деревни — катер, ключи от которого заперты в конторе начальника порта.</span>');
-  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast((document.body.classList.contains('touch')?'«Присесть»':'<span class="kb">C</span>')+'— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
-addInter(-38,-18,2.5,'Осмотреть машину',()=>toast('Все четыре шины проколоты. На машине отсюда уже не уехать.',4),()=>S.escaped);
-function story(dt){
-  if(!S.escaped){for(const[e,t]of[[con,'Чего уставился, городской? Катился бы ты отсюда.'],[loaf,'*сплёвывает под ноги* Ещё один…']]){const d=hypot(e.x-P.x,e.z-P.z);if(d<5&&!S.peeked)faceTo(e,atan2(P.x-e.x,P.z-e.z),dt,3);if(d<3&&!e.barked&&!sub){e.barked=1;say('Житель',t,VO.vil);}}
-    if(!S.peeked)faceTo(owner,atan2(P.x-owner.x,P.z-owner.z),dt,2);}
-  if(S.booked&&!S.inRoom&&P.x<-55.5&&P.z<-30){S.inRoom=true;doorShut=true;blockRect(col(-59.1,-29.15,-57.9,-28.85,3));SFX.door();(async()=>{S.mode='talk';
-    await say(HERO,'Ну и дыра. Сыростью и рыбой несёт… Постой. Голоса за стеной?',VO.hero);setObj('Осмотрите дыру в стене справа.');S.mode='play';})();}
-}
+// --- the motel, the village and the pub before the hunt: src/5-story.js
 
 // ================= CTHULHU: part rig (Blender models, primitive fallback) =================
 const CTHC={a:H('#143233'),b:H('#0f2729'),c:H('#1d4543'),m:H('#11302f'),eye:H('#ff3018',1)};
@@ -150,13 +132,13 @@ const ALTAR_EYE=[10,1.78,74.9];
 async function finale(){S.mode='finale';S.fear=1;S.hud=false;$('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='none';{const f=$('face');f.style.width=f.style.height='150px';f.style.left='auto';f.style.right='16px';f.style.bottom='auto';f.style.top='16px';}for(const e of EN)e.active=false;
   const z=PZ[5],eye=[z.ix,1.62,z.iz];FIN.attacker={x:eye[0]-1.9,z:eye[2]+.5,rot:atan2(1.9,-.5),arm:-1.2};
   FIN.look=[z.x,z.y,z.z];CAM.fp=true;CAM.rate=4;S.camFn=()=>{CAM.ge=eye;CAM.gt=fpTarget(eye,FIN.look);};
-  await say(HERO,'Ключи от катера… и моё имя в их книге. Они ждали меня с самого начала…',VO.hero);
+  await say(HERO,'Ключи от катера… и моё имя в их книге. Они уже всё решили за меня…',VO.hero);
   SFX.creak();await wait(.5);await say(HERO,'Кто здесь?!',VO.hero);FIN.look=[FIN.attacker.x,1.7,FIN.attacker.z];CAM.rate=3.2;await wait(1.1);S.fear=3;
   FIN.atkSwing=1;SFX.swing();await wait(.32);SFX.thud();S.shake=1;$('flash').style.opacity=1;FIN.look=vAdd(eye,[-2,-1.4,1]);CAM.rate=9;S.camFn=()=>{CAM.ge=[eye[0],lerp(CAM.ge[1],.35,.08),eye[2]];CAM.gt=fpTarget(CAM.ge,FIN.look);};
   await wait(.35);lids(false,250);await wait(.5);$('fade').style.transitionDuration='300ms';$('fade').style.opacity=1;$('flash').style.opacity=0;FIN.attacker=null;
   noise(2.5,{f:200,vol:.25,att:1,delay:.6});await wait(3.2);
   // --- the pier at night: storm, torches, altar
-  FIN.on=true;P.vis=false;pierGate.off=true;owner.show=con.show=loaf.show=false;STORM.k=.55;R.rain=.55;PT.update(0,ALTAR_EYE);
+  FIN.on=true;S.inside=null;P.vis=false;pierGate.off=true;owner.show=con.show=loaf.show=false;STORM.k=.55;R.rain=.55;PT.update(0,ALTAR_EYE);
   for(let i=0;i<10;i++){const a=1.05+i/9*(2*PI-2.1);FIN.cult.push({x:10+sin(a)*6.2,z:76+cos(a)*5.6,rot:a+PI,ph:i*1.7,kneel:0});}
   FIN.priest={x:6.2,z:80.6,rot:.5,ph:.3};
   S.camFn=()=>{const e=ALTAR_EYE;CAM.ge=e;CAM.gt=fpTarget(e,FIN.look);};FIN.look=[10.4,14,77.5];CAM.rate=2.2;CAM.fov=1.05;camSnap();
@@ -210,8 +192,8 @@ function drawFinale(){if(FIN.attacker){const a=FIN.attacker;if(FIN.atkSwing)FIN.
   if(FIN.hands&&!FIN.grab){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f);for(const s of[-1,1]){const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.32),vSc(up,-.42)),vSc(f,.05)));
     const tip=vAdd(sp,vAdd(vAdd(vSc(f,.75),vSc(up,.42+sin(S.t*14+s)*.05)),vSc(r,-s*.08)));draw(CH.hero.arm,mBasis(sp,vSub(tip,sp),vSc(f,-1)),0);}}}
 function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';$('lids').style.display='none';cv.style.filter='';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
-  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Эдварда Крейна больше никто не видел.<br>Через неделю в редакцию пришло письмо от «старого моряка» —<br>на имя нового репортёра.</div>'+
-   '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, журналист<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Жители Грейхейвена<br>Жрец и братья в робах<br>и Тот, кто спит в Р\'льехе'+
+  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Эдварда Крейна больше никто не видел.<br>Через неделю Уолтеру пришло видео с его номера:<br>шторм над пирсом, факелы — и что-то огромное в море.</div><h4>Конец первой главы</h4>'+
+   '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, ведущий канала «За гранью»<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Хозяин паба «Дьяволов риф»<br>Жители Грейхейвена<br>Жрец и братья в робах<br>и Тот, кто спит в Р\'льехе'+
    '<h4>Ваше расследование</h4>Знаков культа найдено: 5 / 5<br>Находок-отсылок: '+n+' / '+EGGS.length+'<br>Потерь сознания: '+S.deaths+'<br>Время в деревне: ~'+mins+' мин'+
    '<h4>Прототип</h4>Модели — Blender, графика — WebGL, звук синтезирован в браузере<br><br><br><span class="hand" style="font-size:34px">«Не мертво то, что в вечности пребудет…»</span><br><br><br>Спасибо за игру';
   const r=$('roll');let y=innerHeight;const hgt=r.offsetHeight;const step=()=>{y-=innerHeight/900*1.6;r.style.top=y+'px';if(y>-hgt+innerHeight*.55)requestAnimationFrame(step);else $('again').style.display='block';};step();setTimeout(()=>$('again').style.display='block',12000);}
@@ -223,21 +205,23 @@ function drawAll(){
   for(const l of LAMPS)light(l[0],l[1],l[2],l[3]*(1+sin(S.t*8+l[0])*.03),l[4]);
   for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
     let aR=c?-1.25:e.state==='chase'?-.7:null;if(e.wind>0)aR=-2.7;if(e.atk>0){e.atk-=.016;aR=lerp(.4,-2.6,e.atk/.3);}
-    const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
+    if(e.flee&&e.state!=='ko'&&e.stun<=0)aR=-2.6+sin(S.t*10)*.35;   // the pub owner waving his arms while he yells
+    const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active&&!e.unarmed,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
     if(c&&e.state!=='ko')torchFx(m,e.ph);}
   if(P.vis&&!CAM.fp){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}
   draw(M_car,mM(mT(CAR.x,0,CAR.z),mRy(CAR.rot)),.04);if(!CAR.parked){const fx=CAR.x+sin(CAR.rot)*7,fz=CAR.z+cos(CAR.rot)*7;light(fx,1.5,fz,15,[1,.9,.6]);light(CAR.x,3,CAR.z,7,[.5,.5,.45]);}
-  if(doorShut)draw(M_door,mT(-58.5,0,-29),.03);
-  if(S.escaped&&!FIN.on&&S.mode!=='finale'){for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
+  if(S.explore&&!FIN.on&&S.mode!=='finale')for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
+  if(S.escaped&&!FIN.on&&S.mode!=='finale'){
     for(const z of PZ){if(S.solved[z.i])continue;const dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);draw(M_beacon,mM(mT(z.x,2.7+sin(S.t*2+z.i)*.15,z.z),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(z.x,2.2,z.z+.8,6.5,[.25,.8,.7]);}}
-  for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.escaped)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
-  drawFinale();}
+  for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
+  drawStory();drawFinale();}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
   if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
   R.sunC=[.34,.42,.46];
   if(FIN.on){const g=FIN.u>0?kf(FIN.u,4,20):0;R.fog=[lerp(.06,.13,g),lerp(.13,.25,g),lerp(.145,.27,g)];R.fogD=S.fogK/lerp(80,108,g);R.fogMin=.03;R.fogH=.04;R.amb=[.3,.41,.45];
     M.den=.75*S.fogK;M.top=6.5;M.col=[.22,.32,.34];M.maxD=80;return;}
+  if(S.inside){const I=ROOMS[S.inside];R.fog=I.fog||[.025,.03,.032];R.amb=I.amb||[.28,.3,.3];R.sunC=[.1,.12,.13];R.fogD=1/60;R.fogMin=0;R.fogH=.05;M.den=(I.mist||.22)*S.fogK;M.top=1.5;M.col=[.16,.17,.17];M.maxD=40;return;}
   R.fog=[.075,.15,.165];R.amb=[.36,.47,.5];R.fogH=.15;M.col=[.3,.42,.43];M.maxD=90;
   if(S.mode==='drive'||S.mode==='title'){R.fogD=S.fogK/30;R.fogMin=.03;M.den=.75*S.fogK;M.top=3.2;}else{R.fogD=S.fogK/25;R.fogMin=.05*S.fogK;M.den=1.05*S.fogK;M.top=3.5;}}
 let last=0;
@@ -253,7 +237,8 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
 $('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
 // debug / test hooks
 window.DBG={R,S,P,EN,CAM,FIN,PB,PZ,PT,STORM,cols,blocked,field,finale,solvePuzzle,openPuzzle,closePuzzle,cthPose,waveH,
-  toPlay(){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;S.booked=S.inRoom=S.peeked=S.escaped=true;P.x=-58.5;P.z=-40.5;for(const e of EN){e.active=true;}owner.x=-44;owner.z=-27.6;$('fade').style.opacity=0;setObj('Найдите знаки культа: 0 / 5');},300);}};
+  // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'play' (default: the puzzle hunt)
+  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,get LP(){return LP;}};
 </script>
 </body>
 </html>
