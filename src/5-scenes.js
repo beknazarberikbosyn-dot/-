@@ -20,7 +20,7 @@ async function intro(){S.mode='drive';$('skip').style.display='block';$('gear').
   if(!CAR.parked)parkCar();await wait(.8);
   S.fast=false;$('skip').style.display='none';P.vis=true;P.x=-37;P.z=-15.8;P.rot=2.4;S.camFn=null;S.focus=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2500);
   S.hud=true;$('hud').style.display='block';setObj('Войдите в мотель и снимите комнату на ночь.');S.mode='play';SFX.door();fade(0,900);
-  toast('<span class="kb">WASD</span>— идти, <span class="kb">Shift</span>— бежать, <span class="kb">E</span>— действие',6);}
+  toast(document.body.classList.contains('touch')?'Джойстик слева — идти (до упора — бег), кнопки справа — действия':'<span class="kb">WASD</span>— идти, <span class="kb">Shift</span>— бежать, <span class="kb">E</span>— действие',6);}
 $('skip').onclick=()=>{S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());};
 $('start').onclick=()=>{auInit();$('title').style.display='none';intro();};
 
@@ -39,7 +39,7 @@ addInter(-55.6,-34,1.5,'Заглянуть в дыру в стене',async()=>{
 addInter(-58.5,-37.4,1.6,'Вылезти в окно',async()=>{S.mode='talk';await fade(1,450);P.x=-58.5;P.z=-39.5;P.rot=PI;S.escaped=true;S.cp=[-58.5,-40.5];
   owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;for(const e of EN){if(e.stay){e.show=false;continue;}e.active=true;e.hx=e.x;e.hz=e.z;}camSnap();noise(.4,{f:1800,vol:.2,to:400});await fade(0,600);S.mode='play';
   setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Машина выведена из строя. Единственный путь из деревни — катер, ключи от которого заперты в конторе начальника порта.</span>');
-  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast('<span class="kb">C</span>— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
+  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast((document.body.classList.contains('touch')?'«Присесть»':'<span class="kb">C</span>')+'— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
 addInter(-38,-18,2.5,'Осмотреть машину',()=>toast('Все четыре шины проколоты. На машине отсюда уже не уехать.',4),()=>S.escaped);
 function story(dt){
   if(!S.escaped){for(const[e,t]of[[con,'Чего уставился, городской? Катился бы ты отсюда.'],[loaf,'*сплёвывает под ноги* Ещё один…']]){const d=hypot(e.x-P.x,e.z-P.z);if(d<5&&!S.peeked)faceTo(e,atan2(P.x-e.x,P.z-e.z),dt,3);if(d<3&&!e.barked&&!sub){e.barked=1;say('Житель',t,VO.vil);}}

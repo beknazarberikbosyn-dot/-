@@ -76,6 +76,17 @@ button.b:hover{background:#efe6cc;transform:translate(-1px,-1px)}
 #roll h4{font-family:var(--head);font-weight:400;color:var(--teal);margin:34px 0 0;font-size:18px;letter-spacing:.15em;text-transform:uppercase}
 #again{position:absolute;bottom:24px;display:none}
 #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:99;background:#061012;font-size:22px;padding:30px;text-align:center}
+#touch{position:fixed;inset:0;pointer-events:none;z-index:25;display:none}
+body.touch #touch.on{display:block}
+#joy{position:absolute;left:24px;bottom:24px;width:150px;height:150px;border-radius:50%;border:2.5px solid rgba(217,205,176,.55);background:rgba(11,20,22,.35);pointer-events:auto;touch-action:none}
+#joy i{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:rgba(217,205,176,.55);border:2px solid #0b1416}
+#tbtn{position:absolute;right:16px;bottom:18px;display:grid;grid-template-columns:repeat(3,66px);gap:10px;pointer-events:none}
+#tbtn b,#tbtn2 b{pointer-events:auto;touch-action:none;width:66px;height:66px;border-radius:50%;border:2.5px solid var(--paper);background:rgba(11,20,22,.62);color:var(--paper);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:400;font-size:14px;line-height:1.05}
+#tbtn b.big{background:rgba(127,40,30,.65)}#tbtn b.act{background:rgba(29,58,60,.85)}#tbtn b.on{background:var(--paper);color:var(--ink)}
+#tbtn2{position:absolute;right:16px;top:70px;display:flex;flex-direction:column;gap:8px}#tbtn2 b{width:52px;height:52px;font-size:12px}
+body.touch #face{display:none}body.touch #det{left:190px}body.touch #prompt{bottom:180px;pointer-events:auto}
+body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
+@media (max-width:820px){#bars{width:160px}#obj{font-size:14px;max-width:46vw}#obj small{font-size:11px}#sub{font-size:16px!important}.panel{padding:12px 14px}.panel h2{font-size:22px}.tiles{grid-template-columns:repeat(3,80px)}.tiles canvas{width:80px;height:80px}#title .keys{font-size:14px}}
 </style>
 </head>
 <body>
@@ -88,6 +99,10 @@ button.b:hover{background:#efe6cc;transform:translate(-1px,-1px)}
 </div>
 <div id="fade" class="ov"></div>
 <button id="gear" title="Настройки" aria-label="Настройки">⚙</button>
+<div id="touch"><div id="joy"><i></i></div>
+<div id="tbtn2"><b data-k="Tab">Блок-<br>нот</b><b data-k="KeyQ">Апте-<br>чка</b></div>
+<div id="tbtn"><b data-k="KeyC" data-t="1">При-<br>сесть</b><b data-k="KeyK" data-h="1">Блок</b><b data-k="KeyF">Толч-<br>ок</b>
+<b data-k="ShiftLeft" data-t="1">Бег</b><b data-k="KeyE" class="act">Дейст-<br>вие</b><b data-k="KeyJ" class="big">Удар</b></div></div>
 <div id="toast"></div><div id="sub"></div>
 <button id="skip" class="b">Пропустить сцену ▸</button>
 
@@ -96,7 +111,7 @@ button.b:hover{background:#efe6cc;transform:translate(-1px,-1px)}
   <h1>ЗОВ ИЗ ТУМАНА</h1>
   <h3>по мотивам рассказа Г. Ф. Лавкрафта «Зов Ктулху» · прототип</h3>
   <button class="b" id="start" style="font-size:26px;padding:8px 34px">Начать</button>
-  <div class="keys"><span class="kb">WASD</span>движение · <span class="kb">Shift</span>бег · <span class="kb">C</span>пригнуться · <span class="kb">E</span>действие · <span class="kb">ЛКМ / J</span>удар · <span class="kb">ПКМ / K</span>блок · <span class="kb">F</span>толчок · <span class="kb">Q</span>аптечка · <span class="kb">Tab</span>блокнот · <span class="kb">Esc</span>настройки<br>Лучше играть со звуком и на весь экран.</div>
+  <div class="keys"><span class="kb">WASD</span>движение · <span class="kb">Shift</span>бег · <span class="kb">C</span>пригнуться · <span class="kb">E</span>действие · <span class="kb">ЛКМ / J</span>удар · <span class="kb">ПКМ / K</span>блок · <span class="kb">F</span>толчок · <span class="kb">Q</span>аптечка · <span class="kb">Tab</span>блокнот · <span class="kb">Esc</span>настройки<br>Лучше играть со звуком и на весь экран. На телефоне — держите горизонтально: слева джойстик, справа кнопки действий.</div>
 </div>
 
 <div id="settings" class="screen"><div class="panel" style="min-width:min(480px,94vw)">
@@ -640,7 +655,7 @@ const S={mode:'title',t:0,pause:false,fast:false,escaped:false,booked:false,inRo
   fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0};
 const P={x:-37,z:-15.6,y:0,rot:PI,ph:0,atk:0,cd:0,block:false,combo:0,comboT:0,hurt:0,vis:false,lie:false,stepT:0,armsUp:0};
 const CAM={eye:[-25,15,-278],tgt:[-28,0,-290],ge:[0,0,0],gt:[0,0,0],fov:.72,rate:5,zoom:1,fp:false};
-const K={};let waits=[];
+const K={};const TJ={on:false,x:0,y:0};let waits=[];
 const wait=t=>S.fast?Promise.resolve():new Promise(r=>waits.push({t,r}));
 function tickWaits(dt){for(const w of waits)w.t-=dt;const d=waits.filter(w=>w.t<=0);waits=waits.filter(w=>w.t>0);d.forEach(w=>w.r());}
 
@@ -806,9 +821,9 @@ $('sSub').onchange=e=>{document.documentElement.style.setProperty('--subsz',e.ta
 
 // --- player
 function updPlayer(dt){
-  let mx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),mz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);const mov=!!(mx||mz);
+  let mx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),mz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){mx=TJ.x;mz=TJ.y;}const mov=!!(mx||mz);
   P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;if(S.st<=0)S.tired=true;if(S.st>25)S.tired=false;
-  P.running=mov&&(K.ShiftLeft||K.ShiftRight)&&!S.tired&&!S.crouch&&!P.block;
+  P.running=mov&&(K.ShiftLeft||K.ShiftRight||(TJ.on&&hypot(TJ.x,TJ.y)>.92))&&!S.tired&&!S.crouch&&!P.block;
   const sp=S.crouch?2.2:P.running?6.7:P.block?1.7:4.1;
   if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);if(P.atk<=0)faceTo(P,atan2(mx,mz),dt,12);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
   P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
@@ -947,6 +962,27 @@ function renderJournal(){const j=$('jbody');j.innerHTML='';j.append(el('p',{html
   S.lore.forEach(i=>j.append(el('div',{className:'lore'},el('b',{textContent:LORE[i][0],style:'font-size:20px'}),el('div',{className:'hand',html:LORE[i][1]}))));
   const eg=EGGS.filter(e=>S.eggs[e.id]);j.append(el('p',{className:'lore',html:'<b>Находки ('+eg.length+' / '+EGGS.length+'):</b> '+(eg.map(e=>e.t).join(', ')||'—')}));
   j.append(el('p',{style:'font-size:16px',html:'<b>Памятка:</b> жителей можно бить (ЛКМ, ЛКМ, затем F — нокаут; ПКМ вовремя — парирование). От культистов в робах — только бежать. Враги медленнее вас: оторвитесь подальше или скройтесь из виду на пару секунд — и вас потеряют. Пригнувшись (C) за ящиками, бочками и лодками, вы невидимы.'}));}
+// ================= TOUCH CONTROLS (phones / tablets) =================
+(function(){const touch=('ontouchstart' in window)||navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;if(!touch)return;
+  document.body.classList.add('touch');document.body.style.touchAction='none';const T=$('touch'),J=$('joy'),knob=J.firstChild;
+  // show the pad only while the hero can be controlled
+  setInterval(()=>{T.classList.toggle('on',S.hud&&S.mode==='play'&&!S.pause);},150);
+  let jid=null,cx=0,cy=0;const R_=60;
+  const mv=(x,y)=>{let dx=x-cx,dy=y-cy;const d=hypot(dx,dy);if(d>R_){dx*=R_/d;dy*=R_/d;}knob.style.transform=`translate(${dx}px,${dy}px)`;TJ.x=dx/R_;TJ.y=dy/R_;};
+  J.addEventListener('touchstart',e=>{e.preventDefault();auInit();const t=e.changedTouches[0];jid=t.identifier;const r=J.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;TJ.on=true;mv(t.clientX,t.clientY);},{passive:false});
+  J.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===jid)mv(t.clientX,t.clientY);},{passive:false});
+  const end=e=>{for(const t of e.changedTouches)if(t.identifier===jid){jid=null;TJ.on=false;TJ.x=TJ.y=0;knob.style.transform='';}};J.addEventListener('touchend',end);J.addEventListener('touchcancel',end);
+  for(const b of document.querySelectorAll('#tbtn b,#tbtn2 b')){const k=b.dataset.k;
+    b.addEventListener('touchstart',e=>{e.preventDefault();auInit();if(b.dataset.t){if(k==='KeyC'){onKey('KeyC');}else{K[k]=K[k]?0:1;}b.classList.toggle('on',k==='KeyC'?S.crouch:!!K[k]);return;}
+      if(subAdvance())return;K[k]=1;onKey(k);b.classList.add('on');},{passive:false});
+    const up=e=>{e.preventDefault();if(b.dataset.t)return;K[k]=0;b.classList.remove('on');};b.addEventListener('touchend',up);b.addEventListener('touchcancel',up);}
+  // tap anywhere else: advance subtitles; tap the "E" prompt to interact
+  cv.addEventListener('touchstart',e=>{subAdvance();},{passive:true});$('sub').addEventListener('touchstart',e=>{e.preventDefault();subAdvance();},{passive:false});
+  $('prompt').addEventListener('touchstart',e=>{e.preventDefault();onKey('KeyE');},{passive:false});
+  // finale: drag to look around
+  addEventListener('touchmove',e=>{if(S.mode!=='finale')return;const t=e.touches[0];FIN.mx=t.clientX/innerWidth*2-1;FIN.my=t.clientY/innerHeight*2-1;},{passive:true});
+  $('ntX').addEventListener('touchend',e=>{e.preventDefault();closeNote();});
+})();
 // ================= SCENES: intro drive, motel, finale, credits, main loop =================
 const M_car=modelMesh('car')||(()=>{const g=new Geo(.04),c=H('#80858a'),d=H('#5e6367'),k=H('#15191b');g.bx(0,.35,0,1.8,.62,4.2,c);g.bx(0,.97,-.35,1.62,.62,2.2,d);g.bx(0,1.03,-.35,1.66,.36,1.9,H('#2a4248',.25));g.bx(0,1.6,-.35,1.5,.07,2.1,c);
   for(const sx of[-.92,.92])for(const sz of[-1.35,1.35])g.at(mM(mT(sx,.36,sz),mRz(PI/2)),()=>g.cyl(0,-.13,0,.36,.36,.26,8,k));
@@ -969,7 +1005,7 @@ async function intro(){S.mode='drive';$('skip').style.display='block';$('gear').
   if(!CAR.parked)parkCar();await wait(.8);
   S.fast=false;$('skip').style.display='none';P.vis=true;P.x=-37;P.z=-15.8;P.rot=2.4;S.camFn=null;S.focus=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2500);
   S.hud=true;$('hud').style.display='block';setObj('Войдите в мотель и снимите комнату на ночь.');S.mode='play';SFX.door();fade(0,900);
-  toast('<span class="kb">WASD</span>— идти, <span class="kb">Shift</span>— бежать, <span class="kb">E</span>— действие',6);}
+  toast(document.body.classList.contains('touch')?'Джойстик слева — идти (до упора — бег), кнопки справа — действия':'<span class="kb">WASD</span>— идти, <span class="kb">Shift</span>— бежать, <span class="kb">E</span>— действие',6);}
 $('skip').onclick=()=>{S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());};
 $('start').onclick=()=>{auInit();$('title').style.display='none';intro();};
 
@@ -988,7 +1024,7 @@ addInter(-55.6,-34,1.5,'Заглянуть в дыру в стене',async()=>{
 addInter(-58.5,-37.4,1.6,'Вылезти в окно',async()=>{S.mode='talk';await fade(1,450);P.x=-58.5;P.z=-39.5;P.rot=PI;S.escaped=true;S.cp=[-58.5,-40.5];
   owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;for(const e of EN){if(e.stay){e.show=false;continue;}e.active=true;e.hx=e.x;e.hz=e.z;}camSnap();noise(.4,{f:1800,vol:.2,to:400});await fade(0,600);S.mode='play';
   setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Машина выведена из строя. Единственный путь из деревни — катер, ключи от которого заперты в конторе начальника порта.</span>');
-  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast('<span class="kb">C</span>— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
+  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast((document.body.classList.contains('touch')?'«Присесть»':'<span class="kb">C</span>')+'— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
 addInter(-38,-18,2.5,'Осмотреть машину',()=>toast('Все четыре шины проколоты. На машине отсюда уже не уехать.',4),()=>S.escaped);
 function story(dt){
   if(!S.escaped){for(const[e,t]of[[con,'Чего уставился, городской? Катился бы ты отсюда.'],[loaf,'*сплёвывает под ноги* Ещё один…']]){const d=hypot(e.x-P.x,e.z-P.z);if(d<5&&!S.peeked)faceTo(e,atan2(P.x-e.x,P.z-e.z),dt,3);if(d<3&&!e.barked&&!sub){e.barked=1;say('Житель',t,VO.vil);}}

@@ -3,7 +3,7 @@ const S={mode:'title',t:0,pause:false,fast:false,escaped:false,booked:false,inRo
   fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0};
 const P={x:-37,z:-15.6,y:0,rot:PI,ph:0,atk:0,cd:0,block:false,combo:0,comboT:0,hurt:0,vis:false,lie:false,stepT:0,armsUp:0};
 const CAM={eye:[-25,15,-278],tgt:[-28,0,-290],ge:[0,0,0],gt:[0,0,0],fov:.72,rate:5,zoom:1,fp:false};
-const K={};let waits=[];
+const K={};const TJ={on:false,x:0,y:0};let waits=[];
 const wait=t=>S.fast?Promise.resolve():new Promise(r=>waits.push({t,r}));
 function tickWaits(dt){for(const w of waits)w.t-=dt;const d=waits.filter(w=>w.t<=0);waits=waits.filter(w=>w.t>0);d.forEach(w=>w.r());}
 
@@ -169,9 +169,9 @@ $('sSub').onchange=e=>{document.documentElement.style.setProperty('--subsz',e.ta
 
 // --- player
 function updPlayer(dt){
-  let mx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),mz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);const mov=!!(mx||mz);
+  let mx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),mz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){mx=TJ.x;mz=TJ.y;}const mov=!!(mx||mz);
   P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;if(S.st<=0)S.tired=true;if(S.st>25)S.tired=false;
-  P.running=mov&&(K.ShiftLeft||K.ShiftRight)&&!S.tired&&!S.crouch&&!P.block;
+  P.running=mov&&(K.ShiftLeft||K.ShiftRight||(TJ.on&&hypot(TJ.x,TJ.y)>.92))&&!S.tired&&!S.crouch&&!P.block;
   const sp=S.crouch?2.2:P.running?6.7:P.block?1.7:4.1;
   if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);if(P.atk<=0)faceTo(P,atan2(mx,mz),dt,12);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
   P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
