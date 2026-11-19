@@ -277,10 +277,10 @@ function auInit(){if(AU.ctx)return;const C=window.AudioContext||window.webkitAud
 function auVol(){if(!AU.ctx)return;AU.master.gain.value=AU.vol;AU.amb.gain.value=AU.ambVol;}
 function stormAudio(k,uw){if(!AU.ctx)return;const t=AU.ctx.currentTime;AU.rainL.g.gain.setTargetAtTime(.16*k,t,.5);AU.gust.g.gain.setTargetAtTime(.22*k,t,.5);AU.gust.fl.frequency.setTargetAtTime(260+k*320,t,.8);AU.surf.g.gain.setTargetAtTime(.25*k,t,.6);
   AU.wind.g.gain.setTargetAtTime(.07+.12*k,t,.6);AU.mfl.frequency.setTargetAtTime(uw?420:20000,t,uw?.08:.3);}
-function tone(f,d,o={}){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+(o.delay||0),os=c.createOscillator(),g=c.createGain();os.type=o.type||'sine';os.frequency.setValueAtTime(f,t);if(o.to)os.frequency.exponentialRampToValueAtTime(o.to,t+d);
+function tone(f,d,o={}){if(!AU.ctx||!isFinite(f)||!isFinite(d)||d<=0||(o.to!=null&&!(o.to>0))||!isFinite(o.delay||0))return;const c=AU.ctx,t=c.currentTime+(o.delay||0),os=c.createOscillator(),g=c.createGain();os.type=o.type||'sine';os.frequency.setValueAtTime(f,t);if(o.to)os.frequency.exponentialRampToValueAtTime(o.to,t+d);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(o.vol||.2,t+min(o.att||.02,d/3));g.gain.exponentialRampToValueAtTime(.001,t+d);os.connect(g);let out=g;
   if(o.lp){const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=o.lp;g.connect(fl);out=fl;}out.connect(o.dest||AU.sfx);os.start(t);os.stop(t+d+.05);}
-function noise(d,o={}){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+(o.delay||0),s=c.createBufferSource();s.buffer=AU.nb;s.loop=true;const fl=c.createBiquadFilter();fl.type=o.type||'lowpass';fl.frequency.setValueAtTime(o.f||800,t);if(o.to)fl.frequency.exponentialRampToValueAtTime(o.to,t+d);fl.Q.value=o.q||.7;
+function noise(d,o={}){if(!AU.ctx||!isFinite(d)||d<=0||(o.to!=null&&!(o.to>0))||!isFinite(o.delay||0)||!isFinite(o.f||800))return;const c=AU.ctx,t=c.currentTime+(o.delay||0),s=c.createBufferSource();s.buffer=AU.nb;s.loop=true;const fl=c.createBiquadFilter();fl.type=o.type||'lowpass';fl.frequency.setValueAtTime(o.f||800,t);if(o.to)fl.frequency.exponentialRampToValueAtTime(o.to,t+d);fl.Q.value=o.q||.7;
   const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(o.vol||.2,t+(o.att||.01));g.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(fl);fl.connect(g);g.connect(AU.sfx);s.start(t,Math.random());s.stop(t+d+.05);}
 let mumG=null;
 function mumbleStop(){if(mumG&&AU.ctx){mumG.gain.setTargetAtTime(0,AU.ctx.currentTime,.03);mumG=null;}}

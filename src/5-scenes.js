@@ -37,9 +37,9 @@ addInter(-55.6,-34,1.5,'Заглянуть в дыру в стене',async()=>{
   await fade(1,500);$('peek').style.opacity=0;CAM.fp=false;S.camFn=null;camSnap();S.peeked=true;await fade(0,600);SFX.door();S.shake=.2;
   await say(HERO,'Они говорят обо мне… В дверь уже ломятся. Окно!',VO.hero);setObj('Бегите через окно в дальней стене!');S.mode='play';},()=>S.inRoom&&!S.peeked);
 addInter(-58.5,-37.4,1.6,'Вылезти в окно',async()=>{S.mode='talk';await fade(1,450);P.x=-58.5;P.z=-39.5;P.rot=PI;S.escaped=true;S.cp=[-58.5,-40.5];
-  owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;for(const e of EN){e.active=true;e.hx=e.x;e.hz=e.z;}camSnap();noise(.4,{f:1800,vol:.2,to:400});await fade(0,600);S.mode='play';
+  owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;for(const e of EN){if(e.stay){e.show=false;continue;}e.active=true;e.hx=e.x;e.hz=e.z;}camSnap();noise(.4,{f:1800,vol:.2,to:400});await fade(0,600);S.mode='play';
   setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Машина выведена из строя. Единственный путь из деревни — катер, ключи от которого заперты в конторе начальника порта.</span>');
-  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast('<span class="kb">C</span>— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: выйдите за пунктирный круг — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
+  say(HERO,'Нужно понять, с чем я имею дело, — и найти способ выбраться отсюда.',VO.hero).then(()=>toast('<span class="kb">C</span>— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9));},()=>S.peeked&&!S.escaped);
 addInter(-38,-18,2.5,'Осмотреть машину',()=>toast('Все четыре шины проколоты. На машине отсюда уже не уехать.',4),()=>S.escaped);
 function story(dt){
   if(!S.escaped){for(const[e,t]of[[con,'Чего уставился, городской? Катился бы ты отсюда.'],[loaf,'*сплёвывает под ноги* Ещё один…']]){const d=hypot(e.x-P.x,e.z-P.z);if(d<5&&!S.peeked)faceTo(e,atan2(P.x-e.x,P.z-e.z),dt,3);if(d<3&&!e.barked&&!sub){e.barked=1;say('Житель',t,VO.vil);}}
@@ -224,7 +224,6 @@ function drawAll(){
   for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
     let aR=c?-1.25:e.state==='chase'?-.7:null;if(e.wind>0)aR=-2.7;if(e.atk>0){e.atk-=.016;aR=lerp(.4,-2.6,e.atk/.3);}
     const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
-    if(e.active&&e.state!=='ko'&&e.rv&&S.mode==='play'){const ch=e.state==='chase',r=ch?e.lr:e.rv;if(ch||hypot(e.x-P.x,e.z-P.z)<r+4)draw(ch?M_ringR:M_ringY,mM(mT(e.x,.07,e.z),mRy(S.t*.15),mS(r,1,r)),0,ch?.6:.22);}
     if(c&&e.state!=='ko')torchFx(m,e.ph);}
   if(P.vis&&!CAM.fp){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}

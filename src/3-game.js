@@ -88,10 +88,11 @@ function mkE(kind,x,z,wp,o={}){const e=Object.assign({kind,x,z,hx:x,hz:z,rot:0,p
 const owner=mkE('v',-43.5,-35,[[-44,-23],[-36,-14],[-52,-18]],{v:3,rot:0});
 const con=mkE('v',-46.5,-22.6,[[-47,-22],[-66,-22],[-66,-34]],{v:1,rot:1});
 const loaf=mkE('v',-40.6,-21.2,[[-40,-14],[-31.5,-20],[-34,-10]],{v:0,rot:-1.2});
-mkE('v',-20,-8,[[-27,-8],[-8,-8],[8,-8]]);mkE('v',10,4,[[10,0],[10,20],[10,35]]);mkE('v',-20,42,[[-22,42],[2,42]]);mkE('v',32,10,[[30,-7],[33,12],[41,22]]);
-{const a=mkE('c',-10,-8,[[-18,-8],[10,-8],[36,-8],[10,-8]]);mkE('c',-11,-7,null,{leader:a,off:[-1.3,-1.2],grp:a.grp});
- const b=mkE('c',10,30,[[10,30],[30,22.5],[44,24],[30,22.5]]);mkE('c',9,29,null,{leader:b,off:[1.3,-1.3],grp:b.grp});mkE('c',11,29,null,{leader:b,off:[-1.3,-1.3],grp:b.grp});
- mkE('c',-28,20,[[-28,20],[-28,39.5],[-5,40],[-5,22],[-11,21]]);mkE('c',35,2,[[34,2],[35.5,11],[33,24]]);}
+mkE('v',-20,-8,[[-27,-8],[-8,-8],[8,-8]]);mkE('v',32,10,[[30,-7],[33,12],[41,22]]);
+{mkE('c',-10,-8,[[-18,-8],[10,-8],[36,-8],[10,-8]]);
+ const b=mkE('c',10,30,[[10,30],[30,22.5],[44,24],[30,22.5]]);mkE('c',9,29,null,{leader:b,off:[1.3,-1.3],grp:b.grp});
+ mkE('c',-28,20,[[-28,20],[-28,39.5],[-5,40],[-5,22],[-11,21]]);}
+loaf.stay=true;
 function alertE(e){for(const o of EN)if(o.grp===e.grp&&o.active&&o.state!=='ko'&&o.state!=='chase'){o.state='chase';o.aw=1;o.lose=0;o.ls=[P.x,P.z];}SFX.alert();}
 function faceTo(e,a,dt,k=8){let d=a-e.rot;while(d>PI)d-=2*PI;while(d<-PI)d+=2*PI;e.rot+=d*min(1,dt*k);}
 function goDir(e,tx,tz,sp,dt){const dx=tx-e.x,dz=tz-e.z,d=hypot(dx,dz);if(d<.05)return;const s=min(d,sp*dt);const ox=e.x,oz=e.z;moveC(e,dx/d*s,dz/d*s,.34);e.mv=1;e.ph+=dt*sp*2.3;faceTo(e,atan2(dx,dz),dt);return hypot(e.x-ox,e.z-oz)>s*.3;}
@@ -197,15 +198,14 @@ function updHud(dt){$('bhp').firstChild.style.width=S.hp+'%';$('bst').firstChild
   $('items').innerHTML='🩹 Аптечки: '+S.med+' &nbsp; 🔧 '+(S.weapon?S.weapon.name+' ('+S.weapon.dur+')':'кулаки')+(S.crouch?' &nbsp; ▾ пригнулся':'');
   const o=S.mode==='play'&&!S.pause?curInter():null,p=$('prompt');if(o){p.style.display='block';p.innerHTML='<kbd>E</kbd>'+o.label;}else p.style.display='none';
   let mx=0;for(const e of EN)if(e.active&&e.state!=='ko')mx=max(mx,e.state==='chase'?2:e.aw);
-  $('det').innerHTML=!S.escaped?'':S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':mx>.15?'<span style="color:#f0c060">◐ Вас замечают…</span>':'○ Вас не видят';
+  $('det').innerHTML=!S.escaped?'':S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':'';
   const f=S.mode==='finale'?S.fear:S.chased>0||S.hp<30?2:mx>.15?1:0;faceT-=dt;if(f!==S.fear||f>=2&&faceT<=0||faceT<-5){if(S.mode!=='finale')S.fear=f;drawFace();faceT=.08;}
   $('flash').style.opacity=clamp(P.hurt*1.6,0,.8)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
   if(S.chased>0){S.chased-=dt;S.hbT=(S.hbT||0)-dt;if(S.hbT<=0){SFX.heart();S.hbT=.75;}}}
 function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0,w,h);if(!S.hud||CAM.fp||S.mode==='finale')return;c.textAlign='center';c.textBaseline='middle';
   for(const e of EN){if(!e.active||e.state==='ko')continue;const ch=e.state==='chase';if(!ch&&e.aw<.06&&e.state!=='search'&&e.stun<=0&&e.wind<=0)continue;const p=proj(e.x,2.5,e.z);if(p.w<=0)continue;const x=p.x*w,y=p.y*h;
     if(e.wind>0){c.fillStyle='#fff';c.font='bold 30px Georgia';c.fillText('⚔',x,y-4);continue;}if(e.stun>0){c.fillStyle='#f0c060';c.font='22px Georgia';c.fillText('✶✶',x,y);continue;}
-    c.font='bold 30px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';const t=ch?'!':'?';c.strokeText(t,x,y);c.fillStyle=ch?'#ff5a48':'#f0c060';c.fillText(t,x,y);
-    if(!ch){c.beginPath();c.lineWidth=3.5;c.strokeStyle='#f0c060';c.arc(x,y,17,-PI/2,-PI/2+e.aw*2*PI);c.stroke();}}
+    if(!ch)continue;c.font='bold 30px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText('!',x,y);c.fillStyle='#ff5a48';c.fillText('!',x,y);}
   if(S.escaped&&S.mode==='play')for(const z of PZ){if(S.solved[z.i]||(z.i===5&&S.solved.slice(0,5).some(v=>!v)))continue;const p=proj(z.x,1.5,z.z);let x=(p.x-.5),y=(p.y-.5);if(p.w<=0){x=-x;y=-y;}
     if(p.w>0&&abs(x)<.44&&abs(y)<.42)continue;const a=atan2(y*h,x*w),rx=w/2-46,ry=h/2-86,k=1/max(abs(cos(a))/rx,abs(sin(a))/ry),px=w/2+cos(a)*k,py=h/2+sin(a)*k;
     c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle='#7fd6c8';c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();glyph(c,z.g,0,0,11,'#7fd6c8');c.rotate(a);c.fillStyle='#7fd6c8';c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}}
