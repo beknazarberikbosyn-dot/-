@@ -65,7 +65,7 @@ function groundGrid(x0,x1,z0,z1,st){const nx=Math.round((x1-x0)/st),nz=Math.roun
 groundGrid(-104,96,-48,48,1);groundGrid(-104,48,-332,-48,2);
 // sea: fine grid where the camera can see it, coarse beyond; waves are done in the vertex shader (mode 2)
 function seaGrid(x0,x1,z0,z1,st){const c=H('#14353a');for(let x=x0;x<x1;x+=st)for(let z=z0;z<z1;z+=st){for(const t of[[[x,0,z],[x,0,z+st],[x+st,0,z+st]],[[x,0,z],[x+st,0,z+st],[x+st,0,z]]])for(const p of t)SEA.vert(p,[0,1,0],c,[0,1,0]);}}
-seaGrid(-90,110,46,230,2);seaGrid(-290,-90,46,420,10);seaGrid(110,310,46,420,10);seaGrid(-90,110,230,420,10);
+seaGrid(-90,110,46,300,2);seaGrid(-290,-90,46,420,10);seaGrid(110,310,46,420,10);seaGrid(-90,110,300,420,10);
 prop('seawall',0,0,47.2,0,1,null,()=>W.bx(0,-.7,0,190,.75,.5,H('#3a3a34')));
 
 // --- forest along the road (cutscene) and around the map
