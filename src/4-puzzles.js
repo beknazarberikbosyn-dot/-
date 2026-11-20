@@ -114,7 +114,9 @@ function renderJournal(){const j=$('jbody');j.innerHTML='';j.append(el('p',{html
       if(subAdvance())return;K[k]=1;onKey(k);b.classList.add('on');},{passive:false});
     const up=e=>{e.preventDefault();if(b.dataset.t)return;K[k]=0;b.classList.remove('on');};b.addEventListener('touchend',up);b.addEventListener('touchcancel',up);}
   // tap anywhere else: advance subtitles; tap the "E" prompt to interact
-  cv.addEventListener('touchstart',e=>{subAdvance();},{passive:true});$('sub').addEventListener('touchstart',e=>{e.preventDefault();subAdvance();},{passive:false});
+  let lid=null,lx=0,ly=0;cv.addEventListener('touchstart',e=>{subAdvance();const t=e.changedTouches[0];lid=t.identifier;lx=t.clientX;ly=t.clientY;},{passive:true});
+  cv.addEventListener('touchmove',e=>{for(const t of e.changedTouches)if(t.identifier===lid){if(S.mode==='play'&&!S.pause&&!S.camFn){P.rot-=(t.clientX-lx)*.006*S.sens;CAM.pitch=clamp(CAM.pitch-(t.clientY-ly)*.005*S.sens,-1.25,1.2);}lx=t.clientX;ly=t.clientY;}},{passive:true});
+  cv.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===lid)lid=null;},{passive:true});$('sub').addEventListener('touchstart',e=>{e.preventDefault();subAdvance();},{passive:false});
   $('prompt').addEventListener('touchstart',e=>{e.preventDefault();onKey('KeyE');},{passive:false});
   // finale: drag to look around
   addEventListener('touchmove',e=>{if(S.mode!=='finale')return;const t=e.touches[0];FIN.mx=t.clientX/innerWidth*2-1;FIN.my=t.clientY/innerHeight*2-1;},{passive:true});
