@@ -45,7 +45,8 @@ const ROOMS={
   cellar:{x0:180,z0:-6,x1:200,z1:6,amb:[.16,.19,.19],fog:[.012,.016,.017],mist:.5},
   work:{x0:233,z0:-5,x1:247,z1:5,gap:240,door:'work'},
   chapel:{x0:282,z0:-7,x1:298,z1:7,gap:290,door:'chapel',amb:[.22,.3,.3]},
-  light:{x0:134,z0:-42,x1:146,z1:-30,gap:140,door:'light'},
+  light:{x0:136.2,z0:-39.8,x1:143.8,z1:-32.2,gap:140,door:'light'},
+  doc:{x0:258,z0:-42,x1:280,z1:-28,gap:269,door:'doc',amb:[.33,.35,.34],fog:[.02,.028,.028],mist:.25},
   ware:{x0:181,z0:-42,x1:199,z1:-30,gap:190,door:'ware'},
   office:{x0:234,z0:-41,x1:246,z1:-31,gap:240,door:'office'}};
 // darkness around the cut-away rooms
@@ -132,22 +133,30 @@ IG.bx(205,-.12,-17,190,.06,74,H('#030506'));
  for(const x of[282.17,297.83])for(const z of[-3.5,1,5])IG.bx(x,1.2,z,.06,1.6,.7,H('#57c79a',.85));
  LAMPS.push([284,2.2,-2,7,[.3,.75,.55]],[296,2.2,-2,7,[.3,.75,.55]],[290,1.6,-5,6,[1,.7,.4]],[290,2.4,3,8,[.4,.6,.55]]);}
 
-// LIGHTHOUSE keeper's room: the log and the instrument (puzzle 3)
-{const LW=H('#a8a394'),so={stone:true};iTiles(134,-42,146,-30,['#5a605e','#525856','#626866']);iShell(ROOMS.light,2.8,LW,LW,so);
- IG.bx(140,1.9,-41.82,12,.3,.06,H('#8c3a32'));
- IG.cyl(143.6,0,-39,.28,.28,2.8,8,H('#8a857a'));for(let k=0;k<10;k++)IG.at(mM(mT(143.6,.26*k,-39),mRy(k*.62)),()=>IG.bx(.75,0,0,1.25,.1,.5,PAL.woodD));iCol(142.3,-40.3,144.9,-37.7,2);
+// LIGHTHOUSE keeper's room: round, inside the tower (r 3.8): the log on the lectern (puzzle 3), spiral stairs up the wall
+// circular wall: back half full height, front half low (cut-away), doorway gap facing +z
+function iRound(cx,cz,r,h,c,n=22){const L=2*r*sin(PI/n)+.1;
+  for(let i=0;i<n;i++){const am=(i+.5)/n*2*PI,x=cx+sin(am)*r,z=cz+cos(am)*r;if(abs(atan2(sin(am),cos(am)))<.2)continue;const hh=cos(am)>.3?1:h;
+    IG.at(mM(mT(x,0,z),mRy(am)),()=>{IG.bx(0,0,0,L,hh,.5,c);for(let y=.5;y<hh-.1;y+=.55)IG.bx(0,y,0,L+.03,.05,.54,H('#2c3130'));IG.bx(0,0,0,L+.08,.3,.6,H('#3a403e'));IG.bx(0,hh,0,L+.06,.08,.56,H('#3a403e'));});
+    col(x-.55,z-.55,x+.55,z+.55,3);}}
+{const cx=140,cz=-36,r=3.8,LW=H('#a8a394');IG.cyl(cx,-.03,cz,r+.3,r+.3,.05,24,H('#262a29'));
+ for(let k=0;k<3;k++)IG.cyl(cx,-.02+k*.005,cz,r-.2-k*1.2,r-.2-k*1.2,.05,24,H(['#5a605e','#525856','#626866'][k]));
+ iRound(cx,cz,r,3.2,LW);
+ for(let k=0;k<11;k++){const a=1.15+k*.19;IG.at(mM(mT(cx+sin(a)*(r-.75),.28*k,cz+cos(a)*(r-.75)),mRy(a)),()=>{IG.bx(0,0,0,1.3,.1,.62,PAL.woodD);IG.bx(.62,0,0,.06,.9,.06,PAL.woodD);});}
+ IG.at(mM(mT(cx+sin(2.6)*(r-.75),3.1,cz+cos(2.6)*(r-.75))),()=>IG.bx(0,0,0,1.3,.08,1.3,H('#2a2622')));col(cx+1.4,cz-3.6,cx+3.8,cz+.2,2);
  ip('lectern',140,0,-38,0,1,null,()=>{IG.bx(0,0,0,.5,1.05,.5,PAL.woodD);IG.bx(0,1.05,0,.6,.08,.5,H('#d9cdb0',.3));});iCol(139.75,-38.25,140.25,-37.75,1);
- IG.bx(136.4,0,-38.6,1.8,.78,1.1,PAL.wood);IG.bx(136.4,.78,-38.6,1.7,.02,1,PAPER2);for(let i=0;i<3;i++)IG.bx(135.9+i*.4,.8,-38.6+(i-1)*.2,.5,.01,.04,H('#3a3228'));iCol(135.5,-39.15,137.3,-38.05,1);
- iBarrel(135,-33.2);iBarrel(135.9,-32.5);IG.cyl(136,0,-41,.3,.3,.9,8,IRON);IG.sph(136,1.3,-41,.45,.5,.45,H('#f3e6a0',.8),8,5);iCol(135.6,-41.5,136.4,-40.5,1.5);
- ip('bed',144.8,0,-33.4,0,.85,null,()=>IG.bx(0,0,0,2,.55,3.4,H('#5a6a6a')));iCol(143.8,-35.2,145.8,-31.6,1);ip('ropecoil',138,0,-41,0,1,null,null);
- LAMPS.push([140,2.3,-36,9,[1,.82,.5]],[136,1.4,-40.4,4,[1,.9,.5]]);}
+ IG.at(mM(mT(137.3,0,-37.4),mRy(-.9)),()=>{IG.bx(0,0,0,1.5,.78,.8,PAL.wood);IG.bx(0,.78,0,1.4,.02,.7,PAPER2);for(let i=0;i<3;i++)IG.bx(-.4+i*.4,.8,(i-1)*.15,.45,.01,.04,H('#3a3228'));});iCol(136.6,-38.2,138,-36.6,1);
+ iBarrel(137.6,-34.2);IG.cyl(138.6,0,-39.2,.24,.24,.8,8,IRON);IG.sph(138.6,1.15,-39.2,.4,.45,.4,H('#f3e6a0',.8),8,5);iCol(138.2,-39.6,139,-38.8,1.5);
+ ip('bed',142.7,0,-34.6,PI/2+.5,.62,null,()=>IG.bx(0,0,0,2,.55,3.4,H('#5a6a6a')));iCol(141.6,-35.6,143.6,-33.6,1);ip('ropecoil',141.6,0,-38.4,0,.8,null,null);
+ LAMPS.push([140,2.3,-36,8,[1,.82,.5]],[138.6,1.4,-38.6,4,[1,.9,.5]]);}
 
 // FISH WAREHOUSE (house 8): the idol shelf (puzzle 5)
 {iPlanks(181,-42,199,-30,['#4a3c2c','#423528','#54432f']);const WH=H('#5d5346');iShell(ROOMS.ware,3,WH,WH);
  iCrate(183,-40.8);iCrate(184.2,-40.9,1);iCrate(183.1,-40.8,1,.2,1.1);iCrate(196.8,-40.7);iCrate(197.9,-40.8,1);iCrate(197.4,-39.4,1);iCrate(182.4,-33,1.1);iCrate(182.6,-31.8,.9);
  iBarrel(186,-41);iBarrel(186.9,-41.2);iBarrel(194,-41.1);iBarrel(197.8,-33.4);iBarrel(197,-32.6);
  IG.bx(186,0,-35,2,.6,1,H('#8fb0b8',.12));for(let i=0;i<6;i++)IG.sph(185.3+i*.28,.66,-35+(i%2)*.2,.06,.05,.28,H('#9aa6a2'),5,3);iCol(185,-35.5,187,-34.5,.6);
- IG.bx(190,2.25,-37.5,8.4,.03,.03,H('#b9a36a'));for(let x=186.3;x<194;x+=.7)IG.sph(x,1.88,-37.5,.08,.3,.05,H('#8a9a94'),5,3);
+ IG.bx(190,2.25,-37.5,8.4,.03,.03,H('#b9a36a'));for(const x of[185.75,194.25]){IG.bx(x,0,-37.5,.14,2.45,.14,PAL.woodD);IG.bx(x,0,-37.5,.5,.1,.5,PAL.woodD);IG.at(mM(mT(x,1.4,-37.5),mRz(x<190?.5:-.5)),()=>IG.bx(0,0,0,.08,.9,.08,PAL.woodD));}iCol(185.6,-37.65,185.9,-37.35,2);iCol(194.1,-37.65,194.4,-37.35,2);
+ for(let x=186.3;x<194;x+=.7)IG.bx(x,1.95,-37.5,.01,.3,.01,H('#b9a36a'));for(let x=186.3;x<194;x+=.7)IG.sph(x,1.88,-37.5,.08,.3,.05,H('#8a9a94'),5,3);
  ip('netrack',194.5,0,-36,0,1,null,null);iCol(192.8,-36.1,196.2,-35.9,2);
  ip('idol_shelf',190,0,-40.6,0,1,null,()=>{IG.bx(0,0,0,2.8,1,.6,PAL.stone);for(let i=0;i<4;i++){IG.cyl(-1+i*.66,1,0,.16,.1,.42,5,H('#5c8a6a',.25));IG.sph(-1+i*.66,1.5,0,.13,.13,.13,H('#5c8a6a',.25),5,3);}});iCol(188.6,-40.9,191.4,-40.3,1.1);
  LAMPS.push([190,2.4,-35.5,10,[.8,.72,.52]],[190,1.8,-39.2,5,[.9,.7,.4]]);}
@@ -164,21 +173,21 @@ IG.bx(205,-.12,-17,190,.06,74,H('#030506'));
  LAMPS.push([240,2.3,-36,9,[1,.74,.45]],[236.3,1.3,-38.2,4,[1,.8,.5]]);}
 
 // --- new details in the village: the pub sign, its back door and back yard (house 0 is the pub)
-{const sg=H('#2e2218'),X=-12.4,Z=-11.6;IG.bx(X-1,0,Z,.1,2.1,.1,PAL.woodD);IG.bx(X+1,0,Z,.1,2.1,.1,PAL.woodD);IG.bx(X,1.25,Z,2.2,.85,.08,sg);IG.bx(X,1.22,Z,2.3,.05,.12,PAL.wood);IG.bx(X,2.08,Z,2.3,.05,.12,PAL.wood);
+{const sg=H('#2e2218'),X=-9.4,Z=-11.4;IG.bx(X-1,0,Z,.1,2.1,.1,PAL.woodD);IG.bx(X+1,0,Z,.1,2.1,.1,PAL.woodD);IG.bx(X,1.25,Z,2.2,.85,.08,sg);IG.bx(X,1.22,Z,2.3,.05,.12,PAL.wood);IG.bx(X,2.08,Z,2.3,.05,.12,PAL.wood);
  const br=H('#c9a23a',.35),zf=Z+.06;IG.bx(X,1.42,zf,.06,.52,.03,br);IG.bx(X,1.8,zf,.36,.05,.03,br);IG.at(mM(mT(X,1.42,zf),mRz(.9)),()=>IG.bx(0,0,0,.36,.05,.03,br));IG.at(mM(mT(X,1.42,zf),mRz(-.9)),()=>IG.bx(0,0,0,.36,.05,.03,br));
  for(const x of[X-.65,X+.65])IG.bx(x,1.35,zf,.24,.05,.03,H('#7fd6c8',.35));
- ip('lamp',X+1.5,0,Z-.1,0,.7,null,null);iCol(X-1.2,Z-.15,X+1.2,Z+.15,2);LAMPS.push([X,2.2,Z+.6,8,[1,.72,.38]],[-17,1.4,-11.6,7,[.85,.55,.25]]);
- iDoor(-22.1,-17.5,-PI/2,true);IG.bx(-22.6,0,-17.5,.6,.12,1.3,PAL.stone);
- iBarrel(-23.4,-14.6);iBarrel(-24.3,-15.1);iCrate(-23.7,-20.8,1);iCrate(-23.5,-21.6,.8,.3,1);}
-const M_int=mesh(IG);
+ iCol(X-1.2,Z-.15,X+1.2,Z+.15,2);LAMPS.push([X,2.2,Z+.6,8,[1,.72,.38]],[-13.2,1.6,-11.4,7,[.85,.55,.25]]);
+ iBarrel(-6.2,-24.6);iBarrel(-7.1,-25.4);iBarrel(-5.8,-25.8);iCrate(-6.4,-15.4,1);iCrate(-6.5,-14.4,.8,.3);iCrate(-6.4,-15.3,.8,.2,1);}
+let M_int=null;   // built lazily on the first frame, after src/5b-district.js has added the doctor's house
 
 // --- doors: exterior door → room (lockpicked once). n = outward normal; in = spawn [x, z, rot] inside
 const XD={
-  pubF:{x:-17,z:-13,n:[0,1],room:'pub',in:[145,4.4,PI]},
-  pubB:{x:-22.1,z:-17.5,n:[-1,0],room:'pub',in:[129.3,2,PI/2],pins:3},
+  pubF:{x:-13.2,z:-12.6,n:[0,1],room:'pub',in:[145,4.4,PI]},
+  pubB:{x:-8,z:-20.5,n:[1,0],room:'pub',in:[129.3,2,PI/2],pins:3},
   work:{x:.5,z:-13,n:[0,1],room:'work',in:[240,3.4,PI],pins:4,name:'мастерская скульптора'},
   chapel:{x:26,z:-12.9,n:[0,1],room:'chapel',in:[290,5.4,PI],pins:4,name:'часовня'},
-  light:{x:47,z:34,n:[-1,0],room:'light',in:[140,-31.6,PI],pins:4,name:'маяк'},
+  light:{x:47,z:34,n:[-1,0],room:'light',in:[140,-33.2,PI],pins:4,name:'маяк'},
+  doc:{x:-110,z:-35,n:[0,1],room:'doc',in:[269,-29.2,PI],name:'дом доктора Бернсона'},
   ware:{x:-16.5,z:36,n:[0,1],room:'ware',in:[190,-31.6,PI],pins:4,name:'рыбный склад'},
   office:{x:18,z:39,n:[0,1],room:'office',in:[240,-32.6,PI],pins:5,name:'контора начальника порта'}};
 const chased=()=>EN.some(e=>e.active&&e.state==='chase');
@@ -188,7 +197,7 @@ function markTarget(){const m=S.mark;if(!m)return null;const room=m[2]||null;if(
 const setMark=m=>{S.mark=m&&m.n?[m.x+m.n[0]*.95,m.z+m.n[1]*.95]:m;};
 async function goRoom(d){S.mode='talk';SFX.door();await fade(1,380);S.inside=d.room;P.x=d.in[0];P.z=d.in[1];P.rot=d.in[2];S.crouch=false;camSnap();await fade(0,480);S.mode='play';}
 async function leaveRoom(d){S.mode='talk';SFX.door();await fade(1,350);S.inside=null;P.x=d.x+d.n[0]*1.4;P.z=d.z+d.n[1]*1.4;P.rot=atan2(d.n[0],d.n[1]);camSnap();await fade(0,450);S.mode='play';}
-function doorOn(d){if(S.inside||FIN.on)return false;if(d.k==='pubF')return S.explore&&!S.alarm;if(d.k==='pubB')return S.kicked&&!S.alarm;return S.escaped;}
+function doorOn(d){if(S.inside||FIN.on||d.k==='doc')return false;if(d.k==='pubF')return S.explore&&!S.alarm;if(d.k==='pubB')return S.kicked&&!S.alarm;return S.escaped;}
 function doorLabel(d){if(d.k==='pubF')return S.kicked?'Дверь паба «Дьяволов риф»':'Войти в паб «Дьяволов риф»';if(d.k==='pubB')return d.lock?'Вскрыть замок чёрного хода отмычками':'Войти через чёрный ход';
   return(d.lock?'Вскрыть отмычками: ':'Войти: ')+d.name;}
 async function useDoor(d){
@@ -200,7 +209,7 @@ async function useDoor(d){
   if(d.lock)lockpick(d,()=>{d.lock=false;go();});else go();}
 for(const k in XD){const d=XD[k];d.k=k;d.lock=!!d.pins;const o=addInter(d.x+d.n[0]*.95,d.z+d.n[1]*.95,1.6,'',()=>useDoor(d),()=>doorOn(d));Object.defineProperty(o,'label',{get:()=>doorLabel(d)});}
 // exits from the rooms (the doorway gap in the low front wall)
-for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn));}
+for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn)&&!(key==='doc'&&!S.escaped));}
 
 // --- lockpicking: lift the pins one by one to the shear line
 let LP={on:false};const LPT=.68;
@@ -252,8 +261,8 @@ addInter(-57.6,-34.4,1.5,'Записать вступление к выпуск�
   recOn(false);SFX.click();S.camFn=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2000);S.explore=true;
   await say(HERO,'Так. Теперь — пройдусь по деревне и поговорю с местными. Блокнот под рукой, отмычки в кармане… на всякий случай.',VO.hero);
   setObj(exploreObj());S.mode='play';toast((touchUI()?'«Блокнот»':'<span class="kb">Tab</span>')+'— блокнот с заметками. Значок <b>…</b> над жителем — с ним можно поговорить (<span class="kb">E</span>).',6);},()=>S.inRoom&&!S.explore);
-addInter(-38,-18,2.6,'Машина',()=>{if(S.escaped)toast('Все четыре шины проколоты, провода под капотом вырваны. На машине отсюда уже не уехать.',4);
-  else say(HERO,'Уехать сейчас? Без единого кадра? Ну уж нет.',VO.hero);},()=>S.explore&&!S.inside&&(!S.alarm||S.escaped));
+addInter(-38,-18,2.6,'Машина',()=>{if(S.escaped||S.carSeen)toast('Все четыре шины проколоты, провода под капотом вырваны. На машине отсюда уже не уехать.',4);
+  else say(HERO,'Уехать сейчас? Без единого кадра? Ну уж нет.',VO.hero);},()=>S.explore&&!S.inside&&(!S.alarm||S.escaped||S.carSeen));
 
 // --- the villagers out in the fog (before the hunt): they stare, and answer through their teeth
 const TOWN=[
@@ -301,15 +310,15 @@ async function kickOut(){S.mode='talk';S.mark=null;pubOwner.x=135.3;pubOwner.z=-
   await say('Хозяин паба','Опять эти сказки! Ты не местный. Ты лезешь куда не просят и задаёшь слишком много вопросов.',VO.pub);
   await say('Рыбак у стойки','Ещё и снимает всё на свою камеру. Начитался теорий заговора, умник.',VO.fish);
   await say('Хозяин паба','Вон отсюда. И если ещё раз увижу тебя у этой двери — пожалеешь, что приехал.',VO.pub);
-  await fade(1,400);SFX.door();S.kicked=true;S.inside=null;pubOwner.x=135.15;pubOwner.z=.5;pubOwner.rot=PI/2;P.x=-17;P.z=-11.1;P.rot=0;camSnap();await wait(.3);SFX.thud();S.shake=.35;await fade(0,500);
+  await fade(1,400);SFX.door();S.kicked=true;S.inside=null;pubOwner.x=135.15;pubOwner.z=.5;pubOwner.rot=PI/2;P.x=-13.2;P.z=-10.9;P.rot=0;camSnap();await wait(.3);SFX.thud();S.shake=.35;await fade(0,500);
   await say(HERO,'Ладно… Если они так берегут свой подвал — значит, мне именно туда.',VO.hero);
   await say(HERO,'У таких заведений всегда есть чёрный ход. А отмычки — при мне.',VO.hero);
-  setObj('Найдите чёрный ход паба — во дворе, с западной стороны — и вскройте замок отмычками.');setMark(XD.pubB);S.mode='play';}
+  setObj('Найдите чёрный ход паба — в проулке, с восточной стороны — и вскройте замок отмычками.');setMark(XD.pubB);S.mode='play';}
 async function backRoom(){S.backIn=true;S.mode='talk';await say(HERO,'(шёпотом) Тихо… Хозяин за стеной, в зале. А вот и лестница вниз.',VO.hero);setObj('Спуститесь в подвал.');setMark([129.5,-2.4,'pub']);S.mode='play';}
 addInter(129.5,-2.4,1.5,'Спуститься в подвал',async()=>{S.mode='talk';S.mark=null;SFX.creak();await fade(1,450);S.inside='cellar';P.x=183.6;P.z=-2.3;P.rot=PI/2;camSnap();await fade(0,700);
   if(!S.cellarIn){S.cellarIn=true;await say(HERO,'…Господи. Они не врали.',VO.hero);setObj('Осмотрите подвал: 0 / 3');}S.mode='play';},()=>S.inside==='pub'&&S.backIn&&!S.alarm);
-addInter(181.6,-2.5,1.3,'Подняться наверх',async()=>{S.mode='talk';SFX.creak();await fade(1,400);S.inside='pub';P.x=129.5;P.z=-2.2;P.rot=0;camSnap();await fade(0,500);S.mode='play';},()=>S.inside==='cellar'&&!S.alarm);
-addInter(129,2,1.3,'Выйти через чёрный ход',()=>leaveRoom(XD.pubB),()=>S.inside==='pub'&&S.backIn&&!S.alarm);
+addInter(181.6,-2.5,1.3,'Подняться наверх',async()=>{S.mode='talk';SFX.creak();await fade(1,400);S.inside='pub';P.x=129.5;P.z=-2.2;P.rot=0;camSnap();await fade(0,500);if(S.ownerKO)setMark([129,2,'pub']);S.mode='play';},()=>S.inside==='cellar'&&(!S.alarm||S.ownerKO));
+addInter(129,2,1.3,'Выйти через чёрный ход',()=>S.ownerKO?sneakOut():leaveRoom(XD.pubB),()=>S.inside==='pub'&&S.backIn&&(!S.alarm||S.ownerKO)&&!S.stalk);
 
 // --- the cellar: what the four survivors described
 let PHOTOS=null;
@@ -336,44 +345,32 @@ const EVID=[
 S.ev=0;
 for(const e of EVID)addInter(e.x,e.z,1.6,e.label,()=>{const b=typeof e.b==='function'?e.b():e.b;if(!e.seen){e.seen=1;S.ev++;S.noteCb=()=>{addNote(e.note);setObj(S.ev<3?'Осмотрите подвал: '+S.ev+' / 3':'Осмотрите рабочий стол у стены.');if(S.ev>=3)setMark([198,2.6,'cellar']);};}openNote(e.t,b);},()=>S.inside==='cellar'&&!S.alarm);
 addInter(198,2.6,1.6,'Осмотреть рабочий стол',()=>{if(S.ev<3){toast('Стол завален бумагами. Сначала — оглядеться.',2.5);return;}S.mark=null;
-  S.noteCb=()=>{addNote('Записки со стола: культ «Спящего», опыты по превращению людей. Подпись — д-р Г. Бернсон, Холмовая ул., 9.');alarmSeq();};
-  openNote('Рабочий стол','Журнал наблюдений, исписанный аккуратным почерком:<br><i>«Объект 19. День 6. Чешуя на предплечьях, жаберные щели раскрылись. Во сне повторяет: „Он зовёт“. Перемена идёт хорошо.<br>Объект 20. День 3. Сердце не выдержало. Тело — в угол, до прилива.»</i><br><br>И записка, прижатая подсвечником:<br><i>«Тех, кто не вынесет перемены, — Спящему, на пирс, при факелах. Остальных — в море, к Отцу. Слава Спящему, что видит сны в глубине. Жду отчёт к новолунию.<br>— Д-р Г. Бернсон, Холмовая ул., 9»</i>');},()=>S.inside==='cellar'&&!S.alarm);
+  S.noteCb=()=>{addNote('Записки со стола: культ «Спящего», опыты по превращению людей. Подпись — д-р Э. Бернсон, Холмовая ул., 9.');alarmSeq();};
+  openNote('Рабочий стол','Журнал наблюдений, исписанный аккуратным почерком:<br><i>«Объект 19. День 6. Чешуя на предплечьях, жаберные щели раскрылись. Во сне повторяет: „Он зовёт“. Перемена идёт хорошо.<br>Объект 20. День 3. Сердце не выдержало. Тело — в угол, до прилива.»</i><br><br>И записка, прижатая подсвечником:<br><i>«Тех, кто не вынесет перемены, — Спящему, на пирс, при факелах. Остальных — в море, к Отцу. Слава Спящему, что видит сны в глубине. Жду отчёт к новолунию.<br>— Д-р Э. Бернсон, Холмовая ул., 9»</i>');},()=>S.inside==='cellar'&&!S.alarm);
 
-// --- the alarm: the owner catches the hero and runs into the street yelling
-const crier=mkE('v',-17,-11.5,[[-9,-9],[2,-8.4],[10,-6],[10.6,6],[10.6,18],[10,30],[-2,41.5],[-22,41.5],[-28,30],[-28,12],[-28,-7],[-20,-9]],{v:PUBV,unarmed:true});
+// --- the cellar fight: the owner comes down alone — he wants to knock the hero out quietly, not raise the village
+const crier=mkE('v',182.6,-3.4,[[182.6,-3.4]],{v:PUBV,direct:true,sp:2.6,hp:5});
 const SHOUTS=['ЧУЖАК!','ОН БЫЛ В ПОДВАЛЕ!','ПРОСЫПАЙТЕСЬ!','ЛОВИТЕ ЕГО!','ОН ВСЁ ВИДЕЛ!'],ALARML=[];
 function alarmLight(){if(ALARML.length>=14)return;const h=HOUSES[floor(Math.random()*HOUSES.length)];ALARML.push([(h[0]+h[2])/2+rr(-3,3),1.7,h[3]+1,6.5,[.95,.62,.3]]);}
 function bellToll(n=3){for(let i=0;i<n;i++){const t=i*1.7;for(const[f,v]of[[196,.15],[392,.08],[588,.035],[790,.03]])tone(f,3.4,{type:'sine',vol:v,att:.004,delay:t});noise(.08,{f:3000,type:'highpass',vol:.05,delay:t});}}
 function fleeE(e,dt){const w=e.wp[e.wi];if(hypot(w[0]-e.x,w[1]-e.z)<1.3){e.wi=(e.wi+1)%e.wp.length;return;}
-  const sp=hypot(P.x-e.x,P.z-e.z)<3.5?3.9:3.3;if(!goField(e,field(w[0],w[1],true),sp,dt))goDir(e,w[0],w[1],sp,dt);
-  e.yt=(e.yt||0)-dt;e.yellT=(e.yellT||0)-dt;if(e.yt<=0){e.yt=2+Math.random()*1.2;e.yell=SHOUTS[floor(Math.random()*SHOUTS.length)];e.yellT=1.5;mumble(1.1,140+Math.random()*30,false,.2,true);alarmLight();}}
-async function alarmSeq(){S.mode='talk';SFX.creak();await wait(.5);SFX.door();pubOwner.room='cellar';pubOwner.x=182.2;pubOwner.z=-3.3;pubOwner.rot=atan2(P.x-182.2,P.z+3.3);P.rot=atan2(182.2-P.x,-3.3-P.z);
-  await say('Хозяин паба','Я же сказал тебе — НЕ СОВАТЬСЯ!',VO.pub);S.shake=.35;mumble(2.2,135,false,.3);
-  await say('Хозяин паба','ЧУЖАК В ПОДВАЛЕ! ОН ВСЁ ВИДЕЛ! ВСЕ СЮДА-А!',{dur:2.8});pubOwner.room=null;SFX.creak();
-  await say(HERO,'Нет-нет-нет… Если он поднимет деревню — мне конец. Нужно его заткнуть!',VO.hero);
-  await fade(1,350);S.inside=null;S.alarm=true;P.x=-23.3;P.z=-16.3;P.rot=.7;S.cp=[-23.6,-19.6];
-  Object.assign(crier,{x:-18.4,z:-11.3,hx:-18.4,hz:-11.3,active:true,flee:true,state:'patrol',wi:0,hp:4,stun:0,yt:0});camSnap();await fade(0,400);
-  setObj('Догоните хозяина паба и вырубите его, пока он не поднял всю деревню!');S.mode='play';
-  toast(touchUI()?'«Удар» — бить, два удара и «Толчок» — нокаут. Джойстик до упора — бегом!':'<span class="kb">ЛКМ</span>— удар, два удара и <span class="kb">F</span>— нокаут. <span class="kb">Shift</span>— бегом!',5);}
-async function koSeq(){S.mode='talk';crier.flee=false;await wait(.6);bellToll(4);for(let i=0;i<6;i++)alarmLight();
-  await say(HERO,'Замолчал… Но поздно. Слышишь? Колокол.',VO.hero);
-  await say(HERO,'Вся деревня уже знает, что я видел. Нужно добраться до машины — и гнать отсюда без оглядки!',VO.hero);
-  startHunt();setObj('Доберитесь до машины у мотеля — и уезжайте из Грейхейвена!');setMark([-38,-18]);S.mode='play';
-  toast((touchUI()?'«Присесть»':'<span class="kb">C</span>')+'— пригнуться: за ящиками, бочками и лодками вас не видно. Жителей можно оглушить, от <b>культистов с факелами</b> — только бежать. Враги медленнее вас: оторвитесь или скройтесь из виду — и вас потеряют.',9);}
+  const sp=hypot(P.x-e.x,P.z-e.z)<3.5?3.9:3.3;if(!goField(e,field(w[0],w[1],true),sp,dt))goDir(e,w[0],w[1],sp,dt);}
+async function alarmSeq(){S.mode='talk';SFX.creak();await wait(.5);SFX.door();pubOwner.room=null;
+  Object.assign(crier,{x:182.6,z:-3.4,hx:182.6,hz:-3.4,active:true,state:'patrol',hp:5,stun:0,wind:0,aw:0,cd:1.2});crier.rot=atan2(P.x-crier.x,P.z-crier.z);P.rot=atan2(crier.x-P.x,crier.z-P.z);
+  S.alarm=true;S.cellarFight=true;S.cp=[196.6,1.4];S.cpRoom='cellar';
+  await say('Хозяин паба','Я же сказал тебе — НЕ СОВАТЬСЯ!',VO.pub);S.shake=.3;
+  await say('Хозяин паба','*перехватывает дубинку* Тише, тише… Наверху никто не услышит. Уснёшь здесь — а проснёшься уже в клетке. Как те, что до тебя.',VO.pub);
+  await say(HERO,'Он даже не зовёт своих… Хочет вырубить меня сам, по-тихому. Не дождётся!',VO.hero);
+  crier.state='chase';crier.aw=1;crier.ls=[P.x,P.z];SFX.alert();setObj('Хозяин паба хочет вырубить вас. Вырубите его первым!');S.mode='play';
+  toast(touchUI()?'«Удар» — бить, «Блок» в момент удара — парировать, два удара и «Толчок» — нокаут.':'<span class="kb">ЛКМ</span>— удар, <span class="kb">ПКМ</span> в момент его удара — парировать, два удара и <span class="kb">F</span>— нокаут.',6);}
+async function koSeq(){S.mode='talk';S.cellarFight=false;S.cpRoom=null;await wait(.7);
+  await say(HERO,'(тяжело дыша) Всё… Он так и не позвал на помощь. Хотел сделать всё тихо — значит, наверху пока никто ничего не знает.',VO.hero);
+  await say(HERO,'Пока. Скоро его хватятся. Уходить нужно так же тихо, как я пришёл, — через чёрный ход.',VO.hero);
+  setObj('Тихо выберитесь из паба через чёрный ход.');setMark([181.6,-2.5,'cellar']);S.mode='play';}
 // the robed cultists guarding the car (they show up with the hunt)
 const GUARD=[[-36.2,-20.9,PI],[-40.7,-15.3,-.8],[-34.5,-15.5,.8]].map(([x,z,r])=>mkE('c',x,z,[[x,z]],{rot:r}));GUARD.forEach(g=>g.grp=GUARD[0].grp);
 function startHunt(){S.hunt=true;S.cp=[-23.6,-19.6];for(const n of TOWN)n.c.off=true;owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;
   for(const e of EN){if(e===crier)continue;if(e.stay){e.show=false;continue;}e.active=true;e.hx=e.x;e.hz=e.z;}SFX.alert();}
-async function carScene(){S.mode='talk';S.carSeen=true;S.crouch=true;S.mark=null;const cx=-38,cz=-18,px=P.x,pz=P.z;
-  S.camFn=()=>{CAM.ge=[lerp(px,cx,.45),9.5,lerp(pz,cz,.45)+8.5];CAM.gt=[cx,.8,cz];};CAM.rate=2;await wait(.8);
-  await say(HERO,'(шёпотом) Чёрт… Они уже у машины. Стоят и ждут меня.',VO.hero);
-  await say(HERO,'Даже если прорвусь — шины наверняка проколоты. На машине отсюда не уехать.',VO.hero);
-  await say(HERO,'Записка из подвала… Доктор Бернсон, Холмовая, девять. Если кто-то и знает, что здесь творится и как отсюда выбраться, — это он.',VO.hero);
-  await say(HERO,'Но в таком тумане его улицу вслепую не найти. А знаки этого культа здесь повсюду — начну с них. Чем больше я пойму, тем больше шансов выжить.',VO.hero);
-  S.camFn=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2000);S.escaped=true;S.cp=[-23.6,-19.6];
-  setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Машину стерегут культисты. Знаки — в запертых мастерской, часовне, маяке, складе и на кладбище. Двери откроют отмычки.</span>');S.mode='play';
-  toast('Стрелки по краям экрана ведут к знакам. Замки дверей вскрываются отмычками (<span class="kb">E</span>).',6);}
-
 // --- per-frame story logic (play mode)
 function story(dt){
   if(!S.hunt){for(const[e,t]of[[con,'Чего уставился, городской? Катился бы ты отсюда.'],[loaf,'*сплёвывает под ноги* Ещё один… с камерой.']]){const d=hypot(e.x-P.x,e.z-P.z);if(d<5)faceTo(e,atan2(P.x-e.x,P.z-e.z),dt,3);if(d<3&&!e.barked&&!sub){e.barked=1;say('Житель',t,VO.vil);}}
@@ -382,41 +379,48 @@ function story(dt){
   if(S.inside==='pub')for(const n of PUBN){if(n.room==='pub'&&hypot(n.x-P.x,n.z-P.z)<4.5&&!S.backIn)faceTo(n,atan2(P.x-n.x,P.z-n.z),dt,2);}
   if(S.booked&&!S.inRoom&&P.x<-55.5&&P.z<-30){S.inRoom=true;(async()=>{S.mode='talk';await say(HERO,'Ну и дыра. Сыростью и рыбой несёт… Зато для выпуска — атмосфера что надо.',VO.hero);
     setObj('Поставьте камеру и запишите вступление к выпуску.');setMark([-57.6,-34.4]);S.mode='play';})();}
-  if(S.alarm&&!S.koSeq&&crier.state==='ko'){S.koSeq=true;koSeq();}
-  if(S.hunt&&!S.carSeen&&!S.inside&&hypot(P.x+38,P.z+18)<19.5)carScene();}
+  if(S.cellarFight&&crier.state==='ko'&&!S.ownerKO){S.ownerKO=true;koSeq();}
+  if(S.cellarFight&&S.mode==='play'&&crier.state!=='chase'&&crier.state!=='ko'){crier.state='chase';crier.aw=1;crier.ls=[P.x,P.z];}
+  stage(dt);}
 
 // --- drawing: interiors, people, beacons
 const M_beaconY=(()=>{const g=new Geo(.02);g.cyl(0,0,0,.28,0,.45,4,H('#ffd77a',1));g.cyl(0,-.45,0,0,.28,.45,4,H('#e0b050',1));return mesh(g);})();
 const DEADP=[[197.5,-5,1.45,0],[198.8,-3.9,1.8,1],[196.5,-3.7,1.05,2]];
 const drawNPC=n=>drawChar(CH.v[n.v],n.x,0,n.z,n.rot,{crouch:n.sit,aR:n.sit?-1.1:null,aL:n.sit?-1.1:null});
-function drawStory(){draw(M_int,null,.035);if(FIN.on||S.mode==='finale')return;
-  if(!S.hunt&&!S.inside)for(const n of TOWN)drawNPC(n);
+function drawStory(){if(!M_int)M_int=mesh(IG);draw(M_int,null,.035);if(FIN.on||S.mode==='finale')return;
+  if(!S.curfew&&!S.inside)for(const n of TOWN)drawNPC(n);
   if(S.inside==='pub'||S.inside==='cellar'){for(const n of PUBN)if(n.room===S.inside)drawNPC(n);}
   if(S.inside==='pub')light(147,.9,-4.6,8+sin(S.t*11)*.6+sin(S.t*23)*.4,[1,.55,.25]);
   if(S.inside==='cellar'){for(const[x,z,r,i]of DEADP)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.25,aL:.4});light(190,2.2,0,3+abs(sin(S.t*.7))*1.5,[.5,.45,.3]);}
   for(const l of ALARML)light(...l);
   if(S.escaped&&!S.inside)for(const z of PZ){if(S.solved[z.i]||!z.room)continue;const d=XD[ROOMS[z.room].door],dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);
     draw(M_beacon,mM(mT(d.x+d.n[0]*.6,2.9+sin(S.t*2+z.i)*.15,d.z+d.n[1]*.6),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(d.x+d.n[0]*1.2,2.2,d.z+d.n[1]*1.2,6.5,[.25,.8,.7]);}
-  if(!S.escaped&&S.mode==='play'){const T=markTarget();if(T)draw(M_beaconY,mM(mT(T[0],2.6+sin(S.t*2.4)*.15,T[1]),mRy(S.t*1.6)),0);}}
+  if(!S.escaped&&S.mode==='play'){const T=markTarget();if(T)draw(M_beaconY,mM(mT(T[0],2.6+sin(S.t*2.4)*.15,T[1]),mRy(S.t*1.6)),0);}
+  drawStage();}
 function storyHud(c,w,h){if(S.rec){const s=floor(S.t-S.recT0);$('recT').textContent='00:'+String(floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
   if(S.mode!=='play')return;c.textAlign='center';c.textBaseline='middle';
   const bub=(x,z)=>{if(hypot(x-P.x,z-P.z)>13)return;const p=proj(x,2.4,z);if(p.w<=0)return;c.save();c.translate(p.x*w,p.y*h);c.fillStyle='rgba(11,20,22,.82)';c.strokeStyle='#d9cdb0';c.lineWidth=2;
     c.beginPath();c.ellipse(0,0,17,12,0,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(-4,10);c.lineTo(-9,19);c.lineTo(3,11);c.fill();c.fillStyle='#d9cdb0';for(const k of[-6,0,6]){c.beginPath();c.arc(k,0,2,0,7);c.fill();}c.restore();};
   if(S.explore&&!S.alarm&&!S.inside)for(const n of TOWN)if(!n.done)bub(n.x,n.z);
   if(S.inside==='pub'&&!S.backIn&&!S.kicked)for(const n of PUBN)if(n.lines&&!n.done)bub(n.x,n.z);
+  stageHud(c,w,h);
   if(crier.active&&crier.flee&&crier.yellT>0){const p=proj(crier.x,2.8,crier.z);if(p.w>0){c.font='bold 22px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText(crier.yell,p.x*w,p.y*h-12);c.fillStyle='#ff6a5a';c.fillText(crier.yell,p.x*w,p.y*h-12);}}}
 
-// --- debug: jump to a story stage ('town', 'pub', 'back', 'cellar', 'alarm', 'play')
+// --- debug: jump to a story stage ('town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play')
+const STAGES=['town','pub','back','cellar','alarm','stalk','doctor','play'];
 function storySkip(st){S.booked=S.inRoom=S.explore=true;S.hud=true;$('hud').style.display='block';$('skip').style.display='none';P.vis=true;S.mode='play';$('fade').style.opacity=0;S.camFn=null;S.focus=null;CAM.fp=false;if(!CAR.parked)parkCar();
-  const past=s=>['town','pub','back','cellar','alarm','play'].indexOf(st)>=['town','pub','back','cellar','alarm','play'].indexOf(s);
+  const past=s=>STAGES.indexOf(st)>=STAGES.indexOf(s);
   if(past('pub')){S.asked=3;S.pubKnown=true;for(const n of TOWN)n.done=1;}
   if(past('back')){S.pubIn=S.kicked=true;S.ints=3;for(const n of PUBN)n.done=1;}
   if(past('cellar')){S.backIn=S.cellarIn=true;XD.pubB.lock=false;}
-  S.inside=null;S.mark=null;if(st!=='alarm'&&st!=='play')Object.assign(pubOwner,{room:'pub',x:135.15,z:.5,rot:PI/2});
+  if(past('stalk')){S.ev=3;EVID.forEach(e=>e.seen=1);S.alarm=S.ownerKO=true;Object.assign(crier,{active:true,state:'ko',x:184,z:-1.5});pubOwner.room=null;}
+  S.inside=null;S.mark=null;if(!past('alarm'))Object.assign(pubOwner,{room:'pub',x:135.15,z:.5,rot:PI/2});
   if(st==='town'){P.x=-28;P.z=-10;setObj(exploreObj());}
-  else if(st==='pub'){P.x=-17;P.z=-11.4;setObj('Найдите паб «Дьяволов риф» — у поворота к мотелю — и поговорите с посетителями.');setMark(XD.pubF);}
-  else if(st==='back'){P.x=-23;P.z=-17.5;setObj('Найдите чёрный ход паба и вскройте замок отмычками.');setMark(XD.pubB);XD.pubB.lock=true;}
+  else if(st==='pub'){P.x=-13.2;P.z=-11;setObj('Найдите паб «Дьяволов риф» — у поворота к мотелю — и поговорите с посетителями.');setMark(XD.pubF);}
+  else if(st==='back'){P.x=-6.4;P.z=-20.5;setObj('Найдите чёрный ход паба и вскройте замок отмычками.');setMark(XD.pubB);XD.pubB.lock=true;}
   else if(st==='cellar'){S.inside='cellar';P.x=183.6;P.z=-2.3;setObj('Осмотрите подвал: 0 / 3');}
   else if(st==='alarm'){S.ev=3;EVID.forEach(e=>e.seen=1);S.inside='cellar';P.x=197;P.z=2.6;alarmSeq();}
-  else{S.ev=3;S.alarm=S.koSeq=S.carSeen=true;Object.assign(crier,{active:true,state:'ko',x:2,z:-8.6});startHunt();S.escaped=true;P.x=-23.6;P.z=-19.6;setObj('Найдите знаки культа: 0 / 5');}
+  else if(st==='stalk'){P.x=-6.4;P.z=-20.5;startStalk();}
+  else if(st==='doctor'){startStalk();S.carSeen=S.guardsMet=true;S.inside='doc';P.x=269;P.z=-30;P.rot=PI;S.inDoc=true;setObj(docObj());}
+  else{startStalk();S.carSeen=S.guardsMet=S.inDoc=true;DOCEV.forEach(e=>e.seen=1);stage2(true);P.x=-110;P.z=-29;}
   camSnap();}

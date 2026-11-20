@@ -12,8 +12,17 @@ const VN=(()=>{const P=256,L=new Float32Array(P*P);let s=91;for(let i=0;i<L.leng
 const fbm=(x,y)=>VN(x,y)*.55+VN(x*2.1+17,y*2.1+5)*.3+VN(x*4.3+3,y*4.3+41)*.15;
 
 // --- buildings data (shared with the Blender asset script)
-const HOUSES=[[-22,-22,-12,-13,{}],[-5,-23,6,-13,{wall:'#8f8468',roof:'#4b3a36',lit:1}],[-24,-3,-14,6,{}],[-8,-3,3,5,{}],[16,-3,27,5,{}],[-8,12,3,20,{}],[16,12,27,20,{}],[-24,12,-14,18,{}],
-  [-24,24,-9,36,{wall:'#5d5346',roof:'#35302c',h:4,rh:2.6,lit:0,noCh:1}],[18,24,28,31,{}],[15,34,21,39,{wall:'#6f6a5a',roof:'#3a4450',h:2.8,rh:1.6,lit:0,noCh:1}]];
+// (must match HOUSES in tools/zov_lib.py: model 'house_i' is built from entry i; door = world x of the front door)
+const HOUSES=[[-25.2,-27,-8,-12.6,{kind:'pub',wall:'#6b5f52',roof:'#3a3230',h:3.6,rh:2.6,lit:1,door:-13.2}],[-5,-23,6,-13,{wall:'#8f8468',roof:'#4b3a36',lit:1}],[-24,-3,-14,6,{}],[-8,-3,3,5,{}],[16,-3,27,5,{}],[-8,12,3,20,{}],[16,12,27,20,{}],[-24,12,-14,18,{}],
+  [-24,24,-9,36,{wall:'#5d5346',roof:'#35302c',h:4,rh:2.6,lit:0,noCh:1}],[18,24,28,31,{}],[15,34,21,39,{wall:'#6f6a5a',roof:'#3a4450',h:2.8,rh:1.6,lit:0,noCh:1}],
+  // the western district: market street, Holmovaya street (Dr Bernson, №9), the school, the church, the cannery and the boathouse on the quay
+  [-134,-24,-123,-13,{kind:'bakery',wall:'#8a7a62',roof:'#54463a',lit:1}],[-122,-25,-113,-14,{}],
+  [-118,-44,-102,-35,{kind:'doctor',wall:'#7a7f78',roof:'#2f3a3c',h:5.8,rh:2.6,lit:1,door:-110}],[-106.5,-26,-98,-14,{}],
+  [-94,-32,-80,-12,{kind:'church',wall:'#c9c4b4',roof:'#3a4450',h:5,rh:3.4,lit:1,noCh:1,door:-87}],
+  [-78,-22,-67,-12,{kind:'shop',wall:'#7d8a86',lit:1}],[-136,-3,-118,8,{kind:'school',wall:'#8a5a48',roof:'#3f4a48',lit:1,noCh:1,door:-127}],
+  [-114,-3,-104,6,{}],[-60,-2,-48,7,{kind:'post',wall:'#75807a',lit:1}],[-62,12,-51,20,{}],[-45,12,-35,20,{}],
+  [-128,22,-104,36,{kind:'cannery',wall:'#6a5248',roof:'#3a3a36',h:5.5,rh:2.2,lit:.6,noCh:1,door:-116}],
+  [-96,26,-84,37,{kind:'boathouse',wall:'#5d5346',roof:'#35302c',h:4,rh:2.4,lit:0,noCh:1}],[-77,24,-67,33,{}],[-58,24,-47,32,{}],[-77,-3,-67,6,{}]];
 function house(x0,z0,x1,z1,o={}){const h=o.h||3.2,wc=H(o.wall||PAL.wall[floor(rnd()*4)]),rc=H(o.roof||PAL.roof[floor(rnd()*4)]),cx=(x0+x1)/2,cz=(z0+z1)/2;
   W.bx(cx,0,cz,x1-x0,h,z1-z0,wc);W.bx(cx,0,cz,x1-x0+.15,.45,z1-z0+.15,PAL.stone);W.prism(x0,z0,x1,z1,h,o.rh||2.2,rc);
   const dx=o.door==null?cx:o.door;W.bx(dx,0,z1+.04,1,2,.1,PAL.woodD);W.bx(dx,2,z1+.05,1.25,.14,.14,PAL.wood);
@@ -44,15 +53,17 @@ function lamp(x,z){prop('lamp',x,0,z,rnd()*6.28,1,null,()=>{W.cyl(0,0,0,.09,.07,
 function grave(x,z){const v='abcd'[floor(rnd()*4)];prop('grave_'+v,x,0,z,(rnd()-.5)*.25,.95+rnd()*.15,{k:.85+rnd()*.25},()=>{if(v<'c'){W.bx(0,0,0,.62,.95,.16,PAL.stone);}else{W.bx(0,0,0,.14,1.2,.14,PAL.stone);W.bx(0,.75,0,.6,.14,.14,PAL.stone);}W.bx(0,0,.8,.7,.12,1.3,H('#2a3a30'));});col(x-.3,z-.1,x+.3,z+.1,.9);}
 
 // --- ground: smooth colour field + shader detail (mode 1)
-const ROADS=[[-28,-330,-28,-6,2.4],[-30.6,-8,61,-8,2.4],[10,-8,10,47,2.4],[-30,42,42,42,2.6],[10,5,38.5,5,1.1],[42,42,47.5,36.5,1.2],[-28,-6,-28,10,1],[-40,-22,-30,-16,2.2]];
+const ROADS=[[-28,-330,-28,-6,2.4],[-138,-8,61,-8,2.4],[10,-8,10,47,2.4],[-138,42,42,42,2.6],[-110,-8,-110,-33,2],[-100,-8,-100,42,2],[-64,-8,-64,42,1.6],[10,5,38.5,5,1.1],[42,42,47.5,36.5,1.2],[-28,-6,-28,10,1],[-40,-22,-30,-16,2.2]];
 function segD(x,z,s){const dx=s[2]-s[0],dz=s[3]-s[1],t=clamp(((x-s[0])*dx+(z-s[1])*dz)/(dx*dx+dz*dz),0,1);return hypot(x-s[0]-dx*t,z-s[1]-dz*t);}
 function roadW(x,z){let w=0;const n=(fbm(x*.35,z*.35)-.5)*1.4;for(const s of ROADS){const d=segD(x,z,s)+n;w=max(w,1-sstep(s[4]-.7,s[4]+.8,d));}
   if(x>-50&&x<-30.5&&z>-24.5&&z<-11.5)w=max(w,1-sstep(-.5,1.2,max(-50-x,x+30.5,-24.5-z,z+11.5)+n*.6));return w;}
 const GC={g1:H('#2c4a35'),g2:H('#3e5c3b'),dry:H('#55603e'),moss:H('#263d2e'),road:H('#544a3e'),rut:H('#3d362e'),sand:H('#7b7056'),wet:H('#4f4b3e'),lot:H('#4a4743'),forest:H('#2a3828'),needle:H('#463b2c')};
 function groundCol(x,z){const n1=fbm(x*.06,z*.06),n2=fbm(x*.21+50,z*.21),n3=VN(x*.9,z*.9);
   let c=vLerp(GC.g1,GC.g2,sstep(.35,.7,n1));c=vLerp(c,GC.dry,sstep(.55,.85,n2)*.7);c=vLerp(c,GC.moss,sstep(.6,.9,1-n1)*.5);
-  const forest=sstep(-41,-48,z)+sstep(58,64,x)+sstep(-64,-70,x);c=vLerp(c,vLerp(GC.forest,GC.needle,n3*.6),clamp(forest,0,1)*.85);
+  const forest=sstep(-41,-48,z)+sstep(58,64,x)+sstep(-134,-140,x);c=vLerp(c,vLerp(GC.forest,GC.needle,n3*.6),clamp(forest,0,1)*.85);
   if(x>38&&x<58&&z>-3&&z<14)c=vLerp(c,GC.moss,.55);
+  if(x>-100&&x<-80&&z>-4.5&&z<14)c=vLerp(c,GC.lot,.75*(1-sstep(.4,1,fbm(x*.5,z*.5))*.4));   // the cobbled market square
+  if(x>-136&&x<-118&&z>8&&z<18)c=vLerp(c,GC.dry,.6);   // the trodden schoolyard
   const r=roadW(x,z);if(r>0){let rc=vLerp(GC.road,GC.rut,sstep(.3,.8,n3)*.5);if(x>-50&&x<-30&&z>-24&&z<-12)rc=GC.lot;c=vLerp(c,rc,r);}
   const sd=sstep(43.2,45.2,z+(n2-.5)*1.5);if(sd>0)c=vLerp(c,vLerp(GC.sand,GC.wet,sstep(45.6,47,z)),sd);
   return[c[0],c[1],c[2],0];}
@@ -62,15 +73,15 @@ function groundGrid(x0,x1,z0,z1,st){const nx=Math.round((x1-x0)/st),nz=Math.roun
   const id=(i,j)=>j*(nx+1)+i,nrm=(i,j)=>{const a=Pp[id(max(i-1,0),j)],b=Pp[id(min(i+1,nx),j)],c=Pp[id(i,max(j-1,0))],d=Pp[id(i,min(j+1,nz))];return vNorm([a[1]-b[1],b[0]-a[0],c[1]-d[1]]);};
   const N=Pp.map((_,k)=>nrm(k%(nx+1),floor(k/(nx+1))));
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const q=[id(i,j),id(i,j+1),id(i+1,j+1),id(i+1,j)];for(const t of[[0,1,2],[0,2,3]])for(const k of t){const v=q[k];GR.vert(Pp[v],N[v],Cc[v],N[v]);}}}
-groundGrid(-104,96,-48,48,1);groundGrid(-104,48,-332,-48,2);
+groundGrid(-150,96,-48,48,1);groundGrid(-104,48,-332,-48,2);
 // sea: fine grid where the camera can see it, coarse beyond; waves are done in the vertex shader (mode 2)
 function seaGrid(x0,x1,z0,z1,st){const c=H('#14353a');for(let x=x0;x<x1;x+=st)for(let z=z0;z<z1;z+=st){for(const t of[[[x,0,z],[x,0,z+st],[x+st,0,z+st]],[[x,0,z],[x+st,0,z+st],[x+st,0,z]]])for(const p of t)SEA.vert(p,[0,1,0],c,[0,1,0]);}}
-seaGrid(-90,110,46,300,2);seaGrid(-290,-90,46,420,10);seaGrid(110,310,46,420,10);seaGrid(-90,110,300,420,10);
-prop('seawall',0,0,47.2,0,1,null,()=>W.bx(0,-.7,0,190,.75,.5,H('#3a3a34')));
+seaGrid(-150,110,46,120,2);seaGrid(-90,110,120,300,2);seaGrid(-290,-150,46,420,10);seaGrid(-150,-90,120,420,10);seaGrid(110,310,46,420,10);seaGrid(-90,110,300,420,10);
+prop('seawall',0,0,47.2,0,1,null,()=>W.bx(0,-.7,0,190,.75,.5,H('#3a3a34')));prop('seawall',-190,0,47.2,0,1,null,()=>W.bx(0,-.7,0,190,.75,.5,H('#3a3a34')));
 
 // --- forest along the road (cutscene) and around the map
 for(let z=-318;z<-50;z+=3.4){for(const s of[-1,1]){for(let k=0;k<3;k++){const x=-28+s*(5+k*5.8+rr(0,3.5));tree(x,z+rr(-1.2,1.2),rr(.9,1.6),false,k>0||z<-120?FAR:W);}}}
-const NOTREE=[[-74,-47,-29,-9],[-33,-60,-23,0],[-34,-12,64,-4],[6,-12,14,48],[-32,38,44,48],[36,-5,60,16],[42,28,58,40],[-10,-27,8,-10],[18,-30,34,-10],[10,-20,16,-12]];
+const NOTREE=[[-140,-3,-62,46],[-140,-34,-64,-9],[-121,-47,-99,-30],[-74,-47,-29,-9],[-33,-60,-23,0],[-34,-12,64,-4],[6,-12,14,48],[-32,38,44,48],[36,-5,60,16],[42,28,58,40],[-10,-27,8,-10],[18,-30,34,-10],[10,-20,16,-12]];
 // chapel
 BLD.push([20,-28,32,-13]);if(!W.at(mT(26,0,-20.5),()=>W.model('chapel'))){house(20,-28,32,-13,{wall:'#6c7472',roof:'#2f3a3c',h:4.6,rh:3.6,lit:0,noCh:1,door:26});
   W.bx(22,0,-15,3.4,8.5,3.4,H('#667070'));W.cyl(22,8.5,-15,2.4,0,4.2,4,H('#2f3a3c'));W.bx(22,6.3,-13.25,1,1.5,.1,H('#6fe0b0',.9));W.bx(29.5,1.5,-12.95,1,1.9,.1,H('#57c79a',.8));}
@@ -94,6 +105,43 @@ fence(-30,-3.5,-26,-3.5);fence(-8,7,-8,11);fence(27,8,34,8);fence(-24,20.5,-20,2
 // quay clutter (no collision: small)
 [[-17,43.4,0],[-6.5,43.6,1],[22,43.2,2],[29,43.5,0],[4,43.8,1],[-27,43,2]].forEach(([x,z,v])=>prop(['ropecoil','trap','buoy'][v],x,0,z,rnd()*6.28,1,null,null));
 prop('anchor',16.5,0,43.6,.4,1,null,null);prop('cart',-20.5,0,-10.2,.3,1,null,null);col(-21.6,-11,-19.4,-9.4,1);prop('bench',-1.5,0,-6.2,0,1,null,null);
+// --- the western district: market square, schoolyard, laundry, the doctor's garden, the west quay (jetties, schooner, crane, gear)
+{const cr=(x,z,r,w,d,h)=>{const sw=abs(sin(r))>.7;col(x-(sw?d:w)/2,z-(sw?w:d)/2,x+(sw?d:w)/2,z+(sw?w:d)/2,h);};
+ // market square
+ for(const[x,z,r]of[[-96,-1.6,0],[-90.5,-1.6,0],[-85,-1.6,0],[-96,10.6,PI],[-89,10.6,PI],[-82.4,4.4,-PI/2]]){prop('stall',x,0,z,r,1,null,()=>{W.bx(0,0,0,2.6,.9,1.1,PAL.wood);W.bx(0,2.2,0,2.8,.06,1.5,H('#7a3a2a'));});cr(x,z,r,2.7,1.2,1);}
+ prop('well',-90,0,4.4,0,1,null,()=>{W.cyl(0,0,0,1.1,1.1,.85,8,PAL.stone);W.cyl(0,.5,0,.8,.8,.3,8,H('#0c1a1e'));});col(-91,3.4,-89,5.4,2);
+ for(const[x,z,r]of[[-94.5,4.4,PI/2],[-85.5,4.4,-PI/2],[-108,-5.6,0],[-71,-5.6,0],[-123,-29.6,0]])prop('bench',x,0,z,r,1,null,()=>{W.bx(0,0,0,1.6,.45,.5,PAL.wood);W.bx(0,.45,-.22,1.6,.5,.08,PAL.woodD);});
+ // schoolyard: fence with a gate, swings, a see-saw, a ball
+ fence(-136,8.6,-136,18);fence(-136,18,-118,18);fence(-118,8.6,-118,18);
+ {const sx=-131,sz=13.5,f=PAL.woodD;for(const s of[-1.6,1.6])for(const t of[-.5,.5])W.at(mM(mT(sx+s,0,sz+t*.9),mRx(t*-.38)),()=>W.bx(0,0,0,.12,2.4,.12,f));W.bx(sx,2.25,sz,3.4,.12,.12,f);
+  for(const s of[-.8,.8]){W.bx(sx+s-.25,0,sz,.03,2.25,.03,H('#7a6a50'));W.bx(sx+s+.25,0,sz,.03,2.25,.03,H('#7a6a50'));W.bx(sx+s,.5,sz,.62,.05,.28,PAL.wood);}col(sx-1.8,sz-.6,sx+1.8,sz+.6,1.2);}
+ W.at(mM(mT(-123,.3,14),mRz(.18)),()=>{W.bx(0,0,0,3.4,.08,.3,PAL.wood);});W.bx(-123,0,14,.3,.32,.3,PAL.woodD);W.sph(-120.4,.15,11.2,.15,.15,.15,H('#8a2a24'),6,4);
+ // laundry lines between posts
+ for(const[x0,x1,z,c]of[[-113,-105,8.4,0],[-76,-68,8.2,1],[-61.5,-52,22,2],[-57,-48,34,0],[-44,-36,22,1]]){const cl=[['#d8d2c2','#5a6a7a','#b9b4a4','#7a4a44'],['#cfc8b4','#4a5a4a','#d8d2c2'],['#8a7a62','#d8d2c2','#4a4a56','#b9b4a4']][c];
+   for(const x of[x0,x1])W.bx(x,0,z,.1,2.1,.1,PAL.woodD);W.bx((x0+x1)/2,2.02,z,x1-x0,.02,.02,H('#9a9078'));
+   for(let k=0,x=x0+.8;x<x1-.6;k++,x+=1.1){const h=.5+(k%3)*.18;W.at(mM(mT(x,2-h,z),mRy(rr(-.15,.15))),()=>W.bx(0,0,0,.7,h,.02,H(cl[k%cl.length])));}}
+ // the doctor's garden: iron-topped fence, gate on Holmovaya street, the woodpile and the gravel heap (distractions)
+ fence(-120,-46,-120,-31);fence(-100,-46,-100,-31);fence(-120,-31,-111.4,-31);fence(-108.6,-31,-100,-31);
+ for(const x of[-111.4,-108.6])W.bx(x,0,-31,.3,1.7,.3,PAL.stone);
+ {const x=-97.6,z=-33.4;W.bx(x,0,z+1.1,1.9,.08,.4,PAL.woodD);for(let k=0;k<5;k++)for(let j=0;j<4-k%2;j++)W.at(mM(mT(x-.7+j*.46+(k%2)*.23,.18+k*.34,z),mRx(PI/2)),()=>W.cyl(0,-.9,0,.17,.17,1.8,6,H(['#6a5236','#5a4430','#7a6044'][(j+k)%3])));
+  W.bx(x+1.05,0,z,.12,1.9,.12,PAL.woodD);W.bx(x-1.05,0,z,.12,1.9,.12,PAL.woodD);col(x-1.1,z-1,x+1.1,z+1,1.8);}
+ for(let i=0;i<9;i++)W.sph(-116.2+rr(-.6,.6),.12,-11.2+rr(-.5,.5),rr(.18,.3),rr(.12,.2),rr(.18,.3),H(['#6f7775','#5a6260','#7a807c'][i%3]),5,3);
+ // west quay: jetties, moored boats, a schooner, a cargo crane, net racks, drying racks, crates and barrels
+ for(const jx of[-60,-88,-126]){W.bx(jx,-.25,54,3,.3,15,H('#5c4a38'));for(let z=47;z<62;z+=1.2)W.bx(jx,.04,z,3,.03,.07,PAL.woodD);for(let z=49;z<62;z+=3.5)for(const s of[-1.4,1.4])W.cyl(jx+s,-2.2,z,.18,.18,3.1,5,PAL.woodD);
+   boat(jx+3.2,53,0,'#5a4a3a',0);boat(jx-3.1,57,.08,'#4f5a56',1);}
+ prop('schooner',-106,-1.25,57,0,1,null,()=>{W.bx(0,.5,0,4,2.2,15,H('#3e3a34'));W.cyl(0,2,-2.6,.14,.08,10,6,PAL.woodD);W.cyl(0,2,2,.14,.08,8.5,6,PAL.woodD);});
+ LAMPS.push([-106,2.4,59.8,6,[1,.72,.4]]);
+ {const cx=-116,cz=44.4;W.cyl(cx,0,cz,.4,.3,6.5,6,PAL.woodD);W.at(mM(mT(cx,5.6,cz),mRy(.5),mRx(-1.1)),()=>W.cyl(0,0,0,.18,.12,7,6,PAL.wood));const tip=[cx+sin(.5)*6.3,5.6+cos(1.1)*7*.42+.4,cz+cos(.5)*6.3*.92];
+  W.bx(tip[0],2.1,tip[2],.03,tip[1]-2.1,.03,H('#7a6a50'));W.bx(tip[0],1.3,tip[2],1,.8,.8,PAL.wood);W.bx(cx,0,cz,1.6,.3,1.6,PAL.stone);col(cx-.8,cz-.8,cx+.8,cz+.8,2);}
+ for(const nx of[-132,-80,-70,-50])prop('netrack',nx,0,39,0,1,null,()=>{W.bx(-1.6,0,0,.12,2,.12,PAL.woodD);W.bx(1.6,0,0,.12,2,.12,PAL.woodD);W.bx(0,1.2,0,3.2,1.5,.05,H('#48564e'));}),col(nx-1.7,38.9,nx+1.7,39.1,2);
+ for(const[x,z]of[[-96,40.4],[-139,30]]){for(const s of[-1.5,1.5])W.bx(x+s,0,z,.1,1.9,.1,PAL.woodD);for(const y of[1.25,1.75]){W.bx(x,y,z,3.1,.04,.04,PAL.woodD);for(let k=0;k<9;k++)W.sph(x-1.3+k*.32,y-.22,z,.05,.2,.03,H(k%2?'#8a9a94':'#a89a7a'),5,3);}col(x-1.6,z-.1,x+1.6,z+.1,1.8);}
+ [[-120,40.6],[-118.8,40.8,.9],[-102,40.4],[-101,39.4,.9],[-84,40.6],[-74,40.8],[-73,39.8,.9],[-54,40.6],[-130,24],[-131,25.2,.9],[-104.4,37.8],[-79,-11.2],[-79.6,-10.2,.9],[-135,-11.6],[-66.2,-1]].forEach(c=>crate(c[0],c[1],c[2]||1.1,rr(-.2,.2)));
+ [[-121.6,40.4],[-108,40.6],[-99,40.8],[-86,40.3],[-68,40.6],[-56,40.8],[-130,26],[-102.6,37.8],[-133,-12.2],[-81,-11],[-48,8.6],[-103.2,-12.4],[-62,21.6]].forEach(c=>barrel(c[0],c[1]));
+ [[-124,43.6,0],[-110,43.4,1],[-93,43.8,2],[-78,43.4,0],[-62,43.6,1],[-46,43.4,2],[-136,43.2,1]].forEach(([x,z,v])=>prop(['ropecoil','trap','buoy'][v],x,0,z,rnd()*6.28,1,null,null));
+ boat(-138,45.4,PI/2-.1,'#5a4033');boat(-72,45.5,PI/2+.05,'#4f5a56',1);boat(-44,45.4,PI/2);
+ [[-100.8,-11.2],[-79.6,-5.6],[-110.8,-28],[-64.8,19],[-100.8,26],[-119,39.6],[-90,39.6],[-62,39.6],[-130,-5.6],[-135,20]].forEach(l=>lamp(l[0],l[1]));
+ prop('noticeboard',-98.4,0,-10.6,0,1,null,()=>{W.bx(-.8,0,0,.1,1.9,.1,PAL.woodD);W.bx(.8,0,0,.1,1.9,.1,PAL.woodD);W.bx(0,1,0,1.7,.9,.07,PAL.wood);});col(-99.3,-10.7,-97.5,-10.5,1.9);
+ prop('cart',-74,0,-10.2,-.4,1,null,null);col(-75.1,-11,-72.9,-9.4,1);prop('mailbox',-52,0,8.2,0,1,null,null);}
 // --- puzzle & easter-egg props (the table, lectern, idol shelf and safe now stand inside the buildings: src/5-story.js)
 if(!hasModel('chapel'))W.cyl(26,1.05,-12.86,.34,.34,.5,8,H('#b08d3c',.25));
 for(let i=0;i<5;i++){const a=i/5*2*PI;W.bx(48+cos(a)*.62,1.3+i%2*.5,5+sin(a)*.62,.14,.14,.14,H('#7fffe0',.9));}
@@ -111,7 +159,7 @@ const BRAZ=[[3.2,69.2],[16.8,69.2],[3.2,80.8],[16.8,80.8]];
 const pierGate=col(7,48.3,13,48.9,2.2);
 for(const r of[[-300,47,7,400],[13,47,300,68],[-300,68,2,400],[18,68,300,400],[2,82,18,400]])col(r[0],r[1],r[2],r[3],0);
 // world bounds
-col(-300,-400,-71.5,400,0);col(63.5,-400,112,400,0);col(112,18,300,400,0);col(-300,-400,300,-47.5,0);// x 112..300, z -47.5..18 is left for the interiors (src/5-story.js)
+col(-300,-400,-141.5,400,0);col(63.5,-400,112,400,0);col(112,18,300,400,0);col(-300,-400,300,-47.5,0);// x 112..300, z -47.5..18 is left for the interiors (src/5-story.js)
 
 // --- MOTEL (roofless, Sims-style cutaway)
 const MW=H('#7f7462'),MW2=H('#71675a'),WAIN=H('#4f3d2c'),PAPER=H('#6d6a55');
@@ -144,13 +192,13 @@ prop('motel_sign',-36,0,-25.5,0,1,null,()=>{W.cyl(0,0,0,.1,.1,3.6,5,PAL.dark);W.
 BLD.push([-63,-39,-39,-25]);
 
 // scattered trees (avoid roads, buildings)
-{let n=0,tries=0;while(n<95&&tries<3000){tries++;const x=rr(-70,62),z=rr(-46,45);let ok=true;for(const r of NOTREE)if(x>r[0]&&x<r[2]&&z>r[1]&&z<r[3])ok=false;for(const b of BLD)if(x>b[0]-2.2&&x<b[2]+2.2&&z>b[1]-2.2&&z<b[3]+3)ok=false;
-  if(abs(z-42)<4||abs(x-10)<4.2||(abs(z+8)<4.2&&x>-32))ok=false;for(const c of cols)if(c.h>0&&x>c.x0-1.2&&x<c.x1+1.2&&z>c.z0-1.2&&z<c.z1+1.2)ok=false;if(!ok)continue;tree(x,z,rr(.9,1.5));n++;}}
+{let n=0,tries=0;while(n<125&&tries<4000){tries++;const x=rr(-138,62),z=rr(-46,45);let ok=true;for(const r of NOTREE)if(x>r[0]&&x<r[2]&&z>r[1]&&z<r[3])ok=false;for(const b of BLD)if(x>b[0]-2.2&&x<b[2]+2.2&&z>b[1]-2.2&&z<b[3]+3)ok=false;
+  if(abs(z-42)<4||abs(x-10)<4.2||abs(z+8)<4.2||roadW(x,z)>.15)ok=false;for(const c of cols)if(c.h>0&&x>c.x0-1.2&&x<c.x1+1.2&&z>c.z0-1.2&&z<c.z1+1.2)ok=false;if(!ok)continue;tree(x,z,rr(.9,1.5));n++;}}
 // thick tree wall at the edges
-for(let x=-72;x<66;x+=2.6){tree(x+rr(-.5,.5),-49.5+rr(-1,1),rr(1.2,1.8),false);if(abs(x+28)>4)tree(x+rr(-.5,.5),-52.5,rr(1.2,1.8),false,FAR);}
-for(let z=-46;z<44;z+=2.8){tree(-73.5+rr(-.6,.6),z,rr(1.2,1.8),false);tree(65.5+rr(-.6,.6),z,rr(1.2,1.8),false);}
+for(let x=-140;x<66;x+=2.6){tree(x+rr(-.5,.5),-49.5+rr(-1,1),rr(1.2,1.8),false);if(abs(x+28)>4)tree(x+rr(-.5,.5),-52.5,rr(1.2,1.8),false,FAR);}
+for(let z=-46;z<44;z+=2.8){tree(-143.5+rr(-.6,.6),z,rr(1.2,1.8),false);tree(65.5+rr(-.6,.6),z,rr(1.2,1.8),false);}
 // rocks along the shore and edges
-for(let i=0;i<46;i++){const x=rr(-70,62),z=i<26?rr(44.6,46.6):rr(-46,40);if(i>=26&&roadW(x,z)>.1)continue;let ok=true;for(const b of BLD)if(x>b[0]-1&&x<b[2]+1&&z>b[1]-1&&z<b[3]+1)ok=false;for(const c of cols)if(c.h>0&&c.h<20&&x>c.x0-.8&&x<c.x1+.8&&z>c.z0-.8&&z<c.z1+.8)ok=false;if(ok)prop('rock_'+'abc'[i%3],x,-.05,z,rnd()*6.28,rr(.5,1.2),null,null);}
+for(let i=0;i<64;i++){const x=rr(-138,62),z=i<36?rr(44.6,46.6):rr(-46,40);if(i>=26&&roadW(x,z)>.1)continue;let ok=true;for(const b of BLD)if(x>b[0]-1&&x<b[2]+1&&z>b[1]-1&&z<b[3]+1)ok=false;for(const c of cols)if(c.h>0&&c.h<20&&x>c.x0-.8&&x<c.x1+.8&&z>c.z0-.8&&z<c.z1+.8)ok=false;if(ok)prop('rock_'+'abc'[i%3],x,-.05,z,rnd()*6.28,rr(.5,1.2),null,null);}
 
 // --- vegetation: grass tufts, ferns, bushes, flowers, reeds (mode 3: sways in the wind)
 function bladeTuft(x,z,s,hue){const n=5+floor(rnd()*4),gy=groundH(x,z);for(let i=0;i<n;i++){const a=rnd()*6.28,r=.05+rnd()*.14,h=(.28+rnd()*.38)*s,lean=.12+rnd()*.25,w=.035*s;
@@ -158,8 +206,9 @@ function bladeTuft(x,z,s,hue){const n=5+floor(rnd()*4),gy=groundH(x,z);for(let i
     const c0=[hue[0]*.55,hue[1]*.55,hue[2]*.55,0],c1=[hue[0]*(1+rnd()*.3),hue[1]*(1+rnd()*.25),hue[2],1];const n0=[0,1,0];
     VEG.vert([bx-px,gy,bz-pz],n0,c0,n0);VEG.vert([bx+px,gy,bz+pz],n0,c0,n0);VEG.vert([tx,gy+h,tz],n0,c1,n0);}}
 {const HUES=[H('#4f6e46'),H('#5d7a4a'),H('#6b7448'),H('#49663f'),H('#7a7a52')];let n=0,tries=0;
- while(n<7000&&tries<40000){tries++;const x=rr(-72,64),z=rr(-47,45.5);if(roadW(x,z)>.35)continue;let ok=true;for(const b of BLD)if(x>b[0]-.3&&x<b[2]+.3&&z>b[1]-.3&&z<b[3]+.3){ok=false;break;}
+ while(n<9800&&tries<56000){tries++;const x=rr(-142,64),z=rr(-47,45.5);if(roadW(x,z)>.35)continue;let ok=true;for(const b of BLD)if(x>b[0]-.3&&x<b[2]+.3&&z>b[1]-.3&&z<b[3]+.3){ok=false;break;}
    if(!ok)continue;for(const c of cols)if(c.h>.5&&c.h<20&&x>c.x0-.15&&x<c.x1+.15&&z>c.z0-.15&&z<c.z1+.15){ok=false;break;}if(!ok)continue;
+   if(x>-101&&x<-79&&z>-5&&z<14||x>-136&&x<-118&&z>8&&z<18)continue;   // market square, schoolyard
    const sand=z>44.2,dense=fbm(x*.12,z*.12);if(rnd()>dense*1.3)continue;
    const v=rnd(),s=rr(.8,1.35)*(sand?.8:1);
    if(sand){if(!VEG.at(mM(mT(x,groundH(x,z),z),mRy(rnd()*6.28),mS(s,s,s)),()=>VEG.model('reeds',{sway:1})))bladeTuft(x,z,s*1.4,H('#7c7650'));}
@@ -171,7 +220,7 @@ function bladeTuft(x,z,s,hue){const n=5+floor(rnd()*4),gy=groundH(x,z);for(let i
    n++;}}
 
 // --- nav grid
-const GX0=-72,GZ0=-48,GW=136,GH=132;const blocked=new Uint8Array(GW*GH);
+const GX0=-142,GZ0=-48,GW=206,GH=132;const blocked=new Uint8Array(GW*GH);
 function blockRect(c){const i0=max(0,floor(c.x0-.42-GX0)),i1=min(GW-1,floor(c.x1+.42-GX0)),j0=max(0,floor(c.z0-.42-GZ0)),j1=min(GH-1,floor(c.z1+.42-GZ0));
   for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){const cx=GX0+i+.5,cz=GZ0+j+.5;if(cx>c.x0-.42&&cx<c.x1+.42&&cz>c.z0-.42&&cz<c.z1+.42)blocked[j*GW+i]=1;}}
 cols.forEach(blockRect);

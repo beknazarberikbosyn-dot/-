@@ -881,21 +881,30 @@ PROPS = ['crate_a', 'crate_b', 'barrel', 'boat_a', 'boat_b', 'fence', 'lamp', 'g
          'counter', 'keyboard', 'bell', 'ledger', 'table_lamp', 'bed', 'nightstand', 'book', 'candle', 'wardrobe', 'armchair', 'chair', 'rug', 'sculptor_table', 'lectern', 'idol_shelf', 'safe', 'mailbox', 'noticeboard', 'idol', 'wreck']
 
 # ================================================================ BUILDINGS
-HOUSES = [[-22, -22, -12, -13, {}], [-5, -23, 6, -13, {'wall': '#8f8468', 'roof': '#4b3a36', 'lit': 1}], [-24, -3, -14, 6, {}], [-8, -3, 3, 5, {}], [16, -3, 27, 5, {}], [-8, 12, 3, 20, {}], [16, 12, 27, 20, {}], [-24, 12, -14, 18, {}],
-          [-24, 24, -9, 36, {'wall': '#5d5346', 'roof': '#35302c', 'h': 4, 'rh': 2.6, 'lit': 0, 'noCh': 1}], [18, 24, 28, 31, {}], [15, 34, 21, 39, {'wall': '#6f6a5a', 'roof': '#3a4450', 'h': 2.8, 'rh': 1.6, 'lit': 0, 'noCh': 1}]]
+HOUSES = [[-25.2, -27, -8, -12.6, {'kind': 'pub', 'wall': '#6b5f52', 'roof': '#3a3230', 'h': 3.6, 'rh': 2.6, 'lit': 1, 'door': -13.2}],
+          [-5, -23, 6, -13, {'wall': '#8f8468', 'roof': '#4b3a36', 'lit': 1}], [-24, -3, -14, 6, {}], [-8, -3, 3, 5, {}], [16, -3, 27, 5, {}], [-8, 12, 3, 20, {}], [16, 12, 27, 20, {}], [-24, 12, -14, 18, {}],
+          [-24, 24, -9, 36, {'wall': '#5d5346', 'roof': '#35302c', 'h': 4, 'rh': 2.6, 'lit': 0, 'noCh': 1}], [18, 24, 28, 31, {}], [15, 34, 21, 39, {'wall': '#6f6a5a', 'roof': '#3a4450', 'h': 2.8, 'rh': 1.6, 'lit': 0, 'noCh': 1}],
+          # --- the western district (market street, Holmovaya street, the school, the church, the port)
+          [-134, -24, -123, -13, {'kind': 'bakery', 'wall': '#8a7a62', 'roof': '#54463a', 'lit': 1}], [-122, -25, -113, -14, {}],
+          [-118, -44, -102, -35, {'kind': 'doctor', 'wall': '#7a7f78', 'roof': '#2f3a3c', 'h': 5.8, 'rh': 2.6, 'lit': 1, 'door': -110}], [-106.5, -26, -98, -14, {}],
+          [-94, -32, -80, -12, {'kind': 'church', 'wall': '#c9c4b4', 'roof': '#3a4450', 'h': 5, 'rh': 3.4, 'lit': 1, 'noCh': 1, 'door': -87}],
+          [-78, -22, -67, -12, {'kind': 'shop', 'wall': '#7d8a86', 'lit': 1}], [-136, -3, -118, 8, {'kind': 'school', 'wall': '#8a5a48', 'roof': '#3f4a48', 'lit': 1, 'noCh': 1, 'door': -127}],
+          [-114, -3, -104, 6, {}], [-60, -2, -48, 7, {'kind': 'post', 'wall': '#75807a', 'lit': 1}], [-62, 12, -51, 20, {}], [-45, 12, -35, 20, {}],
+          [-128, 22, -104, 36, {'kind': 'cannery', 'wall': '#6a5248', 'roof': '#3a3a36', 'h': 5.5, 'rh': 2.2, 'lit': .6, 'noCh': 1, 'door': -116}],
+          [-96, 26, -84, 37, {'kind': 'boathouse', 'wall': '#5d5346', 'roof': '#35302c', 'h': 4, 'rh': 2.4, 'lit': 0, 'noCh': 1}], [-77, 24, -67, 33, {}], [-58, 24, -47, 32, {}], [-77, -3, -67, 6, {}]]
 WALLS = ['#8a8271', '#7d8a86', '#93856a', '#75807a']; ROOFS = ['#4b3a36', '#3a4450', '#54463a', '#3f4a48']
-def slope_rows(a, axis, half, length, h, rh, ov, mats, under, rr, holes=.05):
+def slope_rows(a, axis, half, length, h, rh, ov, mats, under, rr, holes=.05, lod=1.0):
     """shingled gable roof. axis='x': ridge along X (slopes face ±Y)."""
     run = half+ov; L = sqrt(run*run + (rh+ov*rh/half)**2); ang = atan2(rh, half)
     for side in (-1, 1):
         if axis == 'x': base = Tr(0, 0, h+rh) @ (Rz(pi) if side > 0 else M.Identity(4)) @ Rx(ang)
         else: base = Tr(0, 0, h+rh) @ Rz(pi/2) @ (Rz(pi) if side > 0 else M.Identity(4)) @ Rx(ang)
         a.add(box(length+.6, L+.05, .08, (0, -L/2, -.05), T=base), under)
-        rows = int(L/.34)+1
+        rows = int(L/(.34*lod))+1
         for j in range(rows):
             y = -(j+.5)*L/rows; x = -(length+.6)/2
             while x < (length+.6)/2:
-                sl = rr.uniform(1.3, 3.0); sl = min(sl, (length+.6)/2-x)
+                sl = rr.uniform(1.3, 3.0)*lod; sl = min(sl, (length+.6)/2-x)
                 if rr.random() > holes:
                     b = box(sl-.03, L/rows+.06, .06, (x+sl/2, y-.03, .02+rr.uniform(0, .015)), T=base)
                     a.add(b, mats[rr.randint(0, len(mats)-1)])
@@ -913,7 +922,7 @@ def window(a, x, y, z, nrm, lit, rr, trim, wood, glass_l, glass_u, shut, boarded
         if r_ < .15: continue
         op = rr.uniform(.05, .5) if r_ < .8 else 1.2
         a.add(box(.45, .05, 1.08, (.225*s, 0, 0), T=T @ Tr(s*.56, -.07, 0) @ Rz(-s*op) @ (Ry(.25*s) if r_ > .93 else M.Identity(4))), shut)
-def house_build(a, w, d, h=3.2, rh=2.2, wall=None, roof=None, lit=.4, noCh=False, door_dx=0, seed=0):
+def house_build(a, w, d, h=3.2, rh=2.2, wall=None, roof=None, lit=.4, noCh=False, door_dx=0, seed=0, lod=1.0):
     rr = random.Random(seed*31+7); wall = wall or WALLS[rr.randint(0, 3)]; roof = roof or ROOFS[rr.randint(0, 3)]
     wm = a.m('wall', wall); wm2 = a.m('wall2', mix(wall, '#000000', .14)); wm3 = a.m('wall3', mix(wall, '#d8d0b8', .1)); core = a.m('core', mix(wall, '#000000', .4))
     trim = a.m('trim', mix(wall, '#c9c2b0', .45)); wood = a.m('wood', WOODD); stn = a.m('stone', '#6f7775'); stn2 = a.m('stone2', '#5a6260')
@@ -949,7 +958,7 @@ def house_build(a, w, d, h=3.2, rh=2.2, wall=None, roof=None, lit=.4, noCh=False
     # roof
     ov = .45
     length = (w if ridge_x else d)+.5; half = (d if ridge_x else w)/2
-    ang = slope_rows(a, 'x' if ridge_x else 'y', half, length, h, rh, ov, [r1, r1, r2, r3], und, rr)
+    ang = slope_rows(a, 'x' if ridge_x else 'y', half, length, h, rh, ov, [r1, r1, r2, r3], und, rr, lod=lod)
     a.add(box(length+.7, .26, .2, (0, 0, h+rh+.04), T=Rz(0) if ridge_x else Rz(pi/2)), r2)
     # door, porch roof, steps
     dx = door_dx; fy = -d/2-.05
@@ -976,9 +985,84 @@ def house_build(a, w, d, h=3.2, rh=2.2, wall=None, roof=None, lit=.4, noCh=False
     # drainpipe, lantern
     a.add(tube([(w/2+.12, -d/2-.12, h-.05), (w/2+.12, -d/2-.12, .1), (w/2+.3, -d/2-.3, .05)], .05, 5), a.m('pipe', '#3a3e3e'))
     if lit >= 1: a.add(box(.18, .18, .26, (dx+.9, fy-.15, 2.0)), a.m('lamp', '#f6cf70', 1.0))
+def wall_windows(a, w, d, dx, z, rr, lit, step=3.2, sides=('-y', '+y'), skip=1.4, boarded=0):
+    """extra rows of windows for long walls and upper floors"""
+    m = lambda n: a.m(n, '#000000')
+    for side in sides:
+        along = side in ('-y', '+y'); span = w if along else d; n = int((span-2.4)//step)
+        for k in range(n+1):
+            t = -span/2+1.2+(span-2.4)*(k/max(n, 1) if n else .5)
+            if side == '-y' and z < 3 and abs(t-dx) < skip: continue
+            x, y = (t, (-d/2-.06 if side == '-y' else d/2+.06)) if along else ((-w/2-.06 if side == '-x' else w/2+.06), t)
+            window(a, x, y, z, side, rr.random() < lit, rr, m('trim'), m('wood'), m('lit'), m('unlit'), m('shutter'), boarded=rr.random() < boarded)
+def awning(a, x, y, w, z, depth, cols):
+    """striped cloth awning sloping out over a shop front (front = -y)"""
+    n = max(2, int(w/.5)); sw = w/n
+    for k in range(n): a.add(box(sw, depth, .04, (x-w/2+sw*(k+.5), y-depth/2, z), T=Tr(x-w/2+sw*(k+.5), y, z) @ Rx(-.35) @ Tr(-(x-w/2+sw*(k+.5)), -y, -z)), cols[k % 2])
+    for k in range(n): a.add(box(sw, .03, .22, (x-w/2+sw*(k+.5), y-depth*.95, z-depth*.34-.1)), cols[k % 2])
+def signboard(a, x, y, z, w, h, col, ink):
+    a.add(box(w+.12, .08, h+.12, (x, y, z)), a.m('wood', WOODD)); a.add(box(w, .1, h, (x, y-.02, z)), a.m('sign', col))
+    for k in range(int(w/.32)): a.add(box(.18, .11, h*.42, (x-w/2+.25+k*.32, y-.03, z+(.06 if k % 2 else -.04))), a.m('ink', ink))
+def house_extra(a, kind, w, d, h, rh, dx, rr):
+    if not kind: return
+    m = lambda n: a.m(n, '#000000'); fy = -d/2-.05; wood = m('wood'); trim = m('trim'); dr = m('door'); stn = m('stone'); und = m('under')
+    if kind == 'pub':
+        wall_windows(a, w, d, dx, 1.85, rr, .9, sides=('-y',), skip=2.6)
+        by = .7; a.add(box(.14, 1.3, 2.25, (w/2+.05, by, 1.125)), trim); a.add(box(.12, 1.0, 1.95, (w/2+.09, by, .98)), dr); a.add(box(.6, 1.5, .12, (w/2+.3, by, .06)), stn)   # back door: east wall, into the alley
+        for s_ in (-1, 1): a.add(box(.2, .2, .3, (dx+s_*1.0, fy-.15, 2.2)), a.m('lamp', '#f6cf70', 1.0))
+    elif kind in ('bakery', 'shop'):
+        cols = [a.m('awn1', '#7a2a24' if kind == 'bakery' else '#2f4a5a'), a.m('awn2', '#d8cfb0')]
+        for x in (-w/2+1.5, w/2-1.5):
+            if abs(x-dx) > 1.3: awning(a, x, fy-.05, 2.2, 2.75, 1.1, cols)
+        signboard(a, dx, fy-.12, 3.0 if h > 3 else 2.85, 2.6, .55, '#2a2620', '#d9b85a')
+    elif kind == 'post':
+        signboard(a, dx, fy-.12, 2.85, 2.2, .45, '#2a3a4a', '#e8dfc4'); wall_windows(a, w, d, dx, 1.85, rr, .6, sides=('-y',), skip=2.4)
+    elif kind == 'school':
+        wall_windows(a, w, d, dx, 1.85, rr, .5, step=2.6, sides=('-y', '+y'), skip=1.6); signboard(a, dx, fy-.12, 2.9, 3.2, .5, '#e8dfc4', '#2a2016')
+        bx, by, bz = 0, 0, h+rh-.4
+        a.add(box(1.3, 1.3, 1.4, (bx, by, bz+.7)), m('wall')); a.add(lathe([(1.0, bz+1.4), (0, bz+2.6)], 4, T=Tr(bx, by, 0) @ Rz(pi/4)), m('roof'))
+        for (ox, oy) in ((0, -.66), (0, .66), (-.66, 0), (.66, 0)): a.add(box(.7 if oy else .1, .1 if oy else .7, .7, (bx+ox, by+oy, bz+.85)), und)
+        a.add(lathe([(.16, bz+.55), (.24, bz+.95), (.05, bz+1.15)], 8), a.m('brass', BRASS))
+    elif kind == 'church':
+        st2 = a.m('stone2', '#5a6260'); gl = a.m('glow', '#f0c27a', .85); fr = a.m('frame', '#3a3a36')
+        for sx in (-1, 1):
+            for y in [-d/2+3+k*3.2 for k in range(int((d-5)//3.2)+1)]:
+                a.add(poly_extrude(arch_poly(1.0, 2.6), .18, T=Tr(sx*(w/2+.04), y, 1.2) @ Rz(pi/2)), gl)
+                a.add(poly_extrude(arch_poly(1.3, 2.95), .16, T=Tr(sx*(w/2+.01), y, 1.05) @ Rz(pi/2)), fr)
+        tx, ty, top = dx, -d/2+1.3, h+rh+1.4
+        a.add(box(3.0, 3.0, top, (tx, ty, top/2)), m('wall')); a.add(box(3.1, 3.1, .2, (tx, ty, top)), trim)
+        for (ox, oy) in ((-1.3, -1.3), (1.3, -1.3), (-1.3, 1.3), (1.3, 1.3)): a.add(box(.32, .32, 2.2, (tx+ox, ty+oy, top+1.1)), trim)
+        a.add(box(2.4, 2.4, 2.1, (tx, ty, top+1.05)), und); a.add(lathe([(.45, top+.4), (.55, top+1.2), (.12, top+1.6)], 8, T=Tr(tx, ty, 0)), a.m('brass', BRASS))
+        a.add(box(3.3, 3.3, .2, (tx, ty, top+2.25)), trim); a.add(lathe([(2.2, top+2.3), (0, top+7.5)], 4, T=Tr(tx, ty, 0) @ Rz(pi/4)), m('roof'))
+        a.add(box(.1, .1, 1.2, (tx, ty, top+8.0)), a.m('iron', IRON)); a.add(box(.6, .1, .1, (tx, ty, top+8.25)), a.m('iron', IRON))
+        a.add(poly_extrude(arch_poly(2.0, 3.0), .3, T=Tr(tx, ty-1.55, 0)), fr); a.add(poly_extrude(arch_poly(1.6, 2.7), .3, T=Tr(tx, ty-1.62, 0)), dr)
+        a.add(poly_extrude(arch_poly(.9, 1.5), .2, T=Tr(tx, ty-1.55, top-2.6)), gl)
+        for k in range(3): a.add(box(3.4-k*.4, .5, .16, (tx, ty-1.6-.5*(2-k), .08+k*.16)), stn)
+    elif kind == 'doctor':
+        wall_windows(a, w, d, dx, 4.3, rr, .55, step=2.8, sides=('-y', '+y', '-x', '+x'), skip=-1)
+        wall_windows(a, w, d, dx, 1.85, rr, .7, step=2.8, sides=('-y',), skip=2.2)
+        for s_ in (-1, 1): a.add(box(.22, .22, 2.9, (dx+s_*1.5, fy-1.6, 1.45+.45)), trim)
+        a.add(box(3.6, 2.0, .14, (dx, fy-.9, 3.4)), m('roof2')); a.add(box(3.7, 2.1, .1, (dx, fy-.9, 3.3)), trim)
+        a.add(box(3.2, 1.8, .3, (dx, fy-.9, .15)), stn); a.add(box(3.2, .4, .45, (dx, fy-1.95, .22)), stn)
+        a.add(box(.22, .22, .32, (dx+1.0, fy-.15, 2.25)), a.m('lamp', '#f6cf70', 1.0))
+    elif kind == 'cannery':
+        brick = a.m('brick', '#6a4a3e'); brick2 = a.m('brick2', '#58402f')
+        wall_windows(a, w, d, dx, 1.9, rr, .5, step=3.0, sides=('-y', '+y', '-x', '+x'), skip=3.2, boarded=.25); wall_windows(a, w, d, dx, 4.1, rr, .35, step=3.0, sides=('-y', '+y'), skip=-1, boarded=.3)
+        a.add(box(4.2, .2, 3.6, (dx, fy-.02, 1.8)), und); a.add(box(4.6, .24, .3, (dx, fy-.05, 3.75)), trim)
+        for k in range(6): a.add(box(.06, .22, 3.5, (dx-1.9+k*.76, fy-.08, 1.8)), wood)
+        cx_, cy_ = w/2-2.2, d/2-2.0
+        for k in range(int(13/.52)): a.add(cyl(.95-k*.006, .95-k*.006, .52, 8, at=(cx_, cy_, k*.52)), brick if k % 2 else brick2)
+        a.add(cyl(1.1, 1.1, .3, 10, at=(cx_, cy_, 13)), stn); signboard(a, dx, fy-.12, 4.5, 6, .7, '#2a2620', '#c9b98a')
+    elif kind == 'boathouse':
+        a.add(box(5.4, .22, 3.3, (0, fy-.02, 1.65)), und); a.add(box(5.8, .26, .3, (0, fy-.05, 3.4)), trim)
+        for s_ in (-1, 1): a.add(box(.3, .3, 3.4, (s_*2.85, fy-.08, 1.7)), wood)
+        for k in range(7): a.add(box(5.2, .3, .08, (0, fy-.6-k*.32, .04-k*.05)), wood)
 for i, (x0, z0, x1, z1, o) in enumerate(HOUSES):
     def mk(i=i, x0=x0, z0=z0, x1=x1, z1=z1, o=o):
-        def f(a): house_build(a, x1-x0, z1-z0, o.get('h', 3.2), o.get('rh', 2.2), o.get('wall'), o.get('roof'), o.get('lit', .4), o.get('noCh', 0), 0, i)
+        def f(a):
+            dx = o.get('door', (x0+x1)/2)-(x0+x1)/2
+            house_build(a, x1-x0, z1-z0, o.get('h', 3.2), o.get('rh', 2.2), o.get('wall'), o.get('roof'), o.get('lit', .4), o.get('noCh', 0), dx, i, lod=1.0 if i < 11 else 1.7)
+            house_extra(a, o.get('kind'), x1-x0, z1-z0, o.get('h', 3.2), o.get('rh', 2.2), dx, random.Random(i*13+5))
         return f
     BUILDERS['house_%d' % i] = (mk(), {})
 def stone_wall(a, x0, y0, x1, y1, z0, z1, mats, rr, row=.42, depth=.5):
@@ -1086,6 +1170,17 @@ def head(a, c, skin, st):
     if hair == 'short' or hair == 'side':
         hb = sph(.106, .112, .118, (0, 0, 0), 10, 7); bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.03 and f.calc_center_median().z < .07] + ([f for f in hb.faces if f.calc_center_median().z > .06] if hair == 'side' else []), context='FACES')
         xform(hb, Tr(cx, cy+.008, cz+.01)); a.add(dbl(hb), hr)
+    if hair == 'bun' or hair == 'braids' or hair == 'long':
+        hb = sph(.108, .114, .12, (0, 0, 0), 10, 7); bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.04 and f.calc_center_median().z < .075], context='FACES')
+        xform(hb, Tr(cx, cy+.01, cz+.012)); a.add(dbl(hb), hr)
+        if hair == 'bun': a.add(sph(.055, .05, .05, (cx, cy+.1, cz+.07), 8, 6), hr)
+        elif hair == 'braids':
+            for s in (-1, 1): a.add(tube([(cx+s*.09, cy+.02, cz-.02), (cx+s*.1, cy+.0, cz-.12), (cx+s*.09, cy-.01, cz-.22)], [.026, .022, .016], 5), hr)
+        else: a.add(box(.2, .06, .26, (cx, cy+.085, cz-.08)), hr)
+    if hair == 'kerchief':
+        kc = a.m('kerchief', st.get('scarf', '#6a3a34')); hb = sph(.118, .124, .13, (0, 0, 0), 10, 7)
+        bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.05 and f.calc_center_median().z < .09], context='FACES'); xform(hb, Tr(cx, cy+.012, cz+.012)); a.add(dbl(hb), kc)
+        a.add(dbl(tri_fan([V((cx-.1, cy+.06, cz-.04)), V((cx+.1, cy+.06, cz-.04)), V((cx, cy+.12, cz-.2))])), kc)
     beard = st.get('beard')
     if beard == 'full':
         b = sph(.1, .09, .09, (cx, cy-.035, cz-.08), 8, 6); displace(b, .012, 30, 3); a.add(b, hr); a.add(box(.07, .02, .014, (cx, cy-.112, cz-.035)), hr)
@@ -1240,7 +1335,87 @@ def _(a):
     o = a.m('outer', '#ff7a1a', 1.0); i = a.m('inner', '#ffe08a', 1.0)
     a.add(lathe([(.09, 0), (.13, .08), (.1, .2), (.05, .3), (0, .4)], 7, rf=lambda ang, z: 1+.25*sin(ang*3+z*9)), o)
     a.add(lathe([(.05, .02), (.07, .08), (.04, .18), (0, .26)], 6), i)
+# --- ordinary townsfolk (women, children) and Dr Edmund Bernson
+NSKIN = '#c9a183'
+def skirt(a, cloth, k=1.0, kz=1.0, top=1.0, flare=1.0):
+    cm = a.m('skirt', cloth); fold = lambda ang, z: 1+.05*sin(ang*8+z*3)
+    a.add(dbl(lathe([(.19*k*flare, .06*kz), (.24*k*flare, .3*kz), (.2*k, .7*kz), (.168*k, top*kz)], 16, rf=fold, cap0=False, cap1=False, T=Sc(1, .78, 1))), cm)
+    sh = a.m('shoe', '#1c1a18')
+    for s_ in (-1, 1): a.add(box(.08*k, .16*k, .07, (s_*.07*k, -.04, .035)), sh)
+def woman(a, cloth, skirt_col, head_cfg, apron=None, shawl=None, k=1.0):
+    torso(a, {'cloth': cloth, 'skin': NSKIN, 'k': .9*k, 'kd': .95, 'head': head_cfg}); skirt(a, skirt_col, k)
+    if apron:
+        ap = a.m('apron', apron); a.add(dbl(quadstrip([V((-.13*k, -.13, 1.0)), V((.13*k, -.13, 1.0))], [V((-.2*k, -.24, .18)), V((.2*k, -.24, .18))])), ap)
+    if shawl:
+        sw = a.m('shawl', shawl); a.add(tube([V((cos(t)*.17*k, sin(t)*.12*k+.01, 1.48+.04*cos(t))) for t in [j/14*2*pi for j in range(15)]], .045, 5, False, False), sw)
+        a.add(dbl(tri_fan([V((-.17*k, .06, 1.48)), V((.17*k, .06, 1.48)), V((0, .14, 1.05))])), sw)
+@asset('wom_body_0')
+def _(a): woman(a, '#5a4a5a', '#3a3440', {'hair_style': 'bun', 'hair': '#4a3424'}, shawl='#7a6a58')
+@asset('wom_body_1')
+def _(a): woman(a, '#6a5a44', '#4a3a2e', {'hair_style': 'kerchief', 'scarf': '#5a3a34', 'hair': '#3a2a1e'}, apron='#cfc8b4')
+@asset('wom_body_2')
+def _(a): woman(a, '#3a3a3e', '#2a2a2e', {'hair_style': 'kerchief', 'scarf': '#2a2a30', 'hair': '#9a9588', 'jaw': 2.6}, shawl='#4a4a46')
+def kid(a, cloth, head_cfg, dress=None):
+    torso(a, {'cloth': cloth, 'skin': NSKIN, 'k': .74, 'kz': .66, 'head': head_cfg})
+    if dress: skirt(a, dress, .74, .66, top=1.0, flare=.9)
+@asset('kid_body_0')
+def _(a): kid(a, '#4a5a6a', {'hat': 'flatcap', 'hat_col': '#3a3a36', 'hair': '#5a3a24'})
+@asset('kid_body_1')
+def _(a): kid(a, '#7a4a44', {'hair_style': 'braids', 'hair': '#8a6a3a'}, dress='#6a3e3a')
+@asset('kid_arm')
+def _(a):
+    arm(a, '#808080', NSKIN, k=.8)
+    for v in a.bm.verts: v.co.z *= .68
+@asset('kid_leg')
+def _(a):
+    leg(a, '#3a3836', k=.8)
+    for v in a.bm.verts: v.co.z *= .66
+@asset('doc_body')
+def _(a):
+    cm, c2 = torso(a, {'cloth': '#2e3034', 'cloth2': '#202226', 'skin': '#c4a088', 'head': {'hair_style': 'side', 'hair': '#2a2018', 'glasses': 1, 'eyes': 'sunken'}})
+    shirt = a.m('shirt', '#d8d2c2'); tie = a.m('tie', '#1e2a2a'); coat = a.m('labcoat', '#cfcab8'); coat2 = a.m('labcoat2', '#b8b3a2')
+    a.add(tri_fan([V((0, -.135, 1.47)), V((-.07, -.128, 1.5)), V((0, -.14, 1.3)), V((.07, -.128, 1.5))]), shirt)
+    a.add(tri_fan([V((0, -.142, 1.47)), V((-.016, -.141, 1.44)), V((0, -.146, 1.3)), V((.016, -.141, 1.44))]), tie)
+    fold = lambda ang, z: 1+.035*sin(ang*7+z*4)   # open laboratory coat down to the knees
+    bm = lathe([(.25, .5), (.235, .8), (.21, 1.05), (.22, 1.3), (.215, 1.46), (.12, 1.56)], 16, rf=fold, cap0=False, cap1=False, T=Sc(1, .72, 1))
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().y < -.1 and abs(f.calc_center_median().x) < .085], context='FACES'); a.add(dbl(bm), lambda f: coat2 if f.calc_center_median().z < .7 else coat)
+    for s_ in (-1, 1): a.add(box(.08, .02, .1, (s_*.15, -.16, .85)), coat2)
+    a.add(box(.012, .03, .1, (.13, -.17, 1.33)), a.m('pen', '#2a2a2a'))
+@asset('doc_arm')
+def _(a): arm(a, '#cfcab8', '#c4a088', cuff='#b8b3a2')
+@asset('stall')
+def _(a):
+    rr = random.Random(5); w = a.m('wood', WOOD); wd = a.m('woodd', WOODD); c1 = a.m('awn1', '#7a3a2a'); c2 = a.m('awn2', '#cfc6a8'); fish = a.m('fish', '#8a9a94'); fish2 = a.m('fish2', '#6a7a76'); ice = a.m('ice', '#9fb4b8', .05); veg = a.m('veg', '#6a7a3a'); veg2 = a.m('veg2', '#8a5a2a')
+    a.add(box(2.6, 1.1, .08, (0, 0, .85)), w); a.add(box(2.5, 1.0, .75, (0, .05, .42)), wd)
+    for sx in (-1.25, 1.25):
+        for sy in (-.5, .5): a.add(box(.08, .08, 2.2 if sy < 0 else 2.5, (sx, sy, 1.1 if sy < 0 else 1.25)), wd)
+    n = 6
+    for k in range(n):
+        x = -1.35+2.7/n*(k+.5); a.add(box(2.7/n, 1.4, .04, (x, -.15, 2.35), T=Tr(x, -.15, 2.35) @ Rx(-.25) @ Tr(-x, .15, -2.35)), c1 if k % 2 else c2)
+    a.add(box(2.4, .9, .08, (0, -.02, .93)), ice)
+    for i in range(14): a.add(sph(.06, .2, .04, (rr.uniform(-1.1, 1.1), rr.uniform(-.35, .3), .99), 6, 4), fish if i % 3 else fish2)
+    for (x, y) in ((-1.6, .1), (1.6, .2)):
+        a.add(box(.5, .4, .3, (x, y, .15)), w)
+        for j in range(6): a.add(sph(.06, .06, .06, (x+rr.uniform(-.18, .18), y+rr.uniform(-.12, .12), .32), 5, 3), veg if x < 0 else veg2)
+@asset('schooner', ground=False)
+def _(a):
+    m = (a.m('hull', '#3e3a34'), a.m('hull2', '#2a2622'), a.m('inner', '#6b5a44'), a.m('trim', '#7a2a24'))
+    hull(a, 15, 4.4, 2.2, m, 7); wd = a.m('wood', WOOD); wdd = a.m('woodd', WOODD); sail = a.m('sail', '#b8ae94'); rope = a.m('rope', '#4a4034'); win = a.m('win', '#e2a94a', .8)
+    a.add(box(3.4, 2.6, .12, (0, 2.0, 2.2)), wd); a.add(box(2.4, 2.2, 1.3, (0, 2.8, 2.85)), wdd); a.add(box(2.7, 2.5, .14, (0, 2.8, 3.55)), wd)
+    for x in (-1.21, 1.21): a.add(box(.06, .5, .4, (x, 2.8, 3.0)), win)
+    for (y, hgt) in ((-2.6, 10), (2.0, 8.5)):
+        a.add(tube([(0, y, 2.0), (0, y, 2.0+hgt)], [.14, .08], 6), wdd)
+        a.add(tube([(0, y, 3.2), (0, y+4.0, 3.0)], .07, 5), wdd)
+        a.add(tube([(0, y+.2, 3.25), (0, y+3.8, 3.1)], .2, 6, sq=.6), sail)
+        for s_ in (-1, 1): a.add(tube([(0, y, 2.0+hgt-.3), (s_*2.0, y+.5, 2.4)], .02, 3), rope)
+    a.add(tube([(0, -2.6, 11.7), (0, -7.4, 2.6)], .025, 3), rope); a.add(tube([(0, 2.0, 10.3), (0, 7.2, 2.9)], .025, 3), rope)
+    a.add(tube([(0, -7.0, 2.4), (0, -9.6, 3.0)], [.1, .05], 5), wdd)
+    rr = random.Random(8)
+    for i in range(5):
+        b = ico(.45, 1, (rr.uniform(-1, 1), rr.uniform(-5, -3.5), 2.4)); xform(b, Sc(1, 1, .5)); displace(b, .1, 3, i); a.add(b, a.m('net', '#3d4a44'))
 PEOPLE = ['hero_body', 'hero_arm', 'hero_armW', 'hero_leg', 'vill_body_0', 'vill_body_1', 'vill_body_2', 'vill_body_3', 'vill_arm', 'vill_armW', 'vill_leg', 'cult_body', 'cult_arm', 'cult_armT', 'flame']
+PEOPLE += ['wom_body_0', 'wom_body_1', 'wom_body_2', 'kid_body_0', 'kid_body_1', 'kid_arm', 'kid_leg', 'doc_body', 'doc_arm']
+TOWNPROPS = ['stall', 'schooner']
 
 # ================================================================ THE GREAT OLD ONE — «Рифовый колосс» (variant E)
 # Part rig; authored facing -Y, exported with flip. Design rules: no spheres or round primitives —
@@ -1646,7 +1821,7 @@ def _(a): imp_wing(a, 1)
 def _(a): imp_wing(a, -1)
 CTHULHU = ['cth_torso', 'cth_head', 'cth_eye', 'cth_tent', 'cth_uarm', 'cth_farm', 'cth_thigh', 'cth_palm', 'cth_finger_a', 'cth_finger_b', 'cth_wing_L', 'cth_wing_R', 'imp_body', 'imp_wing_L', 'imp_wing_R']
 
-ALL = [('nature.json', NATURE), ('props.json', PROPS), ('buildings.json', BUILDINGS), ('people.json', PEOPLE), ('cthulhu.json', CTHULHU)]
+ALL = [('nature.json', NATURE), ('props.json', PROPS+TOWNPROPS), ('buildings.json', BUILDINGS), ('people.json', PEOPLE), ('cthulhu.json', CTHULHU)]
 def build_all():
     out = {}
     for fn, names in ALL: out[fn] = build(names, fn)
