@@ -3,7 +3,7 @@
 # assets with flip=True (the creature) are turned 180° first so they face game -Z.
 import bpy, bmesh, math, random, json, base64, os, struct, time
 from math import sin, cos, pi, radians, atan2, sqrt, hypot
-from mathutils import Vector as V, Matrix as M, noise
+from mathutils import Vector as V, Matrix as M, Quaternion as Q, noise
 from mathutils.bvhtree import BVHTree
 
 OUT = os.path.expanduser('~/zov-iz-tumana-assets')
@@ -1242,8 +1242,13 @@ def _(a):
     a.add(lathe([(.05, .02), (.07, .08), (.04, .18), (0, .26)], 6), i)
 PEOPLE = ['hero_body', 'hero_arm', 'hero_armW', 'hero_leg', 'vill_body_0', 'vill_body_1', 'vill_body_2', 'vill_body_3', 'vill_arm', 'vill_armW', 'vill_leg', 'cult_body', 'cult_arm', 'cult_armT', 'flame']
 
-# ================================================================ THE GREAT OLD ONE (part rig; authored facing -Y, exported with flip)
-CC = {'skin': '#1d4240', 'skin2': '#163536', 'skinL': '#2a5650', 'belly': '#3a5846', 'plate': '#2c4a3c', 'barn': '#6a6e66', 'weed': '#1c3622', 'claw': '#181512', 'socket': '#050807', 'mem': '#16302e', 'vein': '#0e2120', 'spike': '#24302c'}
+# ================================================================ THE GREAT OLD ONE — «Рифовый колосс» (variant E)
+# Part rig; authored facing -Y, exported with flip. Design rules: no spheres or round primitives —
+# every form is lofted from irregular polygon sections (carved plates); every end tapers to a
+# chamfer or a point (no blunt cut-offs). Eyes are small almond slits; brows form a V scowl.
+CC = {'skin': '#1b3d3a', 'skin2': '#142f2e', 'skinL': '#28524c', 'belly': '#3a5846', 'plate': '#2c4a3c', 'barn': '#7a7d72',
+      'weed': '#1c3622', 'claw': '#181512', 'socket': '#040706', 'mem': '#17302d', 'vein': '#0e2120', 'spike': '#22302b',
+      'coral': '#7a2c1e', 'tube': '#a39d8c', 'rock': '#2c3632', 'sucker': '#5a6a5c'}
 def cmats(a): return {k: a.m(k, v) for k, v in CC.items()}
 def skin_pick(m, rr, z_belly=None):
     def f(face):
@@ -1252,141 +1257,394 @@ def skin_pick(m, rr, z_belly=None):
         r = rr.random()
         return m['skinL'] if (n.z > .55 and r < .5) else (m['skin2'] if r < .35 else m['skin'])
     return f
+
+# ---- faceted loft toolkit
+def f_shape(kind, n=8, ch=.42):
+    if kind == 'oct': return [(1, -ch), (1, ch), (ch, 1), (-ch, 1), (-1, ch), (-1, -ch), (-ch, -1), (ch, -1)]
+    if kind == 'keel': return [(1, -.2), (.9, .55), (.35, 1), (-.35, 1), (-.9, .55), (-1, -.2), (-.45, -1), (.45, -1)]
+    return [(cos(2*pi*i/n + pi/n), sin(2*pi*i/n + pi/n)) for i in range(n)]
+def f_cat(pts, sizes, k):
+    P = [V(p) for p in pts]; out, osz = [], []
+    for i in range(len(P)-1):
+        p0 = P[max(i-1, 0)]; p1 = P[i]; p2 = P[i+1]; p3 = P[min(i+2, len(P)-1)]; s1, s2 = sizes[i], sizes[i+1]
+        for j in range(k):
+            t = j/k; t2 = t*t; t3 = t2*t
+            out.append(.5*((2*p1) + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t2 + (-p0+3*p1-3*p2+p3)*t3))
+            osz.append((s1[0]+(s2[0]-s1[0])*t, s1[1]+(s2[1]-s1[1])*t))
+    out.append(P[-1]); osz.append(sizes[-1]); return out, osz
+def f_loft(pts, sizes, ref=(0, -1, 0), kind='n', n=8, cap0='chamfer', cap1='chamfer', jit=0.0, smooth=3, seed=0, ch=.42):
+    """loft polygon sections along a path (parallel transport). caps: None|'flat'|'chamfer'|'point'|float(point length)"""
+    rr = random.Random(seed); bm = bmesh.new()
+    sizes = [(s, s) if not isinstance(s, (tuple, list)) else tuple(s) for s in sizes]
+    if smooth and len(pts) > 2: pts, sizes = f_cat(pts, sizes, smooth)
+    else: pts = [V(p) for p in pts]
+    sh = f_shape(kind, n, ch); N = len(sh); T = []
+    for i in range(len(pts)): T.append((pts[min(i+1, len(pts)-1)] - pts[max(i-1, 0)]).normalized())
+    w = V(ref) - T[0]*V(ref).dot(T[0])
+    if w.length < 1e-4: w = V((1, 0, 0)) - T[0]*T[0].x
+    w.normalize(); rings = []
+    for i, p in enumerate(pts):
+        if i > 0: w = T[i-1].rotation_difference(T[i]) @ w; w = (w - T[i]*w.dot(T[i])).normalized()
+        u = T[i].cross(w).normalized(); sx, sy = sizes[i]
+        rings.append([bm.verts.new(p + u*(x*sx*(1+rr.uniform(-jit, jit))) + w*(y*sy*(1+rr.uniform(-jit, jit)))) for (x, y) in sh])
+    for j in range(len(rings)-1):
+        for i in range(N):
+            try: bm.faces.new((rings[j][i], rings[j][(i+1) % N], rings[j+1][(i+1) % N], rings[j+1][i]))
+            except ValueError: pass
+    def capit(ring, p, t, sz, mode, sign):
+        if mode is None: return
+        if mode == 'flat':
+            try: bm.faces.new(ring)
+            except ValueError: pass
+            return
+        m_ = (sz[0]+sz[1])/2
+        if mode == 'chamfer':
+            inner = [bm.verts.new(p + (v.co-p)*.55 + t*sign*m_*.42) for v in ring]
+            for i in range(N):
+                try: bm.faces.new((ring[i], ring[(i+1) % N], inner[(i+1) % N], inner[i]))
+                except ValueError: pass
+            ring = inner; tip = bm.verts.new(p + t*sign*m_*.62)
+        else: tip = bm.verts.new(p + t*sign*m_*(mode if isinstance(mode, float) else 1.6))
+        for i in range(N):
+            try: bm.faces.new((ring[i], ring[(i+1) % N], tip))
+            except ValueError: pass
+    capit(rings[-1], pts[-1], T[-1], sizes[-1], cap1, 1); capit(rings[0], pts[0], T[0], sizes[0], cap0, -1)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+def f_perp(v):
+    v = V(v).normalized(); a = V((0, 0, 1)) if abs(v.z) < .9 else V((1, 0, 0)); return v.cross(a).normalized()
+def f_horn(base, d, L, r, bend=.5, sides=5, axis=None):
+    d = V(d).normalized(); ax = V(axis).normalized() if axis is not None else f_perp(d); p = V(base); pts, sz = [p - d*r*.5], [r]
+    for i in range(1, 5): d = Q(ax, bend/4) @ d; p = p + d*L/4; pts.append(p.copy()); sz.append(r*(1-i/4.6))
+    return f_loft(pts, sz, ref=ax, n=sides, cap0='flat', cap1=2.5, smooth=2)
+def f_tent(start, d, L, r0, seed, n=9, curl=2.0, grav=.25, sides=5, axis=None, tip=.02):
+    rr = random.Random(seed); d = V(d).normalized(); p = V(start)
+    ax = V(axis).normalized() if axis is not None else f_perp(d); ax = Q(d, rr.uniform(-.4, .4)) @ ax
+    pts, sz = [p.copy()], [r0]
+    for i in range(1, n+1):
+        f = i/n; d = Q(ax, curl/n*(f**1.4)*2.2) @ d
+        d = (d + V((0, 0, -grav/n*2)) + V((rr.uniform(-1, 1), rr.uniform(-1, 1), rr.uniform(-1, 1)))*.06).normalized()
+        p = p + d*(L/n); pts.append(p.copy()); sz.append(max(r0*(1-f)**.85, r0*tip))
+    return f_loft(pts, sz, ref=ax, n=sides, cap0='flat', cap1='point', smooth=2)
+def f_barnacle(a, m, base, nrm, r, seed):
+    rr = random.Random(seed); n = V(nrm).normalized(); h = r*rr.uniform(.6, 1.0)
+    a.add(f_loft([base - n*r*.3, base + n*h*.55, base + n*h*.85], [r*1.05, r*.78, r*.55], ref=f_perp(n), n=6, cap0='flat', cap1=None, smooth=0, jit=.12, seed=seed), m['barn'])
+    a.add(f_loft([base + n*h*.86, base + n*h*.35], [r*.5, r*.22], ref=f_perp(n), n=6, cap0=None, cap1='flat', smooth=0), m['socket'])
+def f_worms(a, m, base, nrm, r, seed):
+    rr = random.Random(seed); n = V(nrm).normalized()
+    for i in range(rr.randint(3, 5)):
+        off = (Q(n, rr.uniform(0, 2*pi)) @ f_perp(n))*rr.uniform(0, r*1.6)
+        d = (n + f_perp(n)*rr.uniform(-.4, .4) + V((0, 0, .3))).normalized(); L = r*rr.uniform(2.5, 5)
+        p0 = base + off - n*r*.3; p1 = p0 + d*L
+        a.add(f_loft([p0, p0 + d*L*.5, p1], [r*.32, r*.3, r*.36], ref=f_perp(d), n=6, cap0='flat', cap1=None, smooth=0), m['tube'])
+        a.add(f_loft([p1 - d*.01, p1 + d*r*.35], [r*.3, r*.05], ref=f_perp(d), n=6, cap0='flat', cap1='point', smooth=0), m['coral'])
+def f_fuse(bm, voxel, target):
+    """union every overlapping loft into one surface, then re-facet it into large carved plates"""
+    me = bpy.data.meshes.new('zov_tmp'); bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new('zov_tmp', me); bpy.context.scene.collection.objects.link(ob)
+    r = ob.modifiers.new('R', 'REMESH'); r.mode = 'VOXEL'; r.voxel_size = voxel; r.adaptivity = 0
+    dg = bpy.context.evaluated_depsgraph_get(); n = len(ob.evaluated_get(dg).data.polygons)*2
+    d = ob.modifiers.new('D', 'DECIMATE'); d.ratio = min(1, target/max(n, 1)); d.use_collapse_triangulate = True
+    dg = bpy.context.evaluated_depsgraph_get(); oe = ob.evaluated_get(dg); me2 = oe.to_mesh()
+    out = bmesh.new(); out.from_mesh(me2); oe.to_mesh_clear(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
+    return out
+def f_ray(bvh, o, d, maxd=40):
+    loc, nrm, i, dist = bvh.ray_cast(V(o), V(d).normalized(), maxd); return (loc, nrm) if loc is not None else (None, None)
+def f_scatter(bm, rr, count, ok, mind):
+    bm.faces.ensure_lookup_table(); fs = [(f.calc_center_median(), f.normal.copy()) for f in bm.faces]; out = []; tries = 0
+    while len(out) < count and tries < count*300:
+        tries += 1; c, n = fs[rr.randrange(len(fs))]
+        if not ok(c, n) or any((c-o).length < mind for o, _ in out): continue
+        out.append((c, n))
+    return out
+def f_dress(a, m, bm, rr, barn=0, worms=0, mini=0, horns=0, ok=lambda c, n: True, scale=1.0, seed=0):
+    """barnacles, tube worms, mini tentacles and growths scattered over a fused surface"""
+    for i, (c, n) in enumerate(f_scatter(bm, rr, barn, ok, 1.4*scale)):
+        for j in range(rr.randint(1, 4)):
+            off = (Q(n, rr.uniform(0, 2*pi)) @ f_perp(n))*rr.uniform(0, 1.1*scale); f_barnacle(a, m, c + off, n, rr.uniform(.32, .7)*scale, seed+i*10+j)
+    for i, (c, n) in enumerate(f_scatter(bm, rr, worms, ok, 2*scale)): f_worms(a, m, c, n, rr.uniform(.28, .42)*scale, seed+500+i)
+    for i, (c, n) in enumerate(f_scatter(bm, rr, mini, ok, 1.2*scale)):
+        d = (n + V((0, 0, -.7)) + V((rr.uniform(-.3, .3), rr.uniform(-.3, .3), 0))).normalized()
+        a.add(f_tent(c - n*.25*scale, d, rr.uniform(3, 7.5)*scale, rr.uniform(.3, .55)*scale, seed+900+i, n=7, curl=rr.uniform(1.5, 3.5), grav=.4), m['skin2'] if i % 3 else m['skinL'])
+    for i, (c, n) in enumerate(f_scatter(bm, rr, horns, ok, 2*scale)):
+        a.add(f_horn(c - n*.3*scale, (n + V((0, .4, .3))).normalized(), rr.uniform(1.8, 3.6)*scale, rr.uniform(.4, .65)*scale, bend=.6, sides=5), m['spike'])
+
+# ---- torso
+TORSO_SECS = [(-7, 9.5, 8.2, 0), (-2, 12, 9.6, -.5), (4, 12.2, 10.0, -1.4), (10, 13.4, 11.0, -2.2), (16, 15.2, 11.6, -1.4),
+              (21, 17.0, 11.6, .3), (25.5, 17.4, 10.8, 1.7), (29, 14.6, 9.8, 2.6), (32, 9.6, 7.9, 2.0), (34.5, 6.9, 6.3, .6)]
 @asset('cth_torso', ground=False, flip=True, ao=1.3, aod=6)
 def _(a):
     m = cmats(a); rr = random.Random(61)
-    secs = [(-7, 9.5, 8, 0), (-2, 12, 9.5, -.5), (4, 13.2, 10.5, -1.6), (10, 13.8, 11.2, -2.2), (16, 14.6, 11.2, -1.2), (21, 16.0, 11.0, .4), (25.5, 16.8, 10.4, 1.8), (29, 14.5, 9.5, 2.6), (32, 9.5, 7.8, 2.0), (34.5, 6.8, 6.2, .6)]
-    rings = [ell(rx, ry, z, 24, 0, cy) for (z, rx, ry, cy) in secs]
-    bm = loft(rings)
-    A_ = A('tmp'); A_.bm = bm
+    path = [V((0, cy, z)) for (z, rx, ry, cy) in TORSO_SECS]; sz = [(rx, ry) for (z, rx, ry, cy) in TORSO_SECS]
+    core = f_loft(path, sz, n=10, jit=.05, seed=1, smooth=2)
+    helper = f_loft(path, sz, n=10, cap0='flat', cap1='flat', smooth=2)
+    A_ = A('tmp'); A_.bm = core
     for s_ in (-1, 1):
-        for b in (sph(8.2, 7.6, 7.4, (s_*15.5, 1.0, 28.0), 12, 9), sph(8.5, 7.0, 5.2, (s_*8.0, 3.5, 32.0), 10, 7), sph(6.5, 5.5, 8.5, (s_*11, 2.5, 13), 9, 7)):
-            A_.add(b, 0)
-    A_.add(sph(9, 6, 7, (0, 7.5, 27), 12, 8), 0)
-    bm = modproc(A_.bm, subsurf=1)
-    displace(bm, 1.5, .08, 3, 3); displace(bm, .45, .4, 9, 2)
-    bm = modproc(bm, target=5200)
-    a.add(bm, skin_pick(m, rr, 21))
+        A_.add(f_loft([V((s_*3, 3, 33)), V((s_*9, 2.5, 32.5)), V((s_*15.5, 1.5, 30))], [(3.2, 3.4), (4.4, 4.2), (4.6, 4.6)], ref=(0, 0, 1), n=9, jit=.06, seed=2+s_), 0)           # trapezius
+        A_.add(f_loft([V((s_*11, .5, 33)), V((s_*16.5, .8, 29)), V((s_*18.2, .5, 23))], [(5.4, 5.6), (6.6, 6.4), (4.6, 4.6)], ref=(s_, 0, 0), kind='keel', jit=.05, seed=4+s_), 0)  # shoulder cap
+        A_.add(f_loft([V((s_*1.2, -8.6, 25.5)), V((s_*6.5, -9.6, 24)), V((s_*12, -7.2, 23))], [(2.6, 2.2), (3.6, 3.0), (2.6, 2.2)], kind='keel', seed=6+s_), 0)                    # pectoral plates
+        A_.add(f_loft([V((s_*12.5, 6, 25)), V((s_*13.5, 7.5, 17)), V((s_*11, 6.5, 9))], [(3.4, 3.0), (3.8, 3.6), (2.4, 2.4)], ref=(s_, 0, 0), kind='keel', seed=8+s_), 0)          # lats
+    bm = f_fuse(A_.bm, .45, 4600)
+    a.add(bm.copy(), skin_pick(m, rr, 21))
+    hb = BVHTree.FromBMesh(helper)
+    # flank ribs: slope down toward the sternum, flattened against the skin
     for s_ in (-1, 1):
-        for k in range(5): a.add(tube([V((s_*8.5, -7.5+k*.4, 14+k*2.2)), V((s_*13.2, -2+k*.3, 13.5+k*2.2)), V((s_*14.2, 4, 13+k*2.2))], [.55, .7, .3], 5), m['skin2'])
-    # dorsal spines and ridges along the hunched back
+        for i in range(5):
+            z = 12.5 + i*2.6; pts = []
+            for k in range(9):
+                th = radians(150 - k*11); zz = z - 5.5*(k/8)**1.2 + 1
+                loc, nrm = f_ray(hb, (0, 0, zz), (s_*sin(th), -cos(th), 0))
+                if loc is not None: pts.append(loc)
+            if len(pts) > 4: a.add(f_loft(pts, [(.95*(1-.4*abs(j/(len(pts)-1)-.4)), .62) for j in range(len(pts))], ref=(0, 0, 1), kind='keel', cap0='point', cap1='point', smooth=2), m['skin2'])
+    # ventral scutes down the belly
+    for i in range(6):
+        z = -1 + i*2.5; pts = []
+        for k in range(7):
+            th = radians(-55 + k*18.3); loc, nrm = f_ray(hb, (0, 0, z + .6*abs(k-3)/3), (sin(th), -cos(th), -.15))
+            if loc is not None: pts.append(loc + nrm*.05)
+        if len(pts) > 4: a.add(f_loft(pts, [(.75, .5)]*len(pts), ref=(0, -.3, -1), kind='keel', cap0='point', cap1='point', smooth=2), m['plate'] if i % 2 else m['belly'])
+    # dorsal spine plates along the hunched back
     for i in range(11):
-        z = 6+i*2.6; y = 10.3+sin(i*.5)*.8+(2.2 if z > 22 else 0); h = 2.2+1.6*sin(i/10*pi)
-        a.add(cyl(1.1, 0, h, 5, T=Tr(0, y, z) @ Rx(-1.0-.15*i/10)), m['spike'])
-        for s_ in (-1, 1):
-            if i % 2 == 0: a.add(cyl(.6, 0, h*.55, 4, T=Tr(s_*4.5, y-1.3, z+.6) @ Rx(-1.1) @ Ry(s_*.4)), m['spike'])
-    # barnacles, coral and sea-weed on the shoulders and back
-    for i in range(70):
-        s_ = rr.choice((-1, 1)); ang = rr.uniform(0, 2*pi); p = V((s_*15.5, .5, 28.5)) + V((cos(ang)*7*rr.uniform(.6, 1), sin(ang)*6.5*rr.uniform(.3, 1), rr.uniform(-1, 6.5)))
-        if i > 40: p = V((rr.uniform(-12, 12), rr.uniform(6, 11), rr.uniform(4, 30)))
-        a.add(cyl(rr.uniform(.35, .8), rr.uniform(.15, .35), rr.uniform(.4, 1.1), 5, at=tuple(p)), m['barn'])
-    for i in range(16):
+        z = 6+i*2.6; y = 10.3+sin(i*.5)*.8+(2.2 if z > 22 else 0); h = 2.4+1.8*sin(i/10*pi)
+        a.add(f_horn(V((0, y, z)), (0, 1, .55), h, 1.0, bend=.6, sides=4, axis=(1, 0, 0)), m['spike'])
+        if i % 2 == 0:
+            for s_ in (-1, 1): a.add(f_horn(V((s_*4.5, y-1.3, z+.6)), (s_*.4, 1, .5), h*.55, .55, bend=.5, sides=4), m['spike'])
+    f_dress(a, m, bm, rr, barn=26, worms=8, mini=22, horns=8, seed=60,
+            ok=lambda c, n: (n.y > -.35 or c.z > 26 or abs(c.x) > 13) and n.z > -.4 and c.z > 4)
+    for i in range(14):   # kelp hanging from the shoulders
         s_ = rr.choice((-1, 1)); x0 = s_*rr.uniform(6, 20); y0 = rr.uniform(-3, 10); z0 = rr.uniform(24, 33); L = rr.uniform(5, 11)
         pts = [V((x0+sin(k*.9)*.6, y0+cos(k*.7)*.4-k*.1, z0-k*L/5)) for k in range(6)]
         a.add(tube(pts, [.5, .45, .38, .3, .2, .05], 4, sq=.25), m['weed'])
+
+# ---- head: face + octopoid mantle swept back, V brows, deep sockets, crest fins
+HEAD_PATH = [(0, -4.6, -.2), (0, -4.4, 3.6), (0, -3.4, 7.8), (0, -.4, 12.4), (0, 5.2, 15.8), (0, 11.5, 17.6)]
+HEAD_SIZE = [(3.6, 3.0), (5.8, 4.8), (6.9, 6.0), (9.0, 8.4), (8.0, 7.7), (3.4, 3.4)]
+HEAD_C = V((0, -2.6, 7.6))
+EYE_DIR = (.5, -1, .02)
+def head_bvh():
+    return BVHTree.FromBMesh(f_loft([V(p) for p in HEAD_PATH], HEAD_SIZE, n=10, cap0='flat', cap1='flat', smooth=3))
+def eye_pos():
+    """eye centres (Blender coords) — the game's CL.eyes is derived from these"""
+    hb = head_bvh(); out = []
+    for s_ in (-1, 1):
+        loc, nrm = f_ray(hb, HEAD_C, (s_*EYE_DIR[0], EYE_DIR[1], EYE_DIR[2]))
+        n = (nrm*.6 + V((s_*EYE_DIR[0], EYE_DIR[1], EYE_DIR[2])).normalized()*.4).normalized(); out.append((loc - n*.15, n))
+    return out
+def tent_roots():
+    hb = head_bvh(); out = []
+    for row in range(2):
+        m_ = 7 - row
+        for i in range(m_):
+            u = (i/(m_-1) - .5)*2; loc, nrm = f_ray(hb, HEAD_C + V((0, .5, -1.6)), (u*.9, -1, -.2 - row*.32 - .1*(1-abs(u))))
+            if loc is not None: out.append(loc - nrm*.5)
+    return out
 @asset('cth_head', ground=False, flip=True, ao=1.3, aod=4)
 def _(a):
     m = cmats(a); rr = random.Random(62)
-    face = sph(7.8, 7.6, 7.2, (0, -3.2, 7.4), 16, 12)
-    mant = loft([ell(r*1.05, r*.95, z, 20, 0, y) for (z, y, r) in ((8.5, 0, 7.6), (12, 3, 9.2), (15.5, 6.5, 9.8), (18.8, 10.5, 9.0), (21.4, 15, 7.4), (23, 19.5, 5.4), (23.6, 23.5, 3.2), (23.2, 26.2, 1.2), (22.6, 27.2, .2))])
-    for v in mant.verts: v.co.z += sin(v.co.y*.35)*.4 - max(0, v.co.y-15)*.18
-    A_ = A('tmp'); A_.bm = face; A_.add(mant, 0)
+    A_ = A('tmp'); A_.bm = f_loft([V(p) for p in HEAD_PATH], HEAD_SIZE, n=10, jit=.06, seed=11, cap1='point', smooth=3)
+    for s_ in (-1, 1):   # cheek/jaw masses where the beard roots, temple plates
+        A_.add(f_loft([V((s_*2.5, -7.8, 1.2)), V((s_*5.2, -6.2, 3.5)), V((s_*6.4, -3.2, 5.4))], [(1.8, 1.6), (2.4, 2.1), (1.8, 1.6)], n=8, jit=.06, seed=13+s_), 0)
+        A_.add(f_loft([V((s_*6.0, -4.5, 10.5)), V((s_*7.6, -1.0, 11.5)), V((s_*8.0, 3.0, 12.0))], [(1.6, 1.3), (2.0, 1.6), (1.2, 1.0)], kind='keel', ref=(s_, 0, 0), seed=15+s_), 0)
+    bm = f_fuse(A_.bm, .24, 3000)
+    a.add(bm.copy(), skin_pick(m, rr))
+    hb = head_bvh()
+    # carved V-shaped brow blades: meet low between the eyes, sweep up to the temples -> permanent scowl
     for s_ in (-1, 1):
-        br = cyl(1.6, .3, 5.2, 5, T=Tr(s_*1.2, -9.4, 9.8) @ Ry(s_*(1.9)) @ Rx(.15)); A_.add(br, 0)
-        A_.add(sph(3.0, 3.2, 3.4, (s_*6.6, -5.0, 5.0), 9, 7), 0)
-        A_.add(sph(2.4, 4.0, 2.0, (s_*7.8, 2.0, 12.5), 8, 6), 0)
-    bm = modproc(A_.bm, subsurf=1)
-    displace(bm, .55, .2, 5, 3); displace(bm, .18, .9, 6, 2)
-    bm = modproc(bm, target=3800)
-    a.add(bm, skin_pick(m, rr))
+        ridge = []
+        for i in range(6):
+            u = i/5; loc, nrm = f_ray(hb, HEAD_C, (s_*(.04 + u*1.0), -1, .08 + .55*u**1.1))
+            if loc is not None: ridge.append(loc + nrm*(.3 + .35*(1-u)))
+        if len(ridge) > 3: a.add(f_loft(ridge, [(.6 + .45*(1-j/(len(ridge)-1)), .8 + .8*(1-j/(len(ridge)-1))) for j in range(len(ridge))], ref=(0, -1, .5), kind='keel', cap1='point', smooth=2), m['skin2'])
+    # deep dark sockets behind the eyes (pointed toward the outer-top corner)
+    for (c, n) in eye_pos():
+        s_ = 1 if c.x > 0 else -1; lat = V((s_, 0, 0)); lat = (lat - n*lat.dot(n)).normalized(); up_ = n.cross(lat).normalized()
+        if up_.z < 0: up_ = -up_
+        ang = .45; lu = lat*cos(ang) + up_*sin(ang); uu = up_*cos(ang) - lat*sin(ang)
+        sv = [(1.5, .22), (.6, .62), (-.55, .5), (-1.35, -.1), (-.5, -.5), (.65, -.42)]
+        bm2 = bmesh.new(); vs = [bm2.verts.new(c + n*.25 + lu*(x*1.75) + uu*(y*1.75)) for x, y in sv]; ctr = bm2.verts.new(c - n*1.2)
+        for k in range(6): bm2.faces.new((vs[k], vs[(k+1) % 6], ctr))
+        bmesh.ops.recalc_face_normals(bm2, faces=bm2.faces); a.add(bm2, m['socket'])
+    # crest fins along the mantle ridge
+    for i in range(6):
+        t = .15 + i/6*.8; p = V(HEAD_PATH[2]).lerp(V(HEAD_PATH[-1]), t)
+        loc, nrm = f_ray(hb, p - V((0, 0, 3)), (0, .15, 1))
+        if loc is not None: a.add(f_horn(loc - nrm*.5, (0, .6, 1), 7.5*(1-.6*t), .8, bend=.5, sides=4, axis=(1, 0, 0)), m['spike'])
+    # gill slits low on the sides
     for s_ in (-1, 1):
-        a.add(sph(2.5, 1.4, 1.4, (s_*3.6, -9.2, 8.4), 10, 6), m['socket'])
-        for k in range(4): a.add(box(.25, 2.6, .9, (s_*8.0, -1.0+k*1.0, 5.2-k*.4), T=Tr(s_*8.0, -1.0+k*1.0, 5.2-k*.4) @ Rz(s_*.25) @ Tr(-s_*8.0, 1.0-k*1.0, -(5.2-k*.4))), m['socket'])
-        for k in range(3): a.add(cyl(.9, 0, 3.2, 5, T=Tr(s_*(6.5+k*.6), 6+k*3, 15-k*.8) @ Rx(-1.2) @ Ry(s_*.6)), m['spike'])
-    a.add(sph(3.4, 1.8, 2.2, (0, -7.2, 2.8), 10, 6), m['socket'])
-    for i in range(8):
-        s_ = -1 if i % 2 else 1; x0 = s_*(3.2+(i//2)*1.3); z0 = 5.5-(i//2)*.9
-        pts = [V((x0, -8.5, z0)), V((x0*1.25, -9.6, z0-2.2)), V((x0*1.35, -9.2, z0-4.2)), V((x0*1.1, -8.4, z0-5.6))]
-        a.add(tube(pts, [.75, .55, .35, .1], 5), m['skin2'])
+        for g in range(3):
+            loc, nrm = f_ray(hb, V((0, -1 + g*1.4, 3.5 - g*.5)), (s_, .15, -.25))
+            if loc is None: continue
+            a.add(f_loft([loc - V((0, 0, 1.2)), loc + V((0, 0, 1.3))], [(.35, .14), (.35, .14)], ref=nrm, kind='oct', smooth=0, cap0='point', cap1='point'), m['socket'])
+            a.add(f_loft([loc + nrm*.1 - V((0, .45, 1.5)), loc + nrm*.45 - V((0, .35, 0)), loc + nrm*.1 - V((0, .45, -1.7))], [(.4, .5), (.45, .75), (.35, .5)], ref=nrm, kind='keel', smooth=2, cap0='point', cap1='point'), m['skin2'])
+    a.add(f_loft([V((0, -6.6, .6)), V((0, -7.6, 1.6))], [(2.6, 1.6), (3.0, 1.9)], kind='oct', cap0='flat', cap1=None, smooth=0), m['socket'])   # maw behind the beard
+    f_dress(a, m, bm, rr, barn=8, worms=3, mini=6, horns=0, scale=.8, seed=620,
+            ok=lambda c, n: n.y > -.2 and c.z > 4)
 @asset('cth_eye', ground=False, flip=True, ao=0)
 def _(a):
+    """small almond slit (long axis X, faces -Y); the game tilts it so the outer corner rises"""
     e = a.m('eye', '#ff3a1a', 1.0); p = a.m('pupil', '#140402', .0); g = a.m('glow', '#ffb060', 1.0)
-    a.add(sph(1.95, .8, .98, (0, 0, 0), 12, 8), e); a.add(sph(.9, .5, .5, (0, -.5, 0), 8, 5), g); a.add(box(.32, .3, 1.55, (0, -.72, 0)), p)
+    lens = [(1.0, .05), (.4, .36), (-.45, .3), (-1.0, -.06), (-.4, -.3), (.42, -.28)]
+    def almond(sx, sz, y0, bulge, mat):
+        bm = bmesh.new(); vs = [bm.verts.new((x*sx, y0, z*sz)) for x, z in lens]; c = bm.verts.new((0, y0-bulge, 0))
+        for k in range(6): bm.faces.new((vs[k], vs[(k+1) % 6], c))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces); a.add(bm, mat)
+    almond(1.25, 1.0, 0, .35, e); almond(.7, .5, -.2, .22, g)
+    slit = [(1, 0), (.4, 1), (-.4, 1), (-1, 0), (-.4, -1), (.4, -1)]
+    bm = bmesh.new(); vs = [bm.verts.new((x*.78, -.5, z*.09)) for x, z in slit]; bm.faces.new(list(reversed(vs))); a.add(bm, p)
 @asset('cth_tent', ground=False, flip=True, ao=.6, aod=1.5)
 def _(a):
-    m = cmats(a); suck = a.m('sucker', '#4a6a5a')
-    bm = lathe([(1.0, .25), (1.0, 0), (.97, -1.3), (.93, -2.6), (.9, -3.95)], 10); displace(bm, .05, 2, 4)
-    a.add(bm, lambda f: m['skinL'] if f.normal.y < -.5 else m['skin'])
-    for k in range(3): a.add(cyl(.27-.02*k, .2-.02*k, .1, 6, T=Tr(0, .9, -.7-k*1.15) @ Rx(-pi/2) @ Tr(0, 0, -.05)), suck)
-def limb(a, name_len, radii, seg, seed, spikes=0, bulges=()):
-    m = cmats(a); rr = random.Random(seed); L = name_len
-    n = len(radii); pts = [V((0, 0, -L*i/(n-1))) for i in range(n)]
-    bm = tube(pts, radii, seg)
-    A_ = A('tmp'); A_.bm = bm
-    for (z, rx, ry, rz, y) in bulges: A_.add(sph(rx, ry, rz, (0, y, z), 10, 7), 0)
-    bm = modproc(A_.bm, subsurf=1); displace(bm, radii[0]*.08, .5/radii[0], seed, 3)
-    bm = modproc(bm, target=900); a.add(bm, skin_pick(m, rr))
-    for i in range(spikes):
-        z = -L*(.15+.7*i/max(1, spikes-1)); r = radii[0]*(1-.3*i/max(1, spikes))
-        a.add(cyl(r*.22, 0, r*.85, 5, T=Tr(0, r*.85, z) @ Rx(-1.9)), m['spike'])
+    m = cmats(a)
+    a.add(f_loft([V((0, 0, .35)), V((0, 0, -1.9)), V((0, 0, -4.15))], [1.0, .97, .9], n=7, jit=.05, seed=31, cap0='chamfer', cap1='chamfer', smooth=0),
+          lambda f: m['skinL'] if f.normal.y < -.5 else m['skin'])
+    for k in range(3):   # hexagonal suckers on the inner side
+        c = V((0, .86, -.7-k*1.15)); r = .3-.02*k
+        bm = bmesh.new(); vs = [bm.verts.new(c + V((cos(i/6*2*pi)*r, .05, sin(i/6*2*pi)*r))) for i in range(6)]; ctr = bm.verts.new(c + V((0, .18, 0)))
+        for i in range(6): bm.faces.new((vs[i], vs[(i+1) % 6], ctr))
+        a.add(dbl(bm), m['sucker'])
+def f_limb(a, top, L, sizes, seed, spikes=0, dress=None):
+    m = cmats(a); rr = random.Random(seed); n_ = len(sizes)
+    pts = [V((0, 0, top - (L+top)*i/(n_-1))) for i in range(n_)]
+    bm = f_loft(pts, sizes, n=9, jit=.06, seed=seed, smooth=2)
+    a.add(bm.copy(), skin_pick(m, rr))
+    for i in range(spikes):   # forearm blades on the back side
+        z = -L*(.15+.7*i/max(1, spikes-1)); r = sizes[0][0]*(1-.3*i/max(1, spikes))
+        a.add(f_horn(V((0, r*.75, z)), (0, 1, .6), r*.95, r*.22, bend=.7, sides=4, axis=(1, 0, 0)), m['spike'])
+    if dress: f_dress(a, m, bm, rr, seed=seed*10, **dress)
 @asset('cth_uarm', ground=False, flip=True, ao=1.0, aod=5)
-def _(a): limb(a, 26, [5.8, 5.6, 5.2, 4.9, 4.5], 14, 71, 3, bulges=((-2, 6.6, 6.4, 6.0, 0), (-11, 4.2, 4.6, 6.5, -2.2)))
+def _(a): f_limb(a, 2.5, 26, [(6.0, 5.8), (6.6, 6.3), (6.0, 5.6), (5.2, 4.9), (4.6, 4.3)], 71, 3, dict(barn=10, worms=2, mini=5, ok=lambda c, n: n.y > -.2 and c.z > -18))
 @asset('cth_farm', ground=False, flip=True, ao=1.0, aod=4)
-def _(a): limb(a, 24, [4.7, 4.5, 4.0, 3.5, 3.1], 12, 72, 5, bulges=((-5, 4.4, 4.0, 6, .5),))
+def _(a): f_limb(a, 2.0, 24, [(4.8, 4.6), (5.3, 4.8), (4.6, 4.1), (3.8, 3.4), (3.2, 2.9)], 72, 5, dict(barn=6, worms=3, mini=4, ok=lambda c, n: n.y > 0 and c.z < -2))
 @asset('cth_thigh', ground=False, flip=True, ao=1.0, aod=5)
-def _(a): limb(a, 24, [7.0, 6.8, 6.0, 5.2, 4.6], 14, 73, 0, bulges=((-6, 7.2, 7.0, 8, -1),))
+def _(a): f_limb(a, 3.0, 24, [(7.2, 7.0), (7.6, 7.2), (6.4, 6.0), (5.4, 5.2), (4.8, 4.6)], 73, 0, dict(barn=14, worms=4, mini=0, ok=lambda c, n: True))
 @asset('cth_palm', ground=False, flip=True, ao=1.1, aod=2.5)
 def _(a):
     m = cmats(a); rr = random.Random(74)
-    rings = [ell(3.0, 1.9, -z, 14, 0, 0, f=(lambda ang, z=z: 1+.12*sin(ang*2))) for z in (0, 1.5)] + [ell(3.4, 1.4, -3.4, 14), ell(3.3, 1.2, -5.0, 14)]
-    bm = loft(rings); bm = modproc(bm, subsurf=1); displace(bm, .18, .6, 7, 2); bm = modproc(bm, target=700)
+    bm = f_loft([V((0, 0, .8)), V((0, 0, -1.5)), V((0, -.1, -3.4)), V((0, -.1, -5.1))], [(2.9, 1.9), (3.2, 1.8), (3.5, 1.45), (3.35, 1.2)], kind='oct', jit=.05, seed=74, cap0='chamfer', cap1='chamfer', smooth=0)
     a.add(bm, lambda f: m['belly'] if f.normal.y < -.6 else (m['skin2'] if rr.random() < .3 else m['skin']))
-    for x in (-2.5, -.85, .85, 2.5): a.add(sph(.95, 1.1, .9, (x, 0, -5.3), 8, 6), m['skin2'])
+    for x in (-2.5, -.85, .85, 2.5):   # knuckle plates
+        a.add(f_loft([V((x, .2, -4.2)), V((x, .3, -5.3)), V((x, .2, -6.1))], [(.9, .8), (1.05, .95), (.8, .7)], kind='keel', ref=(0, 1, 0), smooth=0), m['skin2'])
     for i in range(3):
         x = -1.7+i*1.7; a.add(dbl(tri_fan([V((x, -.2, -4.6)), V((x-.85, -.1, -6.6)), V((x+.85, -.1, -6.6))])), m['mem'])
 @asset('cth_finger_a', ground=False, flip=True, ao=.8, aod=1.5)
 def _(a):
-    m = cmats(a); bm = lathe([(.95, .2), (1.02, -.4), (.88, -2.0), (.8, -3.3), (.86, -3.75)], 9); displace(bm, .05, 2.5, 8)
-    a.add(bm, lambda f: m['belly'] if f.normal.y < -.6 else m['skin']); a.add(sph(1.0, 1.0, .9, (0, 0, -.1), 8, 6), m['skin2'])
+    m = cmats(a)
+    a.add(f_loft([V((0, 0, .7)), V((0, 0, -.4)), V((0, 0, -2.0)), V((0, 0, -3.95))], [(1.0, .95), (1.08, 1.0), (.9, .84), (.86, .8)], n=7, jit=.05, seed=81, smooth=0),
+          lambda f: m['belly'] if f.normal.y < -.6 else m['skin'])
 @asset('cth_finger_b', ground=False, flip=True, ao=.8, aod=1.5)
 def _(a):
-    m = cmats(a); bm = lathe([(.78, .15), (.72, -1.2), (.6, -2.6), (.5, -3.1)], 8); displace(bm, .04, 3, 9)
-    a.add(bm, lambda f: m['belly'] if f.normal.y < -.6 else m['skin']); a.add(sph(.8, .8, .7, (0, 0, -.05), 8, 5), m['skin2'])
-    pts = [V((0, 0, -2.9)), V((0, -.3, -4.2)), V((0, -1.1, -5.4)), V((0, -2.2, -6.0))]
-    a.add(tube(pts, [.5, .38, .22, .02], 6), m['claw'])
-def wing(a, side):
-    m = cmats(a); rr = random.Random(80)
-    P = lambda x, y, z: V((side*x, y, z))
+    m = cmats(a)
+    a.add(f_loft([V((0, 0, .5)), V((0, 0, -1.2)), V((0, 0, -3.0))], [(.82, .76), (.74, .7), (.56, .52)], n=7, jit=.05, seed=82, cap1='flat', smooth=0),
+          lambda f: m['belly'] if f.normal.y < -.6 else m['skin'])
+    a.add(f_horn(V((0, 0, -2.6)), (0, -.25, -1), 3.9, .58, bend=1.0, sides=4, axis=(1, 0, 0)), m['claw'])   # claw curls toward the palm (-Y)
+def wing(a, side, P_=None, scale=1.0, tatter=.12, seed=80, bone=1.0):
+    m = cmats(a); rr = random.Random(seed)
+    P = lambda x, y, z: V((side*x*scale, y*scale, z*scale))
     root = P(0, 0, 0); W = P(14, 10, 24); tips = [P(22, 12, 46), P(42, 16, 30), P(44, 14, 4)]; B = P(8, 4, -16)
-    bone = m['spike']; mem = m['mem']; vein = m['vein']
-    a.add(tube([root, (root+W)/2+P(0, 1.5, 0), W], [1.9, 1.6, 1.2], 7), m['skin2'])
-    for t in tips: a.add(tube([W, W+(t-W)*.5+P(0, 1.2, 0), t], [1.15, .6, .12], 6), bone)
-    a.add(tube([W, W+P(-1, -1.5, 3.5), W+P(-2.5, -3.5, 4.5)], [.6, .3, .02], 5), m['claw'])
-    edge = [tips[0]]
-    for i in range(2):
-        a_, b_ = tips[i], tips[i+1]
-        for k in range(1, 7):
-            t = k/7; p = a_.lerp(b_, t); p = p.lerp(W, sin(t*pi)*.3); edge.append(p)
-        edge.append(b_)
-    for k in range(1, 8):
-        t = k/8; p = tips[2].lerp(B, t); p = p.lerp(W.lerp(root, .5), sin(t*pi)*.28); edge.append(p)
-    edge.append(B)
-    bm = bmesh.new(); w0 = bm.verts.new(W); r0 = bm.verts.new(root); ev = [bm.verts.new(p) for p in edge]
-    for i in range(len(ev)-1):
-        if i < 14: bm.faces.new((w0, ev[i], ev[i+1]))
-        else: bm.faces.new((r0, ev[i], ev[i+1]))
-    bm.faces.new((w0, ev[14], r0))
-    bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=2, use_grid_fill=True)
-    bmesh.ops.triangulate(bm, faces=bm.faces)
-    for v in bm.verts: v.co += V((0, nz(v.co, .12, 4)*1.2, 0))
-    a.add(dbl(bm), mem)
-    for i in range(0, len(edge), 3):
-        if i < 14: a.add(tube([W, W.lerp(edge[i], .55), edge[i]], [.35, .25, .05], 4), vein)
+    a.add(f_loft([root, (root+W)/2+P(0, 1.5, 0), W], [1.9*scale*bone, 1.6*scale*bone, 1.2*scale*bone], kind='oct', ref=(0, 0, 1), cap0='chamfer', cap1='chamfer', smooth=2), m['skin2'])
+    for t in tips:
+        mid = W+(t-W)*.5+P(0, 1.2, 0)
+        a.add(f_loft([W, mid, t], [1.15*scale*bone, .6*scale*bone, .12*scale*bone], kind='oct', ref=(0, 0, 1), cap0='flat', cap1='point', smooth=2), m['spike'])
+        a.add(f_horn(t, (t-mid).normalized(), 2.5*scale, .2*scale*bone, bend=.4, sides=4), m['claw'])
+    a.add(f_horn(W, (P(-1, -1.5, 3.5)).normalized(), 4.5*scale, .6*scale*bone, bend=.6, sides=4), m['claw'])
+    fingers = tips + [B]; K, U = 6, 8; mem = bmesh.new()
+    for i in range(len(fingers)-1):
+        A0, B0 = fingers[i], fingers[i+1]; last = i == len(fingers)-2
+        hub = root.lerp(W, .5) if last else W
+        grid = []
+        for j in range(K+1):
+            row = []
+            for k in range(U+1):
+                u = k/U; e = A0.lerp(B0, u); depth = (.3 + rr.uniform(-.04, .06))*sin(pi*u)*(.75 if not last else .4)
+                e = e.lerp(hub, depth)
+                if tatter and j == K and 0 < k < U: e = e.lerp(hub, rr.uniform(0, tatter))
+                p = hub.lerp(e, j/K); p = p + P(0, sin(pi*u)*sin(pi*j/K*.9)*1.6, 0)
+                row.append(mem.verts.new(p))
+            grid.append(row)
+        for j in range(K):
+            for k in range(U):
+                if tatter and j >= K-2 and rr.random() < tatter*.9: continue   # rips near the trailing edge
+                try: mem.faces.new((grid[j][k], grid[j][k+1], grid[j+1][k+1], grid[j+1][k]))
+                except ValueError: pass
+    bmesh.ops.triangulate(mem, faces=mem.faces); a.add(dbl(mem), m['mem'])
+    for i in range(len(tips)-1):   # veins
+        e = tips[i].lerp(tips[i+1], .5).lerp(W, .3)
+        a.add(tube([W, W.lerp(e, .55), e], [.35*scale, .25*scale, .05*scale], 4), m['vein'])
 @asset('cth_wing_L', ground=False, flip=True, ao=.8, aod=6)
 def _(a): wing(a, 1)
 @asset('cth_wing_R', ground=False, flip=True, ao=.8, aod=6)
 def _(a): wing(a, -1)
-CTHULHU = ['cth_torso', 'cth_head', 'cth_eye', 'cth_tent', 'cth_uarm', 'cth_farm', 'cth_thigh', 'cth_palm', 'cth_finger_a', 'cth_finger_b', 'cth_wing_L', 'cth_wing_R']
+
+# ================================================================ IMPS («бесы») — the Old One's winged spawn
+# origin = chest; faces -Y; arms reach forward-down (grabbing pose); ~2 m tall, 4 m wingspan.
+IC = {'skin': '#1a302d', 'skin2': '#122523', 'skinL': '#24433e', 'belly': '#3a4a3c', 'plate': '#2c3c33', 'claw': '#14110f',
+      'socket': '#040505', 'mem': '#24191b', 'vein': '#120c0d', 'spike': '#1f2a26', 'barn': '#6a6d64', 'coral': '#7a2c1e', 'tube': '#a39d8c',
+      'weed': '#1c3622', 'rock': '#2c3632', 'sucker': '#4a5a4c', 'mouth': '#3a0c0c'}
+@asset('imp_body', ground=False, flip=True, ao=1.0, aod=.5)
+def _(a):
+    m = {k: a.m(k, v) for k, v in IC.items()}; rr = random.Random(91)
+    eye = a.m('eye', '#ff2a14', 1.0)
+    A_ = A('tmp')
+    A_.bm = f_loft([V((0, .12, -.62)), V((0, .04, -.3)), V((0, -.02, .12)), V((0, .06, .42))], [(.17, .14), (.21, .17), (.29, .21), (.15, .13)], n=8, jit=.05, seed=1, smooth=2)
+    A_.add(f_loft([V((0, -.02, .38)), V((0, -.04, .6)), V((0, .1, .82)), V((0, .34, .98)), V((0, .55, 1.04))], [(.11, .1), (.16, .15), (.19, .19), (.15, .15), (.06, .06)], n=8, jit=.06, seed=2, cap1='point', smooth=2), 0)
+    for s_ in (-1, 1):
+        S = V((s_*.27, .02, .3)); E = V((s_*.42, -.28, -.02)); Wr = V((s_*.3, -.62, -.26))
+        A_.add(f_loft([S + V((-s_*.06, 0, .05)), S.lerp(E, .5), E, E.lerp(Wr, .5), Wr], [.09, .075, .055, .05, .04], n=6, jit=.05, seed=3+s_, cap1='flat', smooth=2), 0)
+        Hp = V((s_*.12, .06, -.55)); K = V((s_*.2, -.22, -.72)); An = V((s_*.17, .08, -.98))
+        A_.add(f_loft([Hp, Hp.lerp(K, .5), K, K.lerp(An, .5), An], [.1, .08, .055, .045, .035], n=6, jit=.05, seed=6+s_, smooth=2), 0)
+    bm = f_fuse(A_.bm, .022, 1500)
+    a.add(bm, skin_pick(m, rr, -.1))
+    for s_ in (-1, 1):
+        Wr = V((s_*.3, -.62, -.26)); d0 = (Wr - V((s_*.42, -.28, -.02))).normalized()
+        for k, o in enumerate((-1, 0, 1)):   # three long hooked talons per hand
+            d = (d0 + V((o*.25, 0, 0)) + V((0, -.2, 0))).normalized()
+            a.add(f_horn(Wr - d*.02 + V((o*.035, 0, 0)), d, .34, .028, bend=1.1, sides=4, axis=d.cross(V((0, 0, -1)))), m['claw'])
+        An = V((s_*.17, .08, -.98))
+        for o in (-1, 0, 1): a.add(f_horn(An + V((o*.04, 0, 0)), (o*.3, -1, -.5), .2, .022, bend=1.0, sides=4, axis=(1, 0, 0)), m['claw'])
+        a.add(f_horn(V((s_*.24, .12, .4)), (s_*.4, .5, 1), .22, .04, bend=.5, sides=4), m['spike'])   # shoulder horns
+        # V brows and slit eyes
+        c = V((s_*.085, -.17, .66)); n = V((s_*.35, -1, .05)).normalized()
+        lu = V((s_, 0, .45)).normalized(); uu = V((-s_*.45, 0, 1)).normalized()
+        lens = [(1.0, .05), (.4, .36), (-.45, .3), (-1.0, -.06), (-.4, -.3), (.42, -.28)]
+        b2 = bmesh.new(); vs = [b2.verts.new(c + n*.01 + lu*(x*.045) + uu*(y*.04)) for x, y in lens]; ct = b2.verts.new(c + n*.025)
+        for k in range(6): b2.faces.new((vs[k], vs[(k+1) % 6], ct))
+        a.add(dbl(b2), eye)
+        a.add(f_loft([c + V((-s_*.05, -.02, .03)), c + V((s_*.02, -.03, .07)), c + V((s_*.09, -.01, .1))], [(.022, .03), (.026, .035), (.012, .015)], ref=(0, -1, .5), kind='keel', cap1='point', smooth=0), m['skin2'])
+    for i in range(6):   # short face tentacles
+        u = (i/5 - .5)*2
+        a.add(f_tent(V((u*.08, -.16, .52)), (u*.3, -.3, -1), rr.uniform(.3, .45), .028, 950+i, n=6, curl=2.2, grav=.2), m['skin2'])
+    tp = [V((0, .14, -.6)), V((0, .4, -.8)), V((0, .75, -.85)), V((0, 1.05, -.7)), V((0, 1.3, -.78))]   # spined tail
+    a.add(f_loft(tp, [.07, .05, .035, .022, .012], n=6, cap1='point', smooth=2), m['skin'])
+    for i in range(1, 4): a.add(f_horn(tp[i] + V((0, 0, .02)), (0, .3, 1), .1, .015, bend=.4, sides=4), m['spike'])
+    for i in range(4): a.add(f_horn(V((0, .2 - i*.02, .3 - i*.2)), (0, 1, .4), .14, .025, bend=.5, sides=4, axis=(1, 0, 0)), m['spike'])
+    for s_ in (-1, 1):   # little ribs
+        for i in range(3):
+            z = .05 - i*.11
+            a.add(f_loft([V((s_*.2, .1, z)), V((s_*.28, -.05, z-.04)), V((s_*.2, -.17, z-.09))], [(.018, .012)]*3, kind='keel', ref=(0, 0, 1), cap0='point', cap1='point', smooth=0), m['skin2'])
+def imp_wing(a, side):
+    m = {k: a.m(k, v) for k, v in IC.items()}; rr = random.Random(95)
+    P = lambda x, y, z: V((side*x, y, z))
+    root = P(0, 0, 0); W = P(.6, .3, .45); tips = [P(1.0, .35, 1.15), P(1.95, .4, .55), P(1.8, .3, -.2)]; B = P(.25, .05, -.5)
+    a.add(f_loft([root, W], [.05, .04], kind='oct', ref=(0, 0, 1), cap0='chamfer', cap1='chamfer', smooth=0), m['skin2'])
+    for t in tips: a.add(f_loft([W, W.lerp(t, .5)+P(0, .03, 0), t], [.03, .018, .004], kind='oct', ref=(0, 0, 1), cap0='flat', cap1='point', smooth=2), m['spike'])
+    a.add(f_horn(W, P(-.1, -.1, .4), .14, .02, bend=.6, sides=4), m['claw'])
+    fingers = tips + [B]; mem = bmesh.new()
+    for i in range(len(fingers)-1):
+        A0, B0 = fingers[i], fingers[i+1]; hub = W if i < len(fingers)-2 else root.lerp(W, .5); grid = []
+        for j in range(5):
+            row = []
+            for k in range(7):
+                u = k/6; e = A0.lerp(B0, u).lerp(hub, .32*sin(pi*u));
+                if j == 4 and 0 < k < 6: e = e.lerp(hub, rr.uniform(0, .12))
+                row.append(mem.verts.new(hub.lerp(e, j/4) + P(0, .06*sin(pi*u)*sin(pi*j/4), 0)))
+            grid.append(row)
+        for j in range(4):
+            for k in range(6): mem.faces.new((grid[j][k], grid[j][k+1], grid[j+1][k+1], grid[j+1][k]))
+    bmesh.ops.triangulate(mem, faces=mem.faces); a.add(dbl(mem), m['mem'])
+@asset('imp_wing_L', ground=False, flip=True, ao=.5, aod=.4)
+def _(a): imp_wing(a, 1)
+@asset('imp_wing_R', ground=False, flip=True, ao=.5, aod=.4)
+def _(a): imp_wing(a, -1)
+CTHULHU = ['cth_torso', 'cth_head', 'cth_eye', 'cth_tent', 'cth_uarm', 'cth_farm', 'cth_thigh', 'cth_palm', 'cth_finger_a', 'cth_finger_b', 'cth_wing_L', 'cth_wing_R', 'imp_body', 'imp_wing_L', 'imp_wing_R']
 
 ALL = [('nature.json', NATURE), ('props.json', PROPS), ('buildings.json', BUILDINGS), ('people.json', PEOPLE), ('cthulhu.json', CTHULHU)]
 def build_all():
