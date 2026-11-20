@@ -31,7 +31,7 @@ function gCultist(){const b=new Geo(.07),a=new Geo(.07),aw=new Geo(.07),robe=H('
 // Blender part models (origin conventions: body at the feet facing +Z, arms hang from the shoulder along -Y, legs hang from the hip)
 const VCOL=[['#5a6b4a','#33302c'],['#6b5346','#3a342e'],['#4f5d6b','#2e2c2a'],['#77705f','#33302c']];
 function partSet(prefix,fb,opt={}){const b=modelMesh(opt.bodyName||prefix+'_body',opt.body),a=modelMesh(opt.arm||prefix+'_arm',opt.armO),aw=modelMesh(opt.armW||prefix+'_armW',opt.armO),l=opt.noLeg?null:modelMesh(opt.leg||prefix+'_leg',opt.legO);
-  if(!b||!a)return fb();return{body:b,arm:a,armW:aw||a,leg:l,sh:opt.sh||[.27,1.47],hip:[.11,.9],model:true};}
+  if(!b||!a)return fb();return{body:b,arm:a,armW:aw||a,leg:l,sh:opt.sh||[.27,1.47],hip:opt.hip||[.11,.9],model:true};}
 const CH={hero:partSet('hero',gHero),
   v:[0,1,2,3].map(v=>partSet('vill',()=>gVillager(v),{sh:[[.29,1.47],[.27,1.47],[.25,1.52],[.31,1.47]][v],body:{},arm:'vill_arm',armW:'vill_armW',leg:'vill_leg',armO:{pal:{cloth:H(VCOL[v][0])}},legO:{pal:{trousers:H(VCOL[v][1])}},bodyName:'vill_body_'+v})),
   c:partSet('cult',gCultist,{armW:'cult_armT',noLeg:true,sh:[.3,1.45]})};
@@ -111,11 +111,11 @@ function updEnemy(e,dt){
   let sees=d<Rv&&dt_>.3&&los(e.x,e.z,P.x,P.z,S.crouch);if(d<2.3&&los(e.x,e.z,P.x,P.z,S.crouch))sees=true;if(P.lie)sees=false;
   if(e.state!=='chase'){if(sees)e.aw+=dt*(2.4*(1-d/Rv)+.45)*S.diff;else e.aw-=dt*.3;if(P.running&&d<7.5){e.aw+=dt*.55;faceTo(e,atan2(dx,dz),dt,3);}e.aw=clamp(e.aw,0,1);if(e.aw>=1)alertE(e);}
   if(e.state==='chase'){S.chased=.6;
-    const out=d>e.lr;if(sees&&!out){e.ls=[P.x,P.z];e.lose=0;}else{e.lose+=dt;if(out||e.lose>2.5){e.state='search';e.st=4;e.F=field(e.ls[0],e.ls[1]);e.aw=.2;e.wind=0;if(!EN.some(o=>o.active&&o.state==='chase'))toast('Вас потеряли из виду. Не попадайтесь снова.',3);return;}}
+    const out=d>e.lr&&!e.direct;if(sees&&!out||e.direct){e.ls=[P.x,P.z];e.lose=0;}else{e.lose+=dt;if(out||e.lose>2.5){e.state='search';e.st=4;e.F=field(e.ls[0],e.ls[1]);e.aw=.2;e.wind=0;if(!EN.some(o=>o.active&&o.state==='chase'))toast('Вас потеряли из виду. Не попадайтесь снова.',3);return;}}
     if(e.wind>0){e.wind-=dt;faceTo(e,atan2(dx,dz),dt,10);if(e.wind<=0){strike(e,d);}return;}
     const reach=e.kind==='c'?1.55:1.45;
     if(d<reach&&sees){if(e.cd<=0){e.wind=e.kind==='c'?.45:.6;}faceTo(e,atan2(dx,dz),dt,10);return;}
-    if(d<3&&los(e.x,e.z,P.x,P.z,true)){if(!goDir(e,P.x,P.z,e.sp,dt)&&PF)goField(e,PF,e.sp,dt);}else if(PF)goField(e,PF,e.sp,dt)||goDir(e,P.x,P.z,e.sp,dt);
+    if(e.direct||d<3&&los(e.x,e.z,P.x,P.z,true)){if(!goDir(e,P.x,P.z,e.sp,dt)&&PF&&!e.direct)goField(e,PF,e.sp,dt);}else if(PF)goField(e,PF,e.sp,dt)||goDir(e,P.x,P.z,e.sp,dt);
     return;}
   if(e.state==='search'){if(hypot(e.ls[0]-e.x,e.ls[1]-e.z)>1.3&&goField(e,e.F,e.sp*.6,dt))return;e.st-=dt;e.rot+=dt*1.6;if(e.st<=0)e.state='patrol';return;}
   // patrol
@@ -140,7 +140,7 @@ function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return
     if(best.hp<=0){best.state='ko';best.aw=0;toast('Житель без сознания.',1.8);}}
   if(best.state!=='ko'&&best.state!=='chase')alertE(best);}
 async function die(){S.mode='dead';S.deaths++;P.lie=true;SFX.thud();toast('Удар… темнота.',3);await fade(1,900);await wait(1.2);
-  S.inside=null;P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active)continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
+  S.inside=S.cpRoom||null;P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active)continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
   toast('Вы очнулись в тени. Кажется, вас потеряли из виду…',4);S.mode='play';camSnap();await fade(0,900);}
 
 // --- input
@@ -201,8 +201,8 @@ function updHud(dt){$('bhp').firstChild.style.width=S.hp+'%';$('bst').firstChild
   $('items').innerHTML='🩹 Аптечки: '+S.med+' &nbsp; 🔧 '+(S.weapon?S.weapon.name+' ('+S.weapon.dur+')':'кулаки')+(S.crouch?' &nbsp; ▾ пригнулся':'');
   const o=S.mode==='play'&&!S.pause?curInter():null,p=$('prompt');if(o){p.style.display='block';p.innerHTML='<kbd>E</kbd>'+o.label;}else p.style.display='none';
   let mx=0;for(const e of EN)if(e.active&&e.state!=='ko')mx=max(mx,e.state==='chase'?2:e.aw);
-  $('det').innerHTML=!S.hunt?'':S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':'';
-  const f=S.mode==='finale'?S.fear:S.chased>0||S.hp<30?2:mx>.15?1:0;faceT-=dt;if(f!==S.fear||f>=2&&faceT<=0||faceT<-5){if(S.mode!=='finale')S.fear=f;drawFace();faceT=.08;}
+  $('det').innerHTML=S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':S.tailed?'<span style="color:#f0c060">◉ За вами следят — оторвитесь или скройтесь из виду</span>':'';
+  const f=S.mode==='finale'?S.fear:S.chased>0||S.hp<30?2:mx>.15||S.tailed?1:0;faceT-=dt;if(f!==S.fear||f>=2&&faceT<=0||faceT<-5){if(S.mode!=='finale')S.fear=f;drawFace();faceT=.08;}
   $('flash').style.opacity=clamp(P.hurt*1.6,0,.8)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
   if(S.chased>0){S.chased-=dt;S.hbT=(S.hbT||0)-dt;if(S.hbT<=0){SFX.heart();S.hbT=.75;}}}
 function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0,w,h);if(!S.hud||CAM.fp||S.mode==='finale')return;c.textAlign='center';c.textBaseline='middle';

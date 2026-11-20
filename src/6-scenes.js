@@ -286,6 +286,7 @@ function drawAll(){
   for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
   drawStory();drawFinale();}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
+  if(S.vision){visionAtmo(M);return;}
   if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
   R.sunC=[.34,.42,.46];
   if(FIN.on){const g=FIN.u>0?kf(FIN.u,4,20):0;R.fog=[lerp(.06,.13,g),lerp(.13,.25,g),lerp(.145,.27,g)];R.fogD=S.fogK/lerp(80,175,g);R.fogMin=.03;R.fogH=.04;R.amb=[.3,.41,.45];
@@ -298,7 +299,7 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
   if(!S.pause){S.t+=dt;R.t=S.t;tickWaits(dt);tickSub(dt);
     if(S.mode==='drive')updCar(dt);
     if(S.mode==='play'){updPlayer(dt);story(dt);PFt-=dt;if(PFt<=0){PFt=.3;PF=EN.some(e=>e.active&&e.state==='chase')?field(P.x,P.z):null;}for(const e of EN)updEnemy(e,dt);}
-    updFinale(dt);PT.update(dt,CAM.eye);if(S.hud||S.mode==='finale')updHud(dt);}
+    updFinale(dt);stageTick(dt);PT.update(dt,CAM.eye);if(S.hud||S.mode==='finale')updHud(dt);}
   camGoal();const k=S.fast?1:1-exp(-dt*CAM.rate);for(let i=0;i<3;i++){CAM.eye[i]=lerp(CAM.eye[i],CAM.ge[i],k);CAM.tgt[i]=lerp(CAM.tgt[i],CAM.gt[i],k);}
   S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*(CAM.fp?.22:.55):0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
   atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();render(eye,CAM.tgt,CAM.fov);hud2d();requestAnimationFrame(frame);}
@@ -306,8 +307,8 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
 $('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
 // debug / test hooks
 window.DBG={R,S,P,EN,CAM,FIN,PB,PZ,PT,STORM,cols,blocked,field,finale,solvePuzzle,openPuzzle,closePuzzle,cthPose,waveH,
-  // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'play' (default: the puzzle hunt)
-  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,get LP(){return LP;}};
+  // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play' (default: the puzzle hunt)
+  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,CIV,SK,DGU,DOCEV,VIS,get LP(){return LP;}};
 </script>
 </body>
 </html>
