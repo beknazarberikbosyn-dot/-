@@ -1,9 +1,9 @@
 // ================= GAME: state, characters, player, enemies, HUD =================
 const S={mode:'title',t:0,pause:false,fast:false,escaped:false,booked:false,inRoom:false,peeked:false,solved:[0,0,0,0,0,0],lore:[],eggs:{},hp:100,st:100,tired:false,weapon:null,med:0,crouch:false,cp:[-58.5,-40.5],
-  fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0,
+  sens:1,fear:0,shake:0,obj:'',focus:null,diff:1,fogK:1,shakeOn:true,hud:false,chased:0,deaths:0,t0:0,
   explore:false,hunt:false,inside:null,notes:[],asked:0,ints:0,mark:null};
 const P={x:-37,z:-15.6,y:0,rot:PI,ph:0,atk:0,cd:0,block:false,combo:0,comboT:0,hurt:0,vis:false,lie:false,stepT:0,armsUp:0};
-const CAM={eye:[-25,15,-278],tgt:[-28,0,-290],ge:[0,0,0],gt:[0,0,0],fov:.72,rate:5,zoom:1,fp:false};
+const CAM={eye:[-25,15,-278],tgt:[-28,0,-290],ge:[0,0,0],gt:[0,0,0],fov:.72,rate:5,zoom:1,fp:false,yaw:0,pitch:0};
 const K={};const TJ={on:false,x:0,y:0};let waits=[];
 const wait=t=>S.fast?Promise.resolve():new Promise(r=>waits.push({t,r}));
 function tickWaits(dt){for(const w of waits)w.t-=dt;const d=waits.filter(w=>w.t<=0);waits=waits.filter(w=>w.t>0);d.forEach(w=>w.r());}
@@ -131,7 +131,7 @@ function strike(e,d){e.cd=e.kind==='c'?1.5:1.25;e.atk=.3;SFX.swing();if(d>(e.kin
 function damage(n,e){if(S.mode!=='play')return;S.hp-=n;P.hurt=.5;S.shake=max(S.shake,.35);SFX.hurt();if(e){const a=atan2(P.x-e.x,P.z-e.z);moveC(P,sin(a)*.7,cos(a)*.7);}if(S.hp<=0){S.hp=0;die();}}
 function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return;const cost=shove?14:9;if(S.st<cost){toast('Нет сил...',1.5);return;}S.st-=cost;P.cd=shove?.6:.42;P.atk=.28;P.shove=shove;SFX.swing();
   let best=null,bd=2.05;for(const e of EN){if(!e.active||e.state==='ko')continue;const d=hypot(e.x-P.x,e.z-P.z);if(d<bd&&cos(P.rot-atan2(e.x-P.x,e.z-P.z))>-.2){bd=d;best=e;}}
-  if(!best){P.combo=0;return;}P.rot=atan2(best.x-P.x,best.z-P.z);
+  if(!best){P.combo=0;return;}
   if(best.kind==='c'){SFX.hit();toast('Бесполезно — он даже не пошатнулся. <b>Бегите!</b>',2.5);if(best.state!=='chase')alertE(best);return;}
   SFX.hit();const a=P.rot;
   if(shove){if(P.combo>=2&&P.comboT>0){best.state='ko';best.aw=0;toast('Нокаут!',1.8);P.combo=0;S.shake=.2;}else{best.stun=.7;moveC(best,sin(a)*1.1,cos(a)*1.1,.34);}}
@@ -146,7 +146,8 @@ async function die(){S.mode='dead';S.deaths++;P.lie=true;SFX.thud();toast('Уд�
 // --- input
 addEventListener('keydown',e=>{if(e.code==='Tab'||e.code==='Space')e.preventDefault();if(K[e.code])return;K[e.code]=1;onKey(e.code);});
 addEventListener('keyup',e=>{K[e.code]=0;});addEventListener('blur',()=>{for(const k in K)K[k]=0;P.block=false;});
-cv.addEventListener('mousedown',e=>{if(subAdvance())return;if(e.button===0)playerAttack(false);if(e.button===2)K.RMB=1;});
+cv.addEventListener('mousedown',e=>{if(subAdvance())return;if(S.mode==='play'&&!S.pause&&document.pointerLockElement!==cv){try{cv.requestPointerLock();}catch(_){}return;}if(e.button===0)playerAttack(false);if(e.button===2)K.RMB=1;});
+addEventListener('mousemove',e=>{if(document.pointerLockElement!==cv||S.mode!=='play'||S.pause||S.camFn)return;P.rot-=e.movementX*.0025*S.sens;CAM.pitch=clamp(CAM.pitch-e.movementY*.0022*S.sens,-1.25,1.2);});
 addEventListener('mouseup',e=>{if(e.button===2)K.RMB=0;});addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('wheel',e=>{CAM.zoom=clamp(CAM.zoom+Math.sign(e.deltaY)*.08,.7,1.3);},{passive:true});
 function curInter(){let b=null,bd=1e9;for(const o of inter){if(!o.on())continue;const d=hypot(o.x-P.x,o.z-P.z);if(d<o.r&&d<bd){bd=d;b=o;}}return b;}
@@ -172,11 +173,14 @@ $('sSub').onchange=e=>{document.documentElement.style.setProperty('--subsz',e.ta
 
 // --- player
 function updPlayer(dt){
-  let mx=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),mz=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){mx=TJ.x;mz=TJ.y;}const mov=!!(mx||mz);
+  // first person: W/S along the view, A/D strafe, arrows ←/→ turn; the joystick works the same way
+  let sx=(K.KeyD?1:0)-(K.KeyA?1:0),fw=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){sx=TJ.x;fw=-TJ.y;}
+  P.rot+=((K.ArrowLeft?1:0)-(K.ArrowRight?1:0))*dt*2.2;CAM.yaw=P.rot;
+  const fx=sin(P.rot),fz=cos(P.rot);let mx=fx*fw-fz*sx,mz=fz*fw+fx*sx;const mov=!!(sx||fw);
   P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;if(S.st<=0)S.tired=true;if(S.st>25)S.tired=false;
   P.running=mov&&(K.ShiftLeft||K.ShiftRight||(TJ.on&&hypot(TJ.x,TJ.y)>.92))&&!S.tired&&!S.crouch&&!P.block;
   const sp=S.crouch?2.2:P.running?6.7:P.block?1.7:4.1;
-  if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);if(P.atk<=0)faceTo(P,atan2(mx,mz),dt,12);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
+  if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
   P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
   P.atk-=dt;P.cd-=dt;P.hurt-=dt;if(P.comboT>0){P.comboT-=dt;if(P.comboT<=0)P.combo=0;}
   for(const p of pickups){if(p.taken||!S.explore||S.inside)continue;if(hypot(p.x-P.x,p.z-P.z)<1.1){if(p.t==='m'){p.taken=1;S.med++;toast('Аптечка (+1). <span class="kb">Q</span>— использовать.',3);SFX.pick();}
@@ -206,6 +210,7 @@ function updHud(dt){$('bhp').firstChild.style.width=S.hp+'%';$('bst').firstChild
   $('flash').style.opacity=clamp(P.hurt*1.6,0,.8)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
   if(S.chased>0){S.chased-=dt;S.hbT=(S.hbT||0)-dt;if(S.hbT<=0){SFX.heart();S.hbT=.75;}}}
 function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0,w,h);if(!S.hud||CAM.fp||S.mode==='finale')return;c.textAlign='center';c.textBaseline='middle';
+  if(S.fpPlay&&S.mode==='play'){c.fillStyle='rgba(230,225,205,.7)';c.beginPath();c.arc(w/2,h/2,2.4,0,7);c.fill();if(document.pointerLockElement!==cv&&!document.body.classList.contains('touch')){c.font='15px Georgia';c.fillStyle='rgba(230,225,205,.8)';c.fillText('Щёлкните, чтобы управлять взглядом мышью',w/2,h/2+34);}}
   for(const e of EN){if(!e.active||e.state==='ko')continue;const ch=e.state==='chase';if(!ch&&e.aw<.06&&e.state!=='search'&&e.stun<=0&&e.wind<=0)continue;const p=proj(e.x,2.5,e.z);if(p.w<=0)continue;const x=p.x*w,y=p.y*h;
     if(e.wind>0){c.fillStyle='#fff';c.font='bold 30px Georgia';c.fillText('⚔',x,y-4);continue;}if(e.stun>0){c.fillStyle='#f0c060';c.font='22px Georgia';c.fillText('✶✶',x,y);continue;}
     if(!ch)continue;c.font='bold 30px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText('!',x,y);c.fillStyle='#ff5a48';c.fillText('!',x,y);}
@@ -216,5 +221,6 @@ function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0
 function edgeArrow(c,w,h,wx,wz,col,icon){const p=proj(wx,1.5,wz);let x=(p.x-.5),y=(p.y-.5);if(p.w<=0){x=-x;y=-y;}
   if(p.w>0&&abs(x)<.44&&abs(y)<.42)return;const a=atan2(y*h,x*w),rx=w/2-46,ry=h/2-86,k=1/max(abs(cos(a))/rx,abs(sin(a))/ry),px=w/2+cos(a)*k,py=h/2+sin(a)*k;
   c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();icon();c.rotate(a);c.fillStyle=col;c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}
-function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();}
-function camGoal(){if(S.camFn){S.camFn();return;}CAM.ge=[P.x,17.5*CAM.zoom,P.z+12.5*CAM.zoom];CAM.gt=[P.x,1,P.z];}
+function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();S.camBlend=0;}
+function camGoal(){S.fpPlay=false;if(S.camFn){S.hadCam=1;S.camFn();return;}if(S.hadCam){S.hadCam=0;S.camBlend=1.1;CAM.rate=4;}S.fpPlay=true;CAM.fov=1.15;
+  const h=P.lie?.35:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,cp=cos(CAM.pitch);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(CAM.pitch)*10,P.z+cos(P.rot)*cp*10];}

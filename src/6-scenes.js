@@ -277,7 +277,8 @@ function drawAll(){
     if(e.flee&&e.state!=='ko'&&e.stun<=0)aR=-2.6+sin(S.t*10)*.35;   // the pub owner waving his arms while he yells
     const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active&&!e.unarmed,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
     if(c&&e.state!=='ko')torchFx(m,e.ph);}
-  if(P.vis&&!CAM.fp){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
+  if(S.fpPlay&&P.vis&&!P.lie)drawFpArms();
+  if(P.vis&&!CAM.fp&&!S.fpPlay){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}
   draw(M_car,mM(mT(CAR.x,0,CAR.z),mRy(CAR.rot)),.04);if(!CAR.parked){const fx=CAR.x+sin(CAR.rot)*7,fz=CAR.z+cos(CAR.rot)*7;light(fx,1.5,fz,15,[1,.9,.6]);light(CAR.x,3,CAR.z,7,[.5,.5,.45]);}
   if(S.explore&&!FIN.on&&S.mode!=='finale')for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
@@ -285,6 +286,11 @@ function drawAll(){
     for(const z of PZ){if(S.solved[z.i])continue;const dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);draw(M_beacon,mM(mT(z.x,2.7+sin(S.t*2+z.i)*.15,z.z),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(z.x,2.2,z.z+.8,6.5,[.25,.8,.7]);}}
   for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
   drawStory();drawFinale();}
+// the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
+function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;
+  for(const s of[1,-1]){let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
+    const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.36),vSc(up,-.55+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.55+a*.3),vSc(up,.1+a*.45)),vSc(r,-s*(.05+a*.14))));
+    draw(s>0&&S.weapon?CH.hero.armW:CH.hero.arm,mBasis(sp,vSub(tip,sp),vSc(f,-1)),0);}}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
   if(S.vision){visionAtmo(M);return;}
   if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
@@ -300,7 +306,7 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
     if(S.mode==='drive')updCar(dt);
     if(S.mode==='play'){updPlayer(dt);story(dt);PFt-=dt;if(PFt<=0){PFt=.3;PF=EN.some(e=>e.active&&e.state==='chase')?field(P.x,P.z):null;}for(const e of EN)updEnemy(e,dt);}
     updFinale(dt);stageTick(dt);PT.update(dt,CAM.eye);if(S.hud||S.mode==='finale')updHud(dt);}
-  camGoal();const k=S.fast?1:1-exp(-dt*CAM.rate);for(let i=0;i<3;i++){CAM.eye[i]=lerp(CAM.eye[i],CAM.ge[i],k);CAM.tgt[i]=lerp(CAM.tgt[i],CAM.gt[i],k);}
+  camGoal();if(document.pointerLockElement===cv&&(S.pause||S.mode!=='play'||S.camFn))document.exitPointerLock();const k=S.fast||S.fpPlay&&!S.camBlend?1:1-exp(-dt*CAM.rate);if(S.fpPlay&&S.camBlend)S.camBlend=max(0,S.camBlend-dt);for(let i=0;i<3;i++){CAM.eye[i]=lerp(CAM.eye[i],CAM.ge[i],k);CAM.tgt[i]=lerp(CAM.tgt[i],CAM.gt[i],k);}
   S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*(CAM.fp?.22:.55):0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
   atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();render(eye,CAM.tgt,CAM.fov);hud2d();requestAnimationFrame(frame);}
 // title backdrop
