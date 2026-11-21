@@ -16,6 +16,7 @@ canvas#hud2d{pointer-events:none}
 #vig{background:radial-gradient(ellipse at center,transparent 45%,rgba(2,8,10,.55) 85%,rgba(0,0,0,.9) 100%)}
 #peek{background:radial-gradient(ellipse 44% 52% at 50% 50%,transparent 55%,#000 82%);opacity:0;transition:opacity .6s}
 #fade{background:#000;opacity:1;transition:opacity 1.2s}
+#white{background:#f4f1e6;opacity:0;transition:opacity 1s}
 #flash{background:radial-gradient(ellipse at center,transparent 40%,rgba(160,20,10,.75));opacity:0}
 #lids{display:none}#lids i{position:absolute;left:-12%;right:-12%;height:64%;background:#000;transition:transform .9s cubic-bezier(.6,0,.3,1)}
 #lids .t{top:0;border-radius:0 0 50% 50%/0 0 46% 46%}#lids .b{bottom:0;border-radius:50% 50% 0 0/46% 46% 0 0}
@@ -102,18 +103,18 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
 </head>
 <body>
 <canvas id="gl"></canvas><canvas id="hud2d"></canvas>
-<div id="grain" class="ov"></div><div id="vig" class="ov"></div><div id="peek" class="ov"></div><div id="flash" class="ov"></div><div id="uw" class="ov"></div><div id="tun" class="ov"></div><div id="lids" class="ov"><i class="t"></i><i class="b"></i></div>
+<div id="grain" class="ov"></div><div id="vig" class="ov"></div><div id="peek" class="ov"></div><div id="flash" class="ov"></div><div id="uw" class="ov"></div><div id="tun" class="ov"></div><div id="lids" class="ov"><i class="t"></i><i class="b"></i></div><div id="mask" class="ov" style="display:none"><svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%"><defs><filter id="mb"><feGaussianBlur stdDeviation="2.4"/></filter></defs><path fill="#140909" fill-opacity=".9" filter="url(#mb)" d="M-10,-10H110V110H-10Z M10,48a21,25 0 1,0 42,0a21,25 0 1,0 -42,0Z M48,48a21,25 0 1,0 42,0a21,25 0 1,0 -42,0Z"/></svg></div>
 <div id="hud">
   <div id="bars"><div class="bar" id="bhp"><i></i><b>Здоровье</b></div><div class="bar" id="bst"><i></i><b>Выносливость</b></div><div id="items"></div></div>
   <div id="obj"></div><div id="prompt"></div>
   <canvas id="face" width="104" height="104"></canvas><div id="det"></div>
 </div>
-<div id="fade" class="ov"></div>
+<div id="white" class="ov"></div><div id="fade" class="ov"></div>
 <div id="chap" class="ov"><div><small>«За гранью» · выпуск первый</small><b>ГЛАВА I</b><i>Зов из тумана</i></div></div>
 <div id="rec"><b>● REC</b><span id="recT">00:00:00</span><i>«ЗА ГРАНЬЮ» · ГРЕЙХЕЙВЕН</i></div>
 <button id="gear" title="Настройки" aria-label="Настройки">⚙</button>
 <div id="touch"><div id="joy"><i></i></div>
-<div id="tbtn2"><b data-k="Tab">Блок-<br>нот</b><b data-k="KeyQ">Апте-<br>чка</b></div>
+<div id="tbtn2"><b data-k="Tab">Блок-<br>нот</b></div>
 <div id="tbtn"><b data-k="KeyC" data-t="1">При-<br>сесть</b><b data-k="KeyK" data-h="1">Блок</b><b data-k="KeyF">Толч-<br>ок</b>
 <b data-k="ShiftLeft" data-t="1">Бег</b><b data-k="KeyE" class="act">Дейст-<br>вие</b><b data-k="KeyJ" class="big">Удар</b></div></div>
 <div id="toast"></div><div id="sub"></div>
@@ -125,7 +126,7 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
   <h3>Глава I · по мотивам рассказа Г. Ф. Лавкрафта «Зов Ктулху» · прототип</h3>
   <p class="hand" style="margin:-14px 0 22px;color:#9fb6b0;font-size:clamp(18px,2.4vw,24px)">«За гранью» — путешествия Эдварда Крейна по местам, о которых не принято говорить</p>
   <button class="b" id="start" style="font-size:26px;padding:8px 34px">Начать</button>
-  <div class="keys"><span class="kb">WASD</span>движение · <span class="kb">Shift</span>бег · <span class="kb">C</span>пригнуться · <span class="kb">E</span>действие · <span class="kb">ЛКМ / J</span>удар · <span class="kb">ПКМ / K</span>блок · <span class="kb">F</span>толчок · <span class="kb">Q</span>аптечка · <span class="kb">Tab</span>блокнот · <span class="kb">Esc</span>настройки<br>Лучше играть со звуком и на весь экран. На телефоне — держите горизонтально: слева джойстик, справа кнопки действий.</div>
+  <div class="keys"><span class="kb">WASD</span>движение · <span class="kb">Shift</span>бег · <span class="kb">C</span>пригнуться · <span class="kb">E</span>действие · <span class="kb">ЛКМ / J</span>удар · <span class="kb">ПКМ / K</span>блок · <span class="kb">F</span>толчок · <span class="kb">Tab</span>блокнот · <span class="kb">Esc</span>настройки<br>Лучше играть со звуком и на весь экран. На телефоне — держите горизонтально: слева джойстик, справа кнопки действий.</div>
 </div>
 
 <div id="settings" class="screen"><div class="panel" style="min-width:min(480px,94vw)">
@@ -139,7 +140,7 @@ body.touch #sub{bottom:180px;width:min(820px,70vw);pointer-events:auto}
   <div class="row">Рисованный контур <input type="checkbox" id="sOut" checked></div>
   <div class="row">Штриховка теней <input type="checkbox" id="sHatch" checked></div>
   <div class="row">Тряска экрана <input type="checkbox" id="sShake" checked></div>
-  <p style="font-size:16px;border-top:2px dashed #6b5a3a;padding-top:8px"><b>Управление: мышь — обзор (щелчок захватывает курсор, Esc отпускает), W/S — вперёд/назад, A/D — шаг вбок, ←/→ — поворот, Shift — бег, C — пригнуться, E — действие, ЛКМ/J — удар, ПКМ/K — блок, F — толчок (после двух ударов подряд — нокаут), Q — аптечка, Tab — блокнот.</p>
+  <p style="font-size:16px;border-top:2px dashed #6b5a3a;padding-top:8px"><b>Управление: мышь — обзор (щелчок захватывает курсор, Esc отпускает), W/S — вперёд/назад, A/D — шаг вбок, ←/→ — поворот, Shift — бег, C — пригнуться, E — действие, ЛКМ/J — удар, ПКМ/K — блок, F — толчок (после двух ударов подряд — нокаут), Tab — блокнот.</p>
   <div style="text-align:center;margin-top:10px"><button class="b" id="sClose">Продолжить</button></div>
 </div></div>
 

@@ -5,7 +5,7 @@
 //   (DGU) and must be lured away (stones through a window, a ringing phone, a collapsing woodpile).
 // Inside the doctor's house: five pieces of evidence → Dr Edmund Bernson injects his serum → two visions (his drowning as a boy,
 //   R'lyeh and the Old One; then Greyhaven burning) → the doctor breaks down and flees.
-// Stage 2 — curfew (S.curfew): the townsfolk are locked in, the cult hunts in the streets → the old puzzle chain (S.escaped).
+// Stage 2 — curfew (S.curfew): the townsfolk are locked in, the cult hunts in the streets → act 2 (src/5c-act2.js).
 Object.assign(VO,{doc:{pitch:92},wom:{pitch:168},kid:{pitch:232},sk:{pitch:96}});
 
 // --- people: women (long skirts, no separate legs), children (own small limbs), the doctor
@@ -29,7 +29,7 @@ const CIV=[
  {k:'k',v:0,mode:'play',c:[-121.4,11.8],r:1.5,ph:4.2,name:'Мальчик'},
  {k:'k',v:1,mode:'play',c:[-121.4,11.8],r:1.5,ph:1,name:'Девочка'},
  {k:'w',v:1,x:-125,z:9.4,rot:PI,mode:'idle',name:'Учительница',bark:'Дети, не подходите к забору! …Простите, мистер. Им нельзя говорить с чужими.'},
- {k:'m',v:FM[1],x:-85.4,z:-10.4,rot:0,mode:'idle',name:'Мужчина у церкви',bark:'Отец Бенедикт служит каждый день. Только ходят к нему всё меньше — с тех пор как у моря выстроили ту, другую часовню.'},
+ {k:'m',v:FM[1],x:-85.4,z:-10.4,rot:0,mode:'idle',name:'Мужчина у церкви',bark:'Это новая церковь — отец Мэттью выстроил её пять лет назад. В старую часовню у моря, к отцу Полу, теперь почти никто не ходит… *осекается* Мне пора.'},
  {k:'w',v:2,mode:'walk',wp:[[-87,-9.6],[-87,-5.6],[-104,-5.6],[-104,-9.6]],name:'Прихожанка',bark:'Помолитесь за нас, раз уж приехали. Больше за нас молиться некому.'},
  {k:'w',v:0,mode:'walk',wp:[[-60,-6.2],[-122,-6.2]],name:'Прохожая',bark:'*прижимает сумку к груди* Извините, я спешу.'},
  {k:'m',v:FM[2],mode:'walk',wp:[[-26,-7.6],[30,-7.6]],name:'Прохожий',bark:'Хорошая погода для прогулок. *даже не смотрит на небо*'},
@@ -42,7 +42,7 @@ const CIV=[
  {k:'m',v:FM[0],mode:'walk',wp:[[-134,42.6],[-20,42.6]],name:'Рыбак',bark:'Улов хороший. Всегда хороший. Даже слишком.'},
  {k:'w',v:1,x:-109,z:9.3,rot:PI,mode:'work',name:'Женщина у белья',bark:'*снимает бельё, хотя оно ещё мокрое* Скоро совсем стемнеет. Вам бы под крышу, мистер.'},
  {k:'w',v:2,x:-72,z:9.1,rot:PI,mode:'work',name:'Пожилая женщина'},
- {k:'k',v:0,mode:'play',c:[0,-10.2],r:1.9,ph:0,name:'Мальчик',bark:'А я видел, как дядя Мэттьюс ночью ходил на пирс с факелом! *мать уводит его за руку*'},
+ {k:'k',v:0,mode:'play',c:[0,-10.2],r:1.9,ph:0,name:'Мальчик',bark:'А я видел, как дядя Томас ночью ходил на пирс с факелом! *мать уводит его за руку*'},
  {k:'k',v:1,mode:'play',c:[0,-10.2],r:1.9,ph:3,name:'Девочка'},
  {k:'w',v:0,x:3.4,z:-10.2,rot:-PI/2,mode:'idle',name:'Мать',bark:'Дети, домой! Быстро!'},
  {k:'m',v:FM[2],x:-6,z:41.6,rot:PI,mode:'work',name:'Рыбак'},
@@ -120,7 +120,7 @@ async function sneakOut(){S.mode='talk';S.mark=null;SFX.door();await fade(1,350)
   await say(HERO,'(шёпотом) Тихо… Никто не видел.',VO.hero);
   Object.assign(FOUND,{on:true,t:0});S.camFn=()=>{CAM.ge=[-3,9.5,3];CAM.gt=[-13.2,1,-11];};CAM.rate=2.2;await wait(3.6);
   mumble(1.6,150,false,.22,true);noise(.4,{f:900,vol:.2});
-  await say('Голос из паба','*глухо, из-за стены* ХОЗЯИН! Кто его так?! …Подвал открыт! Это тот, с камерой!',{dur:3.2,pitch:140,vol:.25});await wait(1.6);
+  await say('Голос из паба','*глухо, из-за стены* ХОЗЯИН?! Господи… его будто загрызли! …Подвал открыт! Это тот, с камерой!',{dur:3.4,pitch:140,vol:.25});await wait(1.6);
   FOUND.on=false;S.camFn=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2000);
   await say(HERO,'Нашли. Быстро… Теперь они знают, что я видел подвал.',VO.hero);
   await say(HERO,'Орать на всю деревню они не станут — им нужна тихая рыбацкая деревушка. Будут просто… следить. Любой прохожий может оказаться одним из них.',VO.hero);
@@ -189,8 +189,8 @@ const DOCEV=[
   note:'Лаборатория: баки с «образцами», кресло с ремнями. Сыворотка «М-7» — «открывает окно».'},
  {x:276.6,z:-36.2,label:'Осмотреть «подопытных»',t:'«Подопытные»',b:'Под простынёй — то, что было человеком. И ещё двое на полу, под мешковиной. Серая чешуя, раздутые шеи, пальцы-плавники. На бирках рукой доктора: <i>«Объект 27. Не выдержал перемены». «Объект 28. Не выдержал перемены». «Объект 29…»</i><br><br>Лабораторные крысы. Только крысами здесь были люди.',
   note:'Тела «не выдержавших перемены». Бирки рукой доктора: объекты 27, 28, 29…'},
- {x:261.4,z:-31.2,label:'Прочесть личный дневник',t:'Личный дневник Э. Бернсона',b:'<i>«Мне было двенадцать, когда я упал за борт отцовской лодки. Вода сомкнулась, и я пошёл ко дну. Я закрывал глаза — и видел внизу город: зелёные башни, углы, которых не бывает. И Его. Он открыл глаза и заговорил со мной — без слов. Рыбаки вытащили меня через четверть часа и крестились: так долго под водой не живут.<br><br>С того дня я понимаю всё — языки, анатомию, химию. Но Он приходит. Каждую ночь, а теперь и днём, посреди улицы. Я перестал отличать, где Он, а где мой кабинет.<br><br>Он открыл мне истину: старые обряды — пустое. Если Грейхейвен не станет Его народом, Он придёт и возьмёт его сам. Я сделаю нас Его детьми — и жертвы прекратятся.<br><br>P.S. Мэттьюс по-прежнему держит ключи от катеров в сейфе конторы: шифр — пять знаков Спящего, по порядку обряда. Знаки хранят скульптор, часовня, маяк, склад и кладбище. Никто не сбежит морем».</i>',
-  note:'Дневник Бернсона: тонул в 12 лет, увидел Р\'льех и Его; с тех пор — дар и видения. Ключи от катеров — в сейфе начальника порта; шифр — пять знаков Спящего (мастерская, часовня, маяк, склад, кладбище).'}];
+ {x:261.4,z:-31.2,label:'Прочесть личный дневник',t:'Личный дневник Э. Бернсона',b:'<i>«Мне было двенадцать, когда я упал за борт отцовской лодки. Вода сомкнулась, и я пошёл ко дну. Я закрывал глаза — и видел внизу город: зелёные башни, углы, которых не бывает. И Его. Он открыл глаза и заговорил со мной — без слов. Рыбаки вытащили меня через четверть часа и крестились: так долго под водой не живут.<br><br>С того дня я понимаю всё — языки, анатомию, химию. Но Он приходит. Каждую ночь, а теперь и днём, посреди улицы. Я перестал отличать, где Он, а где мой кабинет.<br><br>Он открыл мне истину: старые обряды — пустое. Если Грейхейвен не станет Его народом, Он придёт и возьмёт его сам. Я сделаю нас Его детьми — и жертвы прекратятся.<br><br>P.S. Мэттью снова звал меня в свою церковь — «отдохнуть от голосов». Добрый Мэттью. Только там, за его засовом, Он говорит со мной тише».</i>',
+  note:'Дневник Бернсона: тонул в 12 лет, увидел Р\'льех и Его; с тех пор — дар и видения. Прячется от голосов в церкви отца Мэттью.'}];
 const docObj=()=>'Осмотрите дом доктора: '+DOCEV.filter(e=>e.seen).length+' / '+DOCEV.length;
 for(const e of DOCEV)addInter(e.x,e.z,1.5,e.label,()=>{const b=typeof e.b==='function'?e.b():e.b;if(!e.seen){e.seen=1;S.noteCb=()=>{addNote(e.note);setObj(docObj());const left=DOCEV.filter(q=>!q.seen);S.mark=left.length&&left.length<3?[left[0].x,left[0].z,'doc']:null;if(!left.length)injection();};}openNote(e.t,b);},()=>S.inside==='doc'&&!S.escaped&&!S.injected);
 async function enterDoc(){S.inDoc=true;S.mark=null;await goRoom(XD.doc);S.mode='talk';
@@ -213,13 +213,21 @@ function seaCam(t){let e=[VX,-1.4-min(t,18)*1.25,min(t,20)*1.1],g=vLerp([VX,2,e[
 function visionAtmo(M){if(S.vision==='sea'){R.fog=[.01,.07,.07];R.fogD=1/62;R.fogMin=0;R.fogH=.05;R.amb=[.16,.33,.33];R.sunC=[.08,.2,.22];M.on=false;return;}
   R.fog=[.3,.12,.05];R.fogD=1/120;R.fogMin=.02;R.fogH=.1;R.amb=[.62,.38,.26];R.sunC=[.55,.26,.14];M.den=.55;M.top=9;M.col=[.5,.24,.12];M.maxD=130;}
 function whisper(){mumble(3.2,46,false,.32,true);noise(3,{f:240,vol:.18,att:.8,to:90});tone(55,3.4,{type:'sawtooth',vol:.12,to:41,lp:300});}
-async function injection(){S.injected=true;S.mode='talk';S.mark=null;Object.assign(DOC,{show:true,x:269,z:-28.6,rot:PI,walk:null,flee:false});
+// first person all the way: he comes up from behind without a cut, the hero turns — the syringe is already raised — and it goes into the neck
+const M_syr=(()=>{const g=new Geo(.012),gl=H('#d8ece6',.25),lq=H('#5fd6a0',.7),mt=H('#9aa0a2',.2);g.at(mRx(PI/2),()=>{   // along +Z of the fist: plunger below, glass and needle above
+  g.cyl(0,-.12,0,.008,.008,.12,5,mt);g.cyl(0,-.13,0,.022,.022,.012,6,mt);g.cyl(0,-.005,0,.026,.026,.012,6,mt);
+  g.cyl(0,.0,0,.017,.017,.16,8,gl);g.cyl(0,.02,0,.013,.013,.12,7,lq);g.cyl(0,.16,0,.012,.004,.025,6,mt);g.cyl(0,.18,0,.0022,.0015,.09,4,H('#e2e6e6',.35));});return mesh(g);})();
+async function injection(){S.injected=true;S.mode='talk';S.mark=null;const fx=sin(P.rot),fz=cos(P.rot);
+  Object.assign(DOC,{show:true,x:clamp(P.x-fx*3.4,259,279),z:clamp(P.z-fz*3.4,-41.2,-28.8),rot:P.rot,walk:null,flee:false,syr:false,arm:0,stab:0});
   await say(HERO,'(про себя) Здесь всё: опыты, имена, его безумие… Нужно уходить, пока хозяин не…',VO.hero);
-  SFX.creak();DOC.walk=[P.x-sin(P.rot)*.9,P.z-cos(P.rot)*.9];const pr=P.rot;
-  S.camFn=()=>{CAM.ge=[P.x+sin(pr)*2.8+.8,2.4,P.z+cos(pr)*2.8];CAM.gt=[P.x-sin(pr)*.5,1.4,P.z-cos(pr)*.5];};CAM.rate=2.5;await wait(2.6);
-  await say('???','Любопытство — прекрасное качество, мистер Крейн. Для журналиста. И для подопытного.',VO.doc);
-  noise(.18,{f:3200,type:'highpass',vol:.22});SFX.hurt();S.shake=.5;P.rot=atan2(DOC.x-P.x,DOC.z-P.z);DOC.walk=null;
-  await say(HERO,'А-а! Что вы… что вы мне вкололи?!',VO.hero);S.drug=1;
+  DOC.walk=[clamp(P.x-fx*.95,259,279),clamp(P.z-fz*.95,-41.2,-28.8)];SFX.creak();await wait(2.2);DOC.walk=null;DOC.rot=atan2(P.x-DOC.x,P.z-DOC.z);
+  await say('???','Любопытство — прекрасное качество, мистер Крейн…',VO.doc);
+  {const r0=P.rot,p0=CAM.pitch;let d=atan2(DOC.x-P.x,DOC.z-P.z)-r0;d=((d+PI)%(2*PI)+2*PI)%(2*PI)-PI;DOC.syr=true;
+   for(let k=1;k<=16;k++){P.rot=r0+d*eas(k/16);CAM.yaw=P.rot;CAM.pitch=lerp(p0,.12,eas(k/16));await wait(.03);}}
+  await say('Доктор Бернсон','…для журналиста. И для подопытного.',VO.doc);
+  DOC.stab=.001;SFX.swing();await wait(.22);DOC.x+=(P.x-DOC.x)*.25;DOC.z+=(P.z-DOC.z)*.25;
+  noise(.18,{f:3200,type:'highpass',vol:.22});SFX.hurt();S.shake=.55;$('flash').style.opacity=.8;P.rot+=.32;CAM.yaw=P.rot;CAM.pitch=-.18;await wait(.35);$('flash').style.opacity=0;
+  await say(HERO,'А-а! Шея… Что вы… что вы мне вкололи?!',VO.hero);S.drug=1;DOC.syr=false;DOC.stab=0;DOC.rot=atan2(P.x-DOC.x,P.z-DOC.z);lookAt(DOC.x,1.6,DOC.z);
   await say('Доктор Бернсон','Не бойтесь, это не яд. Это — окно. То самое, через которое смотрю я сам. Эдмунд Бернсон, к вашим услугам.',VO.doc);
   await say('Доктор Бернсон','Вы ведь приехали за правдой о Грейхейвене? Смотрите. Смотрите внимательно…',VO.doc);
   P.lie=true;SFX.thud();lids(false,1400);await wait(1.6);$('fade').style.transitionDuration='600ms';$('fade').style.opacity=1;await wait(.8);
@@ -256,8 +264,7 @@ async function visionEnd(){$('hud').style.display='block';S.vision=null;R.uw=0;S
   await say('Доктор Бернсон','ЭТО ВСЁ ЛОЖЬ! ЛО-О-ОЖЬ!!!',{pitch:136,vol:.34,dur:2.2});scream(1.6);await wait(1.4);SFX.door();await wait(1);DOC.show=false;
   P.lie=false;await wait(.6);
   await say(HERO,'Он сбежал… Голова раскалывается. Что это было? Бред от его отравы — или предупреждение?',VO.hero);
-  await say(HERO,'Неважно. В дневнике: ключи от катеров — в сейфе начальника порта, а шифр — пять знаков Спящего.',VO.hero);
-  await say(HERO,'Найду знаки, открою сейф — и уплыву отсюда. Пока этот город не сгорел вместе со мной.',VO.hero);
+  await say(HERO,'Неважно. Если у этого «доктора» и есть ответы — они наверху. В кабинете, у входа, лестница на второй этаж.',VO.hero);
   bellToll(5);await wait(1.4);
   await say(HERO,'Колокол… Похоже, Бернсон поднял их всех. Теперь на улицах будет только культ.',VO.hero);
   S.camFn=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2000);stage2();S.mode='play';}
@@ -267,17 +274,18 @@ async function visionEnd(){$('hud').style.display='block';S.vision=null;R.uw=0;S
  mkE('c',-100,-6,pairs[0]);mkE('c',-130,-7.4,pairs[1]);const b=mkE('c',-90,8,[[-90,8],[-82,0],[-98,0]]);mkE('c',-89,7,null,{leader:b,off:[1.3,-1.3],grp:b.grp});mkE('v',-110,-12,pairs[2]);}
 function stage2(skip){S.stalk=false;S.curfew=true;S.tailed=false;for(const s of SK)s.on=false;DOC.show=false;
   startHunt();S.escaped=true;S.cp=[-110,-29];S.cpRoom=null;for(let i=0;i<10;i++)alarmLight();
-  setObj('Найдите знаки культа: 0 / 5<br><span style="font-size:15px">Пять знаков Спящего — шифр к сейфу начальника порта с ключами от катера. Двери откроют отмычки.</span>');
+  setObj('Осмотрите второй этаж дома доктора — лестница в кабинете, у входа.');S.mark=[271.4,-29.4,'doc'];
   if(!skip)toast('<b>Комендантский час.</b> Жители заперлись по домам, на улицах — только культ. Жителей можно оглушить, от культистов с факелами — только бежать и прятаться.',8);}
 
 // --- per-frame: always (cutscenes too) and in play mode
 function stageTick(dt){
-  if(FOUND.on){FOUND.t+=dt;}
+  if(FOUND.on){FOUND.t+=dt;}cellarTick(dt);act2Tick(dt);
+  if(DOC.syr)DOC.arm=min(1,DOC.arm+dt*1.3);if(DOC.stab>0&&DOC.stab<1)DOC.stab=min(1,DOC.stab+dt*5);
   if(DOC.show){DOC.mv=0;if(DOC.flee){if(hypot(269-DOC.x,-28.2-DOC.z)>.4)goDir(DOC,269,-28.2,4.6,dt);}else if(DOC.walk&&hypot(DOC.walk[0]-DOC.x,DOC.walk[1]-DOC.z)>.15)goDir(DOC,DOC.walk[0],DOC.walk[1],1.6,dt);}
   if(S.vision){VIS.t+=dt;}
   if(S.drug){const t=S.t;cv.style.filter='blur('+(.8+.7*sin(t*1.3)).toFixed(2)+'px) saturate(1.6) hue-rotate('+(sin(t*.6)*28).toFixed(1)+'deg)';}
   if(!S.curfew&&S.explore&&!FIN.on)for(const c of CIV)updCiv(c,dt);}
-function stage(dt){
+function stage(dt){act2Play(dt);
   if(S.stalk){SKFt-=dt;S.tailed=SK.some(s=>s.on&&s.state==='tail');if(S.tailed&&SKFt<=0){SKFt=.4;SKF=field(P.x,P.z);}
     for(const s of SK)updSK(s,dt);if(S.guardsMet&&!S.inDoc)for(const g of DGU)updGuard(g,dt);
     if(!S.carSeen&&!S.inside&&hypot(P.x+38,P.z+18)<17)carScene();
@@ -298,7 +306,7 @@ function drawStage(){
     return;}
   if(FOUND.on){const t=FOUND.t;for(const[i,m]of FOUND.men.entries()){if(t>2.8&&t<4.6)continue;const k=kf(t,0,2.8),x=lerp(m.x,-13.2,k),z=lerp(m.z,-11.8,k),out=t>4.6;
     drawChar(CH.v[m.v],out?-13.2+(t-4.6)*(i?3.6:-3.6):x,0,out?-11.2+(t-4.6)*1.6:z,out?(i?PI/2:-PI/2):PI,{ph:t*7,mv:1});}}
-  if(S.inside==='doc'){for(const[x,z,r,i]of DOCDEAD)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.3,aL:.5});if(DOC.show)drawChar(CHF.doc,DOC.x,0,DOC.z,DOC.rot,{ph:DOC.ph,mv:DOC.mv,aR:DOC.flee?-2.5+sin(S.t*12)*.4:null,aL:DOC.flee?-2.4:null});}
+  if(S.inside==='doc'){for(const[x,z,r,i]of DOCDEAD)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.3,aL:.5});if(DOC.show)drawChar(CHF.doc,DOC.x,0,DOC.z,DOC.rot,{ph:DOC.ph,mv:DOC.mv,aR:DOC.flee?-2.5+sin(S.t*12)*.4:DOC.syr?lerp(lerp(-.15,-1.5,eas(DOC.arm)),-.7,eas(DOC.stab)):null,eR:DOC.syr?lerp(.9,.15,eas(DOC.stab)):null,aRz:DOC.syr?.1-.3*eas(DOC.stab):0,aL:DOC.flee?-2.4:null,armed:DOC.syr,wpn:M_syr,cR:DOC.syr?1.5:null});}
   if(S.inside||FIN.on||S.mode==='finale')return;
   if(!S.curfew&&S.explore){const cx=CAM.tgt[0],cz=CAM.tgt[2];for(const c of CIV)if(abs(c.x-cx)<46&&abs(c.z-cz)<40)drawCiv(c);}
   if(S.stalk){for(const s of SK)if(s.on)drawChar(CH.v[s.v],s.x,0,s.z,s.rot,{ph:s.ph,mv:s.mv});if(S.guardsMet&&!S.inDoc)for(const g of DGU)drawChar(CH.v[g.v],g.x,0,g.z,g.rot,{ph:g.ph,mv:g.mv});}}

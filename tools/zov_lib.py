@@ -1579,6 +1579,11 @@ HEADS = {
  'doc_body': ('#c4a088', 1., {'hair_style': 'side', 'part': -.8, 'recede': .7, 'hair': '#2a2018', 'glasses': 1, 'eyes': 'sunken', 'hw': .95, 'hd': 1.04, 'fl': 1.08, 'jw': .95,
                'cr': 1.08, 'cheek': 1.0, 'hollow': .7, 'lid': .45, 'socket': 1.6, 'es': .039, 'iris': '#5a6a6a', 'nl': 1.12, 'np': .024, 'nw': .012, 'lu': .003, 'll': .004,
                'mw': .019, 'age': .5, 'bt': .0035, 'barc': .1, 'bang': -.1, 'stubble': .15}),
+    'paul_body': ('#bfa08a', .95, {'hair_style': 'side', 'part': .5, 'recede': .9, 'hair': '#a6a298', 'beard': 'goatee', 'beard_c': '#b4b0a6', 'blen': .02, 'fl': 1.1, 'hw': .92, 'jw': .88,
+               'hollow': .9, 'cheek': 1.1, 'eh': .0085, 'ew': .02, 'lid': .55, 'socket': 1.6, 'nl': 1.2, 'np': .027, 'hump': .005, 'nw': .013, 'lu': .0025, 'll': .0032, 'smile': -.004,
+               'age': 1.0, 'bt': .005, 'brow_c': '#c0bcb2', 'barc': .1, 'bang': -.2, 'iris': '#5a5a44', 'ear': 1.15}),
+    'matt_body': ('#c8a68c', 1., {'hair_style': 'side', 'part': .6, 'hair': '#4a3626', 'fl': 1.0, 'hw': .98, 'jw': 1.0, 'cheek': .6, 'chin': .2, 'eh': .0105, 'lid': .15, 'tilt': .02,
+               'iris': '#4a6a7a', 'nl': 1.0, 'np': .02, 'mw': .021, 'lu': .004, 'll': .0055, 'smile': .002, 'age': .35, 'bt': .004, 'barc': .35, 'blush': .08}),
 }
 def head_kz(n): return {'kid_body_0': .66, 'kid_body_1': .66, 'vill_body_2': 1.05}.get(n, 1.)
 HEAD_Z = 1.725
@@ -1688,6 +1693,36 @@ def _(a):
     for s in (-1, 1): a.add(box(.08, .02, .1, (s*.16, -.175, .85)), coat2)
     a.add(box(.012, .03, .1, (.13, -.17, 1.33)), a.m('pen', '#2a2a2a'))
 
+def cassock(a, cloth, skin, k=1.0):
+    cfg = {'cloth': cloth, 'skin': skin, 'k': k, 'robe': 1, 'nobelt': 1}
+    cm, c2 = torso(a, cfg)
+    skirtl(a, cfg, [.99, .8, .5, .25, .07], [.01, .04, .07, .09, .1], cm, fold=.15)
+    return cfg, cm, c2
+@asset('paul_body')
+def _(a):
+    cfg, cm, c2 = cassock(a, '#1e1a1c', '#bfa08a', .95)
+    collar(a, cfg, 1.47, 1.56, .016, c2)
+    a.add(loft([tring_at(cfg, .94, .016), tring_at(cfg, .97, .016)], False, False), a.m('rope', '#7a6a4a'))
+    for s in (-1, 1): a.add(tube([(s*.05, -.13, .95), (s*.07, -.15, .7), (s*.06, -.17, .5)], [.01, .009, .014], 4), a.m('rope', '#7a6a4a'))
+    bv = body_bvh(a); O = V((0, 0, 0))
+    a.add(tube([V((cos(t)*.075, sin(t)*.07-.005, 1.53)) for t in [k_/10*2*pi for k_ in range(11)]], .005, 3, False, False), a.m('chain', '#6a6458', .1))
+    for (x0, z0) in ((-.05, 1.5), (.05, 1.5)): a.add(tube([V((x0, -.11, z0)), V((0, -.135, 1.3))], .004, 3, False, False), a.m('chain', '#6a6458', .1))
+    cband(a, bv, O, [(-.028, 1.3), (0, 1.33), (.028, 1.3)], [(-.028, 1.27), (0, 1.24), (.028, 1.27)], a.m('amulet', '#2a4a44', .2), .012)
+    cband(a, bv, O, [(-.016, 1.296), (0, 1.315), (.016, 1.296)], [(-.016, 1.276), (0, 1.256), (.016, 1.276)], a.m('sigil', '#5fd6c0', .7), .016)
+    buttons(a, bv, [(0, z) for z in (1.42, 1.34, 1.18, 1.1, 1.02)], a.m('button', '#0e0c0c'), r=.007)
+@asset('matt_body')
+def _(a):
+    cfg, cm, c2 = cassock(a, '#16161a', '#c8a68c')
+    wc = a.m('whitecollar', '#e8e4d8')
+    collar(a, cfg, 1.49, 1.56, .014, cm)
+    a.add(loft([tring_at(cfg, 1.555, .02), tring_at(cfg, 1.585, .018)], False, False), wc)
+    bv = body_bvh(a); O = V((0, 0, 0))
+    cband(a, bv, O, [(-.014, 1.56), (.014, 1.56)], [(-.014, 1.53), (.014, 1.53)], wc, .03)
+    sv = a.m('silver', '#b8bcc0', .15)
+    a.add(tube([V((cos(t)*.07, sin(t)*.065-.004, 1.52)) for t in [k_/10*2*pi for k_ in range(11)]], .0035, 3, False, False), sv)
+    cband(a, bv, O, [(-.004, 1.36), (.004, 1.36)], [(-.004, 1.26), (.004, 1.26)], sv, .012)
+    cband(a, bv, O, [(-.022, 1.33), (.022, 1.33)], [(-.022, 1.32), (.022, 1.32)], sv, .012)
+    buttons(a, bv, [(0, z) for z in (1.44, 1.36, 1.2, 1.12, 1.04, .96)], a.m('button', '#0a0a0c'), r=.0065)
 # ---------------------------------------------------------------- limb segments
 def seg_loft(pts, sizes, kind='oct', n=8, c0='chamfer', c1='chamfer'):
     return f_loft([V(p) for p in pts], sizes, ref=(0, -1, 0), kind=kind, n=n, cap0=c0, cap1=c1, smooth=0)
