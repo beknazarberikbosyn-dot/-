@@ -32,9 +32,10 @@ function iWall(x0,z0,x1,z1,h,c,o={}){const sx=max(.3,x1-x0),sz=max(.3,z1-z0),cx=
   if(o.stone){for(let y=.5;y<h-.1;y+=.55)IG.bx(cx,y,cz,sx+.04,.05,sz+.04,H('#2c3130'));IG.bx(cx,0,cz,sx+.1,.3,sz+.1,H('#3a403e'));}
   else{if(h>2){IG.bx(cx,0,cz,sx+.06,1,sz+.06,WAIN);IG.bx(cx,1,cz,sx+.08,.07,sz+.08,PAL.woodD);}IG.bx(cx,0,cz,sx+.1,.14,sz+.1,PAL.woodD);}
   IG.bx(cx,h,cz,max(.36,x1-x0+.06),.08,max(.36,z1-z0+.06),o.stone?H('#3a403e'):PAL.woodD);col(min(x0,x1)-.15,min(z0,z1)-.15,max(x0,x1)+.15,max(z0,z1)+.15,3);}
-// room shell: back and side walls full height, front wall low (cut-away), doorway gap in the front wall
+// room shell (first person): four full-height walls, a doorway with a lintel in the front wall, a ceiling with beams
 function iShell(r,h,c,c2,o={}){const{x0,z0,x1,z1,gap}=r;iWall(x0,z0,x1,z0,h,c,o);iWall(x0,z0,x0,z1,h,c,o);iWall(x1,z0,x1,z1,h,c,o);
-  if(gap==null)iWall(x0,z1,x1,z1,1,c2,o);else{iWall(x0,z1,gap-.75,z1,1,c2,o);iWall(gap+.75,z1,x1,z1,1,c2,o);col(gap-.8,z1+.25,gap+.8,z1+.6,3);IG.bx(gap,.05,z1-.45,1.3,.02,.8,H('#3a2c20'));}}
+  IG.bx((x0+x1)/2,h,(z0+z1)/2,x1-x0+.4,.14,z1-z0+.4,o.stone?H('#2c302f'):H('#2e2620'));for(let x=x0+1.6;x<x1-.8;x+=2.4)IG.bx(x,h-.22,(z0+z1)/2,.22,.22,z1-z0,o.stone?H('#3a403e'):PAL.woodD);
+  if(gap==null)iWall(x0,z1,x1,z1,h,c2,o);else{iWall(x0,z1,gap-.75,z1,h,c2,o);iWall(gap+.75,z1,x1,z1,h,c2,o);IG.bx(gap,2.1,z1,1.7,h-2.1,.36,c2);col(gap-.8,z1+.25,gap+.8,z1+.6,3);IG.bx(gap,.05,z1-.45,1.3,.02,.8,H('#3a2c20'));}}
 function iDoor(x,z,ry,dark){IG.at(mM(mT(x,0,z),mRy(ry)),()=>{if(!IG.model('door',dark?{k:.7}:null))IG.bx(0,0,0,1.2,1.9,.12,PAL.woodD);
   IG.bx(0,1.92,0,1.45,.14,.2,PAL.wood);IG.bx(-.67,0,0,.1,1.98,.2,PAL.wood);IG.bx(.67,0,0,.1,1.98,.2,PAL.wood);});}
 const RUST=H('#5a3a28'),IRON=H('#2a2e30'),PAPER2=H('#d8cfb0');
@@ -136,12 +137,12 @@ IG.bx(205,-.12,-17,190,.06,74,H('#030506'));
 // LIGHTHOUSE keeper's room: round, inside the tower (r 3.8): the log on the lectern (puzzle 3), spiral stairs up the wall
 // circular wall: back half full height, front half low (cut-away), doorway gap facing +z
 function iRound(cx,cz,r,h,c,n=22){const L=2*r*sin(PI/n)+.1;
-  for(let i=0;i<n;i++){const am=(i+.5)/n*2*PI,x=cx+sin(am)*r,z=cz+cos(am)*r;if(abs(atan2(sin(am),cos(am)))<.2)continue;const hh=cos(am)>.3?1:h;
+  for(let i=0;i<n;i++){const am=(i+.5)/n*2*PI,x=cx+sin(am)*r,z=cz+cos(am)*r;if(abs(atan2(sin(am),cos(am)))<.2){IG.at(mM(mT(x,2.1,z),mRy(am)),()=>IG.bx(0,0,0,L,h-2.1,.5,c));continue;}const hh=h;
     IG.at(mM(mT(x,0,z),mRy(am)),()=>{IG.bx(0,0,0,L,hh,.5,c);for(let y=.5;y<hh-.1;y+=.55)IG.bx(0,y,0,L+.03,.05,.54,H('#2c3130'));IG.bx(0,0,0,L+.08,.3,.6,H('#3a403e'));IG.bx(0,hh,0,L+.06,.08,.56,H('#3a403e'));});
     col(x-.55,z-.55,x+.55,z+.55,3);}}
 {const cx=140,cz=-36,r=3.8,LW=H('#a8a394');IG.cyl(cx,-.03,cz,r+.3,r+.3,.05,24,H('#262a29'));
  for(let k=0;k<3;k++)IG.cyl(cx,-.02+k*.005,cz,r-.2-k*1.2,r-.2-k*1.2,.05,24,H(['#5a605e','#525856','#626866'][k]));
- iRound(cx,cz,r,3.2,LW);
+ iRound(cx,cz,r,3.2,LW);IG.cyl(cx,3.2,cz,r+.4,r+.4,.14,22,H('#2c302f'));for(let k=0;k<4;k++)IG.at(mM(mT(cx,3.0,cz),mRy(k*PI/4)),()=>IG.bx(0,0,0,2*r,.2,.2,PAL.woodD));
  for(let k=0;k<11;k++){const a=1.15+k*.19;IG.at(mM(mT(cx+sin(a)*(r-.75),.28*k,cz+cos(a)*(r-.75)),mRy(a)),()=>{IG.bx(0,0,0,1.3,.1,.62,PAL.woodD);IG.bx(.62,0,0,.06,.9,.06,PAL.woodD);});}
  IG.at(mM(mT(cx+sin(2.6)*(r-.75),3.1,cz+cos(2.6)*(r-.75))),()=>IG.bx(0,0,0,1.3,.08,1.3,H('#2a2622')));col(cx+1.4,cz-3.6,cx+3.8,cz+.2,2);
  ip('lectern',140,0,-38,0,1,null,()=>{IG.bx(0,0,0,.5,1.05,.5,PAL.woodD);IG.bx(0,1.05,0,.6,.08,.5,H('#d9cdb0',.3));});iCol(139.75,-38.25,140.25,-37.75,1);
