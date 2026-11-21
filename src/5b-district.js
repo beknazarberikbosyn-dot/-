@@ -56,7 +56,7 @@ function updCiv(c,dt){c.mv=0;const d=hypot(P.x-c.x,P.z-c.z);
     const w=c.wp[c.wi];if(hypot(w[0]-c.x,w[1]-c.z)<.7){c.wi=(c.wi+1)%c.wp.length;if(rnd()<.35)c.st=1.5+rnd()*2.5;return;}goDir(c,w[0],w[1],c.sp,dt);c.ph2=c.ph;return;}
   if(d<5&&c.mode!=='work')faceTo(c,atan2(P.x-c.x,P.z-c.z),dt,2);}
 function drawCiv(c){const ch=civCh(c);if(!ch)return;const t=S.t+c.ph,o={ph:c.mode==='play'?c.ph2:c.ph,mv:c.mv};
-  if(c.mode==='sit'){o.crouch=1;o.aR=o.aL=-1.1;}else if(c.mode==='work'){o.aR=-1.15+sin(t*2.6)*.45;o.aL=-.95+sin(t*2.6+1.2)*.45;}else if(c.mode==='play')o.aR=-.5+sin(t*9)*.6;
+  if(c.mode==='sit'){o.sit=1;o.aR=o.aL=-1.1;}else if(c.mode==='work'){o.aR=-1.15+sin(t*2.6)*.45;o.aL=-.95+sin(t*2.6+1.2)*.45;}else if(c.mode==='play')o.aR=-.5+sin(t*9)*.6;
   drawChar(ch,c.x,0,c.z,c.rot,o);}
 
 // --- plain-clothes cultists: patrol → (they see him) → tail at his heels → grab him if he lets them close; lost after 3 s out of sight

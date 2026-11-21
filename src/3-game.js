@@ -30,13 +30,84 @@ function gCultist(){const b=new Geo(.07),a=new Geo(.07),aw=new Geo(.07),robe=H('
   return{body:mesh(b),arm:mesh(a),armW:mesh(aw),leg:null};}
 // Blender part models (origin conventions: body at the feet facing +Z, arms hang from the shoulder along -Y, legs hang from the hip)
 const VCOL=[['#5a6b4a','#33302c'],['#6b5346','#3a342e'],['#4f5d6b','#2e2c2a'],['#77705f','#33302c']];
-function partSet(prefix,fb,opt={}){const b=modelMesh(opt.bodyName||prefix+'_body',opt.body),a=modelMesh(opt.arm||prefix+'_arm',opt.armO),aw=modelMesh(opt.armW||prefix+'_armW',opt.armO),l=opt.noLeg?null:modelMesh(opt.leg||prefix+'_leg',opt.legO);
+function oldPartSet(prefix,fb,opt={}){const b=modelMesh(opt.bodyName||prefix+'_body',opt.body),a=modelMesh(opt.arm||prefix+'_arm',opt.armO),aw=modelMesh(opt.armW||prefix+'_armW',opt.armO),l=opt.noLeg?null:modelMesh(opt.leg||prefix+'_leg',opt.legO);
   if(!b||!a)return fb();return{body:b,arm:a,armW:aw||a,leg:l,sh:opt.sh||[.27,1.47],hip:opt.hip||[.11,.9],model:true};}
+// --- jointed people (Blender): <body> + <body>_head / _jaw / _lids and shared limb segments (shoulder→elbow→wrist→knuckles, hip→knee→ankle),
+// recoloured per character by palette. Lengths must match ARM_L / HAND_L / LEG_L / ANKLE / HEAD_Z in tools/zov_lib.py.
+const RIG={ua:.29,fa:.27,hand:.095,th:.42,sh:.40,ank:.085,headZ:1.725};
+const SEGC={};function segM(n,pal){const k=n+'|'+(pal?JSON.stringify(pal):'');if(!(k in SEGC))SEGC[k]=modelMesh(n,pal?{pal}:null);return SEGC[k];}
+const dk=(c,f)=>[c[0]*f,c[1]*f,c[2]*f,c[3]||0];
+const skinPal=c=>({skin:c,skin2:dk(c,.86),skin_ch:c,stubble:dk(c,.8),fd_lid:dk(c,.93),fd_lidc:dk(c,.93),fd_lidl:dk(c,.97),fd_chin:c,fd_crease:dk(c,.78),fd_socket:dk(c,.93),fd_lip:dk(c,.78),fd_bag:dk(c,.82),fd_wrinkle:dk(c,.8)});
+const HUMS={hero_body:{skin:'#c9a183',sl:'#8a7450',cf:'#6f5c3e',tr:'#3a3530',w:'wpn_crowbar'},
+  vill_body_0:{skin:'#a8a088',sl:'#5a6b4a',tr:'#33302c',k:1.08,w:'wpn_club'},vill_body_1:{skin:'#a8a088',sl:'#6b5346',tr:'#3a342e',w:'wpn_club'},
+  vill_body_2:{skin:'#a8a088',sl:'#4f5d6b',tr:'#2e2c2a',k:.92,kz:1.05,w:'wpn_club'},vill_body_3:{skin:'#b8987e',sl:'#77705f',tr:'#33302c',k:1.16,w:'wpn_club'},
+  cult_body:{skin:'#8f8f7a',sl:'#4d1d22',cf:'#32131a',k:1.05,robe:1,noLeg:1,w:'wpn_torch'},
+  wom_body_0:{skin:'#c9a183',sl:'#5a4a5a',st:'#2a2624',k:.9,f:1},wom_body_1:{skin:'#c9a183',sl:'#6a5a44',st:'#3a3430',k:.9,f:1},wom_body_2:{skin:'#c9a183',sl:'#3a3a3e',st:'#1e1e20',k:.9,f:1},
+  kid_body_0:{skin:'#c9a183',sl:'#4a5a6a',tr:'#3a3836',k:.74,kz:.66},kid_body_1:{skin:'#c9a183',sl:'#7a4a44',st:'#5a4a40',k:.74,kz:.66,f:1},
+  doc_body:{skin:'#c4a088',sl:'#cfcab8',cf:'#b8b3a2',tr:'#2a2a2e'}};
+let SEGN=0;
+function partSet(prefix,fb,opt={}){const bn=opt.bodyName||prefix+'_body',h=HUMS[bn];
+  if(!h||!getModel(bn)||!getModel(bn+'_head')||!getModel('arm_up'))return oldPartSet(prefix,fb,opt);
+  const k=h.k||1,kz=h.kz||1,bp=Object.assign({},opt.body&&opt.body.pal||{}),ap=opt.armO&&opt.armO.pal||{},lp=opt.legO&&opt.legO.pal||{};
+  const skin=bp.skin||ap.skin||H(h.skin),sl=ap.cloth||H(h.sl),cf=h.cf&&!ap.cloth?H(h.cf):dk(sl,.78),tr=lp.trousers||H(h.tr||'#33302c');
+  const sp=(bp.skin||ap.skin)?skinPal(skin):null;if(sp)Object.assign(bp,sp);if(!h.f&&!h.robe)bp.trousers=bp.trousers||tr;
+  const hp=sp?{pal:sp}:null,ar={cloth:sl,cuff:cf,skin},hs={skin};
+  return{seg:true,model:true,sd:SEGN++,bn,body:modelMesh(bn,{pal:bp}),head:modelMesh(bn+'_head',hp),jaw:modelMesh(bn+'_jaw',hp),lids:modelMesh(bn+'_lids',hp),
+    arm:{up:segM(h.robe?'robe_up':'arm_up',ar),lo:segM(h.robe?'robe_lo':'arm_lo',ar)},hand:[segM('hand_R',hs),segM('hand_L',hs)],fing:[segM('fing_R',hs),segM('fing_L',hs)],fist:[segM('fist_R',hs),segM('fist_L',hs)],
+    leg:h.noLeg?null:h.f?{up:null,lo:segM('stock_lo',{stock:H(h.st)}),foot:segM('shoe')}:{up:segM('leg_up',{trousers:tr}),lo:segM('leg_lo',{trousers:tr}),foot:segM('foot')},
+    wpn:h.w?segM(h.w):null,sh:[.185*k,1.4*kz],hip:[.092*k,.9*kz],neck:(RIG.headZ-.12)*kz,kz,w:clamp(k,.75,1.12),f:!!h.f};}
+// who is talking: the nearest non-hero person to the camera while an NPC line is being spoken (the lower lip follows the syllables)
+const TK={on:false,open:0,cand:null,cd:1e9,cur:null};
+function talkTick(dt){let tg=0;TK.on=false;
+  if(sub&&sub.who&&sub.who!==HERO&&!S.vision&&!/Уолтер|Шёпот|Голос/.test(sub.who)){const L=sub.text.length,ws=max(.6,min(sub.dur-.9,L*.05));
+    if(sub.t<ws){TK.on=true;const c=(sub.text[floor(sub.t/ws*L)]||' ').toLowerCase();tg=/[аеёиоуыэюяaeiou]/.test(c)?.7+.3*abs(sin(sub.t*23)):/[\s,.!?…—-]/.test(c)?.05:.3;}}
+  TK.open+=(tg-TK.open)*min(1,dt*20);}
+function talkFrame(){TK.cur=TK.on?TK.cand:null;TK.cand=null;TK.cd=1e9;}
+// one arm from a shoulder matrix U: elbow flex e, finger curl; s = -1 right / +1 left. Returns the wrist matrix
+function drawArm(ch,U,s,e,curl,o,ws=1,kz=1){const S_=mS(ws,kz,ws);draw(ch.arm.up,mM(U,S_),o);const F=mM(U,mT(0,-RIG.ua*kz,0),mRx(-e));draw(ch.arm.lo,mM(F,S_),o);
+  const W=mM(F,mT(0,-RIG.fa*kz,0),mRx(-.08)),hi=s<0?0:1,oh=o*.35;draw(ch.hand[hi],mM(W,S_),oh);drawFingers(ch,mM(W,mT(0,-RIG.hand*kz,0)),hi,s,curl,S_,oh);return W;}
+// relaxed fingers bend as one at the knuckles; past ~50° they are drawn rolled into a fist
+function drawFingers(ch,K,hi,s,curl,S_,o){if(curl>.85&&ch.fist[hi])draw(ch.fist[hi],S_?mM(K,S_):K,o);else draw(ch.fing[hi],S_?mM(K,mRz(-s*curl),S_):mM(K,mRz(-s*curl)),o);}
+function drawLegStraight(ch,U,kn,o){if(!ch.leg)return;if(ch.leg.up)draw(ch.leg.up,U,o);const K=mM(U,mT(0,-RIG.th,0),mRx(kn));draw(ch.leg.lo,K,o);draw(ch.leg.foot,mM(K,mT(0,-RIG.sh,0)),o);}
+function drawChar(ch,x,y,z,rot,p={}){if(!ch.seg)return drawCharOld(ch,x,y,z,rot,p);
+  const o=p.out==null?.03:p.out,mv=p.mv||0,ph=p.ph||0,kz=ch.kz,sd=ch.sd*1.37+(p.seed||0),t=S.t,sw=sin(ph)*mv,legs=!!ch.leg;
+  let base=mM(mT(x,y,z),mRy(rot));if(p.lie)base=mM(base,mT(0,.22,0),mRx(-PI/2));
+  let dy=-abs(sw)*.04*kz,lean=.05*mv;
+  if(p.sit&&legs){dy=-.42*kz;lean=.04;}else if(p.crouch){if(legs){dy=-.3*kz;lean=.32;}else base=mM(base,mS(1,.68,1));}
+  const pel=mM(base,mT(0,dy,0)),hy=ch.hip[1],tw=-sin(ph)*.09*mv,br=sin(t*1.8+sd)*.005;
+  const B=mM(pel,mT(0,hy,0),mRx(lean),mRy(tw),mT(0,-hy,0));draw(ch.body,B,o);
+  // head: turns to the player when he is close, idles, nods while talking; lower lip, blinking
+  const dC=hypot(x-CAM.eye[0],z-CAM.eye[2]);if(TK.on&&ch!==CH.hero&&!p.lie&&dC<9&&dC<TK.cd){TK.cd=dC;TK.cand={ch,x,z};}
+  const talk=p.talk||(TK.cur&&TK.cur.ch===ch&&abs(TK.cur.x-x)+abs(TK.cur.z-z)<1);
+  let yaw=p.look!=null?p.look:0,pit=-lean*.7;
+  if(p.look==null&&ch!==CH.hero&&!p.lie){const dx=P.x-x,dz=P.z-z,d=hypot(dx,dz);if(d<7&&d>.3){let a=atan2(dx,dz)-rot-tw;a=((a+PI)%(2*PI)+2*PI)%(2*PI)-PI;if(abs(a)<2.3)yaw=clamp(a,-1.05,1.05)*clamp((7-d)/2.5,0,1)*(1-.65*min(1,mv));}}
+  if(!p.lie){yaw+=sin(t*.41+sd)*.07;pit+=sin(t*.29+sd*1.3)*.035+(talk?sin(t*4.1+sd)*.04:0);}
+  const nk=ch.neck,Hm=mM(B,mT(0,nk+br,0),mRy(yaw),mRx(pit),mT(0,-nk,0)),oH=o*.4;draw(ch.head,Hm,oH);   // thin outline: a 3 cm shell would cross the face from hats and braids
+  draw(ch.jaw,talk?mM(Hm,mT(0,-TK.open*.013,-TK.open*.003)):Hm,oH);if(ch.lids&&((t*.29+sd*.37)%1)<.035)draw(ch.lids,Hm,oH);
+  // arms: shoulder swing/raise, automatic elbow bend, wrist, curled fingers; the right fist grips the weapon
+  let grip=null;const sh=ch.sh;
+  for(const s of[-1,1]){const R_=s<0;let a=R_?p.aR:p.aL;if(a==null)a=(R_?1:-1)*sw*(ch.f?.38:.48)+(p.sit?0:sin(t*.9+sd+s)*.025);
+    const armed=R_&&p.armed&&ch.wpn;let e=R_?p.eR:p.eL;
+    if(e==null)e=.14+max(0,-a)*.45*min(1,mv*2)+(a<-.5&&a>-2.4?.32:0)+(armed?.28:0)+(p.sit?.45:0)+sin(t*1.3+sd+s)*.02;
+    const U=mM(B,mT(s*sh[0],sh[1]+br,0),mRx(a),mRz(((R_?p.aRz:p.aLz)||0)+s*(.06+(ch.f?.03:0))));
+    let c=R_?p.cR:p.cL;if(c==null)c=armed?1.5:p.fist?1.25:.32+sin(t*.7+sd+s)*.06;
+    const W=drawArm(ch,U,s,e,c,o,ch.w,kz);if(R_){grip=W;if(armed){grip=mM(W,mT(.022*ch.w,-.1*kz,0));draw(ch.wpn,grip,o);}}}
+  // legs: two-bone IK onto the ground; the swing foot lifts and rolls heel-to-toe
+  if(legs){const hp=ch.hip,l1=RIG.th*kz,l2=RIG.sh*kz,an=RIG.ank*kz,lw=ch.w,S_=mS(lw,kz,lw);
+    for(const s of[-1,1]){const lp=ph+(s<0?0:PI),H0=[s*hp[0],hp[1],0];let f,toe=0;
+      if(p.sit)f=[s*(hp[0]+.03),an,.42*kz];else if(p.crouch)f=[s*(hp[0]+.05),an,(s<0?.2:-.06)*kz];
+      else{const A=.23*mv*kz*(p.stride||1)*(ch.f?.6:1),up=max(0,cos(lp));f=[s*(hp[0]+.006),an+up*(ch.f?.06:.12)*mv*kz,sin(lp)*A+.012];toe=up*sin(lp)*.45*mv;}
+      f[1]-=dy;
+      const q=ik2(H0,f,l1,l2,[s*hp[0]*1.3,H0[1]-.3,1.6]),kn=q.e,af=q.t,d1=vNorm(vSub(kn,H0)),d2=vNorm(vSub(af,kn));
+      if(ch.leg.up)draw(ch.leg.up,mM(pel,mBasis(H0,d1,[0,d1[2],-d1[1]]),S_),o);
+      draw(ch.leg.lo,mM(pel,mBasis(kn,d2,[0,d2[2],-d2[1]]),S_),o);
+      draw(ch.leg.foot,mM(pel,mT(af[0],af[1],af[2]),mRx(-toe),S_),o);}}
+  if(!p.lie&&!p.noBlob)draw(M_blob,mT(x,.03,z),0,.38);return grip;}
 const CH={hero:partSet('hero',gHero),
   v:[0,1,2,3].map(v=>partSet('vill',()=>gVillager(v),{sh:[[.29,1.47],[.27,1.47],[.25,1.52],[.31,1.47]][v],body:{},arm:'vill_arm',armW:'vill_armW',leg:'vill_leg',armO:{pal:{cloth:H(VCOL[v][0])}},legO:{pal:{trousers:H(VCOL[v][1])}},bodyName:'vill_body_'+v})),
   c:partSet('cult',gCultist,{armW:'cult_armT',noLeg:true,sh:[.3,1.45]})};
 const M_flame=modelMesh('flame')||(()=>{const g=new Geo(0);g.sph(0,.1,0,.13,.2,.13,H('#ff8a2a',1),5,3);g.sph(0,.15,0,.07,.13,.07,H('#ffe08a',1),4,3);return mesh(g);})();
-const TORCH_TIP=[0,-.74,.9];
+const TORCH_TIP=[0,-.08,.9];   // in the torch's own space (held in the fist)
 const M_blob=(()=>{const g=new Geo(0);g.cyl(0,0,0,.55,.55,.01,10,[0,0,0,0]);return mesh(g);})();
 const mkRing=c=>{const g=new Geo(0),p=(a,r)=>[cos(a)*r,0,sin(a)*r];for(let i=0;i<48;i+=2){const a0=i/48*2*PI,a1=(i+1.2)/48*2*PI;g.quad(p(a0,.98),p(a1,.98),p(a1,1),p(a0,1),c);g.quad(p(a0,.98),p(a0,1),p(a1,1),p(a1,.98),c);}return mesh(g);};
 const M_ringR=mkRing(H('#ff5a48',1)),M_ringY=mkRing(H('#f0c060',1));
@@ -44,7 +115,7 @@ const M_beacon=(()=>{const g=new Geo(.02);g.cyl(0,0,0,.28,0,.45,4,H('#7fffe0',1)
 const M_egg=(()=>{const g=new Geo(.02);g.bx(0,-.15,0,.26,.32,.03,H('#f1e3b0',.85));return mesh(g);})();
 const M_med=(()=>{const g=new Geo(.02);g.bx(0,0,0,.5,.32,.34,H('#e8e2d0',.5));g.bx(0,.1,.18,.3,.08,.02,H('#d0352a',.9));g.bx(0,.1,.18,.08,.24,.02,H('#d0352a',.9));return mesh(g);})();
 const M_wpn=(()=>{const g=new Geo(.02);g.bx(0,.2,0,.1,.1,1.3,H('#aab0b4',.45));g.bx(0,.2,.6,.3,.1,.12,H('#aab0b4',.45));return mesh(g);})();
-function drawChar(ch,x,y,z,rot,p={}){let base=mM(mT(x,y,z),mRy(rot));if(p.lie)base=mM(base,mT(0,.22,0),mRx(-PI/2));else if(p.crouch)base=mMul(base,mS(1,.68,1));
+function drawCharOld(ch,x,y,z,rot,p={}){let base=mM(mT(x,y,z),mRy(rot));if(p.lie)base=mM(base,mT(0,.22,0),mRx(-PI/2));else if(p.crouch)base=mMul(base,mS(1,.68,1));
   const o=p.out==null?.03:p.out,sh=ch.sh||[.42,1.55],hp=ch.hip||[.16,.8];draw(ch.body,base,o);const sw=sin(p.ph||0)*(p.mv||0);
   const aR=mM(base,mT(-sh[0],sh[1],0),mRx(p.aR!=null?p.aR:sw*.7),mRz(p.aRz||0));draw(p.armed?ch.armW:ch.arm,aR,o);
   draw(ch.arm,mM(base,mT(sh[0],sh[1],0),mRx(p.aL!=null?p.aL:-sw*.7),mRz(p.aLz||0)),o);
@@ -58,8 +129,8 @@ let toastT=0;function toast(t,d=4.5){const e=$('toast');e.innerHTML=t;e.style.op
 function setObj(t){S.obj=t;$('obj').innerHTML='<small>Цель</small>'+t;}
 let sub=null;
 function say(who,text,o={}){if(S.fast)return Promise.resolve();if(sub)sub.res();const dur=o.dur||(1.5+text.length*.052);const e=$('sub');e.style.display='block';e.innerHTML='<b>'+who+'</b><span></span>';
-  if(o.pitch)mumble(min(dur-.9,text.length*.05),o.pitch,o.phone,o.vol);return new Promise(res=>{sub={t:0,dur,text,res:()=>{sub=null;e.style.display='none';mumbleStop();res();},n:0};});}
-function tickSub(dt){if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').style.opacity=0;}if(!sub)return;sub.t+=dt;const n=min(sub.text.length,floor(sub.t*48));if(n!==sub.n){sub.n=n;$('sub').lastChild.textContent=sub.text.slice(0,n);}if(sub.t>sub.dur)sub.res();}
+  if(o.pitch)mumble(min(dur-.9,text.length*.05),o.pitch,o.phone,o.vol);return new Promise(res=>{sub={t:0,dur,text,who,res:()=>{sub=null;e.style.display='none';mumbleStop();res();},n:0};});}
+function tickSub(dt){talkTick(dt);if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').style.opacity=0;}if(!sub)return;sub.t+=dt;const n=min(sub.text.length,floor(sub.t*48));if(n!==sub.n){sub.n=n;$('sub').lastChild.textContent=sub.text.slice(0,n);}if(sub.t>sub.dur)sub.res();}
 function subAdvance(){if(!sub)return false;if(sub.n<sub.text.length){sub.t=sub.text.length/48;}else sub.res();return true;}
 const VO={hero:{pitch:128},col:{pitch:150,phone:true},own:{pitch:82},vil:{pitch:100},cult:{pitch:66,vol:.2}};
 const HERO='Эдвард Крейн';

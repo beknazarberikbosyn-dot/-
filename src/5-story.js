@@ -387,7 +387,7 @@ function story(dt){
 // --- drawing: interiors, people, beacons
 const M_beaconY=(()=>{const g=new Geo(.02);g.cyl(0,0,0,.28,0,.45,4,H('#ffd77a',1));g.cyl(0,-.45,0,0,.28,.45,4,H('#e0b050',1));return mesh(g);})();
 const DEADP=[[197.5,-5,1.45,0],[198.8,-3.9,1.8,1],[196.5,-3.7,1.05,2]];
-const drawNPC=n=>drawChar(CH.v[n.v],n.x,0,n.z,n.rot,{crouch:n.sit,aR:n.sit?-1.1:null,aL:n.sit?-1.1:null});
+const drawNPC=n=>drawChar(CH.v[n.v],n.x,0,n.z,n.rot,{sit:n.sit,aR:n.sit?-1.1:null,aL:n.sit?-1.1:null});
 function drawStory(){if(!M_int)M_int=mesh(IG);draw(M_int,null,.035);if(FIN.on||S.mode==='finale')return;
   if(!S.curfew&&!S.inside)for(const n of TOWN)drawNPC(n);
   if(S.inside==='pub'||S.inside==='cellar'){for(const n of PUBN)if(n.room===S.inside)drawNPC(n);}

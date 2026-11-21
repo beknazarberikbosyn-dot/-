@@ -172,9 +172,19 @@ function updBodies(dt,u){const g=16;
   const f=FIN.fall;if(f&&!f.gone){f.a+=dt;
     if(!f.splash){f.v[1]-=g*dt;f.p=vAdd(f.p,vSc(f.v,dt));if(Math.random()<.7)blood(f.p,1,.4);if(f.p[1]<waveH(f.p[0],f.p[2])){f.splash=f.p.slice();seaSplash(f.p,1);S.shake=max(S.shake,.3);f.v=[0,-1.2,0];}}
     else{f.p=vAdd(f.p,vSc(f.v,dt));if(f.a>9)f.gone=1;}}}
-function drawCorpse(p,t,fall){const ch=CH.hero,sh=ch.sh||[.42,1.55],hp=ch.hip||[.16,.8];
+function drawCorpse(p,t,fall){const ch=CH.hero,sh=ch.sh||[.42,1.55],hp=ch.hip||[.16,.8];if(ch.seg)return drawCorpseSeg(ch,p,t,fall);
   const base=fall?mM(mT(...p),mRy(t*1.7),mRx(.6+t*2.2),mT(0,-1,0)):mM(mT(...p),mRy(sin(t*.9)*.4),mRx(.25+sin(t*2.1)*.15),mT(0,-1.45,0));
   draw(ch.body,base,.03);draw(ch.arm,mM(base,mT(sh[0],sh[1],0),mRx(fall?-2.2+sin(t*5)*.5:.15+sin(t*3)*.25)),.03);if(ch.leg)draw(ch.leg,mM(base,mT(hp[0],hp[1],0),mRx(.4+sin(t*4)*.3)),.03);}
+// the torn body: one arm and one leg left, limp joints flopping
+function drawCorpseSeg(ch,p,t,fall){const base=fall?mM(mT(...p),mRy(t*1.7),mRx(.6+t*2.2),mT(0,-1,0)):mM(mT(...p),mRy(sin(t*.9)*.4),mRx(.25+sin(t*2.1)*.15),mT(0,-1.45,0));
+  draw(ch.body,base,.03);draw(ch.head,base,.012);draw(ch.jaw,mM(base,mT(0,-.008,-.002)),.012);
+  drawArm(ch,mM(base,mT(ch.sh[0],ch.sh[1],0),mRx(fall?-2.2+sin(t*5)*.5:.15+sin(t*3)*.25)),1,.5+sin(t*4)*.4,.2,.03);
+  drawLegStraight(ch,mM(base,mT(ch.hip[0],ch.hip[1],0),mRx(.4+sin(t*4)*.3)),.3+sin(t*3)*.3,.03);}
+// the hero's arm in first person: two-bone IK from the shoulder to a wrist target (elbows drop and splay), palms toward the centre
+function fpArm(sp,wr,s,up,f,armed,curl){const ch=CH.hero,r=vNorm(vCross(f,[0,1,0]));if(!ch.seg){draw(armed?ch.armW:ch.arm,mBasis(sp,vSub(wr,sp),vSc(f,-1)),0);return;}
+  const q=ik2(sp,wr,RIG.ua,RIG.fa,vAdd(sp,vAdd(vSc(up,-1),vSc(r,s*.8)))),e=q.e,w=q.t,d1=vNorm(vSub(e,sp)),d2=vNorm(vSub(w,e)),bs=s>0?-1:1,hi=s>0?0:1;
+  draw(ch.arm.up,mBasis(sp,d1,up),0);draw(ch.arm.lo,mBasis(e,d2,up),0);const W=mBasis(w,d2,up);draw(ch.hand[hi],W,0);
+  drawFingers(ch,mM(W,mT(0,-RIG.hand,0)),hi,bs,curl,null,0);if(armed&&ch.wpn)draw(ch.wpn,mM(W,mT(-bs*.022,-.1,0)),0);}
 // where the first-person eye looks while carried: ahead along the flight, toward the Old One; somersaults on the tosses
 function carryLook(u){const e=heroPos(u);let f=vSub(heroPos(u+.2),e);f=vLen(f)>.01?vNorm(f):[0,0,1];
   const cre=vNorm(vSub(mP(FIN.M.head,[0,8,-6]),e));let d=vNorm(vAdd(vAdd(vSc(f,.55),vSc(cre,.45)),[0,-.2,0]));
@@ -253,13 +263,14 @@ function drawFinale(){if(FIN.attacker){const a=FIN.attacker;if(FIN.atkSwing)FIN.
   if(!FIN.on)return;drawCthulhu();
   for(const im of FIN.imps)drawImp(im);
   if(FIN.u>F_DEAD){const t=FIN.u-F_DEAD;if(!FIN.fall)drawCorpse(bodyPos(FIN.u),t,false);else if(!FIN.fall.gone)drawCorpse(FIN.fall.p,FIN.fall.a,true);
-    for(const q of FIN.pieces||[])if(!q.gone)draw(q.k==='leg'&&CH.hero.leg?CH.hero.leg:CH.hero.arm,mM(mT(...q.p),mRy(q.a*q.w[1]),mRx(q.a*q.w[0])),.03);}
+    for(const q of FIN.pieces||[])if(!q.gone){const M=mM(mT(...q.p),mRy(q.a*q.w[1]),mRx(q.a*q.w[0]));if(!CH.hero.seg)draw(q.k==='leg'&&CH.hero.leg?CH.hero.leg:CH.hero.arm,M,.03);
+      else if(q.k==='leg')drawLegStraight(CH.hero,M,.2+sin(q.a*3)*.3,.03);else drawArm(CH.hero,M,-1,.4+sin(q.a*4)*.4,.2,.03);}}
   for(const c of FIN.cult){const u=FIN.armUp?-2.75+sin(S.t*2+c.ph)*.12:-1.25;const m=drawChar(CH.c,c.x,0,c.z,c.rot,{armed:true,aR:u,aL:FIN.armUp?u+.1:-.2,crouch:c.kneel>.5});torchFx(m,c.ph,true);}
   {const p=FIN.priest,m=drawChar(CH.c,p.x,0,p.z,p.rot,{armed:true,aR:-2.9+sin(S.t*1.4)*.1,aL:-2.9});torchFx(m,p.ph,true);}
   for(const b of BRAZ){light(b[0],2.3,b[1],9+sin(S.t*13+b[0])*.8,[1,.55,.22]);if(Math.random()<.4)PT.add(5,b[0],2.2,b[1],R.wind[0]*.7,1.8,R.wind[1]*.7,.08,1.2,[1,.6,.2,.9],-.3);}
   // hero's own body and, later, panicked hands in view
   if(FIN.hands){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f);for(const s of[-1,1]){const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.32),vSc(up,-.42)),vSc(f,.05)));
-    const tip=vAdd(sp,vAdd(vAdd(vSc(f,.75),vSc(up,.42+sin(S.t*14+s)*.05)),vSc(r,-s*.08)));draw(CH.hero.arm,mBasis(sp,vSub(tip,sp),vSc(f,-1)),0);}}}
+    const tip=vAdd(sp,vAdd(vAdd(vSc(f,.38),vSc(up,.3+sin(S.t*14+s)*.05)),vSc(r,-s*.06)));fpArm(sp,tip,s,up,f,false,.05+abs(sin(S.t*9+s))*.3);}}}
 function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';$('lids').style.display='none';cv.style.filter='';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
   $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Эдварда Крейна больше никто не видел.<br>Через неделю Уолтеру пришло видео с его номера:<br>шторм над пирсом, факелы, крылатые тени над водой — и что-то огромное в море.</div><h4>Конец первой главы</h4>'+
    '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, ведущий канала «За гранью»<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Хозяин паба «Дьяволов риф»<br>Жители Грейхейвена<br>Жрец и братья в робах<br>и Тот, кто спит в Р\'льехе'+
@@ -269,7 +280,7 @@ function credits(){S.mode='credits';$('hud').style.display='none';$('gear').styl
 $('again').onclick=()=>{try{location.reload();}catch(e){}};
 
 // --- frame
-function drawAll(){
+function drawAll(){talkFrame();
   draw(M_ground,null,0,1,1);draw(M_world,null,.035);draw(M_far,null,0);R.items[R.items.length-1].nodepth=1;draw(M_veg,null,0,1,3);draw(M_sea,mT(0,-.55,0),0,1,2);
   for(const l of LAMPS)light(l[0],l[1],l[2],l[3]*(1+sin(S.t*8+l[0])*.03),l[4]);
   for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
@@ -289,8 +300,8 @@ function drawAll(){
 // the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
 function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;
   for(const s of[1,-1]){let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
-    const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.36),vSc(up,-.55+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.55+a*.3),vSc(up,.1+a*.45)),vSc(r,-s*(.05+a*.14))));
-    draw(s>0&&S.weapon?CH.hero.armW:CH.hero.arm,mBasis(sp,vSub(tip,sp),vSc(f,-1)),0);}}
+    const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.3),vSc(up,-.48+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.48+a*.25),vSc(up,.1+a*.42)),vSc(r,-s*(.06+a*.12))));
+    fpArm(sp,tip,s,up,f,s>0&&!!S.weapon,s>0&&S.weapon?1.5:P.block||P.atk>0?1.3:.45);}}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
   if(S.vision){visionAtmo(M);return;}
   if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
