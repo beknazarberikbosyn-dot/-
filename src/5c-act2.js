@@ -13,8 +13,9 @@ const ACT2ST=['upstairs','paul','church','churchin','cave','rlyeh'];STAGES.push(
 const say2=(who,t,vo)=>say(who,t,vo);
 function lookAt(x,y,z){const h=P.lie?.35:S.seated?1.2:S.crouch?1.08:1.62;P.rot=atan2(x-P.x,z-P.z);CAM.yaw=P.rot;CAM.pitch=atan2(y-h,hypot(x-P.x,z-P.z));}
 const NPC2=(o)=>Object.assign({show:false,x:0,z:0,rot:0,ph:0,mv:0,walk:null,sp:1.4},o);
+const walkPath=(n,pts)=>{n.path=pts.slice(1);n.walk=pts[0];},walking=n=>!!n.walk;
 const PAUL=NPC2({faceP:1}),MATT=NPC2({faceP:1}),AD=NPC2({sp:4});   // AD: the doctor in the cave and in R'lyeh
-function npcStep(n,dt){n.mv=0;if(n.walk&&hypot(n.walk[0]-n.x,n.walk[1]-n.z)>.2){const dx=n.walk[0]-n.x,dz=n.walk[1]-n.z,d=hypot(dx,dz),s=min(d,n.sp*dt);n.x+=dx/d*s;n.z+=dz/d*s;n.rot=atan2(dx,dz);n.mv=1;n.ph+=dt*n.sp*2.3;}else if(n.faceP&&n.show)faceTo(n,atan2(P.x-n.x,P.z-n.z),dt,4);}
+function npcStep(n,dt){n.mv=0;if(n.walk&&hypot(n.walk[0]-n.x,n.walk[1]-n.z)<=.2)n.walk=n.path&&n.path.length?n.path.shift():null;if(n.walk&&hypot(n.walk[0]-n.x,n.walk[1]-n.z)>.2){const dx=n.walk[0]-n.x,dz=n.walk[1]-n.z,d=hypot(dx,dz),s=min(d,n.sp*dt);n.x+=dx/d*s;n.z+=dz/d*s;n.rot=atan2(dx,dz);n.mv=1;n.ph+=dt*n.sp*2.3;}else if(n.faceP&&n.show)faceTo(n,atan2(P.x-n.x,P.z-n.z),dt,4);}
 
 // ---------------------------------------------------------------- rooms
 Object.assign(ROOMS,{
@@ -27,7 +28,10 @@ IG.bx(217,-.12,-13,40,.06,72,H('#030506'));   // more darkness around the new ro
 
 // the doctor's study: a staircase up along the front wall
 {for(let i=0;i<12;i++)IG.bx(272.45+i*.48,0,-28.95,.5,.25*(i+1),.9,i%2?PAL.wood:PAL.woodD);IG.bx(275.2,3.05,-28.95,6,.06,.95,PAL.woodD);iCol(272.1,-29.45,278.2,-28.3,1);
- for(let i=0;i<6;i++)IG.bx(272.6+i*1.05,.25*(i*2+2),-29.45,.06,.95,.06,PAL.woodD);}
+ const y0=.25+.92,x0=272.3,x1=276.9,y1=y0+(x1-x0)/.48*.25,L=hypot(x1-x0,y1-y0);   // balusters and a sloped handrail along the open side
+ for(let i=0;i<10;i++){const x=272.45+i*.48;if(x>x1)break;const top=y0+(x-x0)/.48*.25,bot=.25*(i+1);IG.bx(x,bot,-29.43,.05,top-bot,.05,PAL.woodD);}
+ IG.bx(x0,0,-29.43,.12,y0+.06,.12,PAL.wood);IG.at(mM(mT((x0+x1)/2,(y0+y1)/2,-29.43),mRz(atan2(y1-y0,x1-x0))),()=>{IG.bx(0,-.03,0,L+.1,.07,.1,PAL.wood);IG.bx(0,-.07,0,L+.05,.04,.06,PAL.woodD);});}
+iDoor(269,-28.06,PI);iDoor(214,-26.06,PI);   // the street doors seen from inside: the doctor's house, the church
 
 // UPSTAIRS (x 258..280, z -24..-10): the library, the bedroom with the wall safe, the landing — and a chair in the middle
 {const r=ROOMS.doc2,DW=H('#5a5650'),DW2=H('#4c4944');iPlanks(258,-24,280,-10,['#3e3024','#372a20','#45362a']);iShell(r,3,DW,DW2);
@@ -73,38 +77,44 @@ const CH_IN=[214,-27.4];
 const CHU=[['w',0,209,-30,PI,'sit'],['k',1,210.2,-30,PI,'sit'],['w',2,211.6,-31.6,PI,'sit'],['m',FM[1],216.4,-30,PI,'sit'],['w',1,218.5,-31.6,PI,'sit'],['k',0,219.6,-31.6,PI,'sit'],
   ['m',FM[2],209.4,-33.2,PI,'sit'],['w',0,217,-34.8,PI,'sit'],['w',2,211,-36.4,PI,'pray'],['m',FM[0],219.2,-36.4,PI,'sit'],['w',1,220.2,-42,-PI/2,'stand'],['k',1,208.4,-41.6,PI*.7,'stand']].map(([k,v,x,z,rot,pose])=>({k,v,x,z,rot,pose,ph:rnd()*6}));
 
-// THE CAVE (x 206..228, z -22..12): rock walls open to the sky, torches, the paintings, the altar stone
-const CAVE_T=[[207.6,-12],[207.6,2],[226.4,-12],[226.4,2],[212,-20.6],[222,-20.6]];
-{const r=ROOMS.cave;IG.bx(217,-.05,-5,23,.06,35,H('#2a2622'));
- const rock=(x,z,s,sy,ry)=>ip(['rock_a','rock_b','rock_c'][floor(abs(x*7+z*3))%3],x,-.4,z,ry,[s,s*sy,s],{k:.62+((x+z)%5)*.03},()=>IG.bx(0,0,0,1.2,1.2,1.2,H('#3a3632')));
- for(let z=-22;z<=12;z+=2.6){rock(206,z,5+abs(sin(z))*2.5,1.9,z);rock(228,z,5+abs(cos(z))*2.5,1.9,z*1.3);}
- for(let x=207;x<=227;x+=2.6){rock(x,-22.5,5.5+abs(sin(x))*2,2,x);if(x<214.6||x>219.4)rock(x,12.6,5+abs(cos(x))*2,1.8,x*.7);}
- for(const[x,z]of[[214,15],[220,15],[214.2,18],[219.8,18]])rock(x,z,4,1.6,x);
- iCol(204,-24,206.9,14,7);iCol(227.1,-24,230,14,7);iCol(204,-25,230,-21.4,7);iCol(204,11.4,215.3,14,7);iCol(218.7,11.4,230,14,7);iCol(213,13.5,215.2,20,7);iCol(218.8,13.5,221,20,7);iCol(213,19.5,221,21,7);
- for(let i=0;i<14;i++)rock(rr(209,225),rr(-18,8),rr(.4,1.1),.7,rr(0,6));
+// THE CAVE (x 206..228, z -22..12; walkable x 209.5..224.5, z -18..9): rock walls open to the sky, torches, paintings on the rough rock, the altar stone
+const CAVE_T=[[210.4,-12],[210.4,2],[223.6,-12],[223.6,2],[211.4,-16.6],[222.6,-16.6]];
+const ROCKR={rock_a:.45,rock_b:.7,rock_c:.3};
+const rockN=(x,z,rad,sy,ry,k=.64)=>{const n=['rock_a','rock_b','rock_c'][floor(abs(x*7+z*3))%3],s=rad/ROCKR[n];ip(n,x,-.4,z,ry,[s,s*sy,s],{k:k+((x+z)%5)*.03},()=>IG.bx(0,0,0,rad*1.6,rad*1.6*sy,rad*1.6,H('#3a3632')));};
+{IG.bx(217,-.05,-5,23,.06,35,H('#2a2622'));
+ for(let z=-19;z<=10;z+=2.4){rockN(208,z,2.3+abs(sin(z))*.6,3.2,z);rockN(226,z,2.3+abs(cos(z))*.6,3.2,z*1.3);}
+ for(let x=209;x<=225;x+=2.4){rockN(x,-20.2,2.4+abs(sin(x))*.5,3,x);if(x<213.6||x>220.4)rockN(x,11,2.3+abs(cos(x))*.5,2.8,x*.7);}
+ for(const[x,z]of[[213.4,14],[220.6,14],[213.6,17],[220.4,17],[217,19.4]])rockN(x,z,1.9,2.4,x);
+ iCol(204,-24,209.5,14,7);iCol(224.5,-24,230,14,7);iCol(204,-25,230,-18,7);iCol(204,9,215.3,14,7);iCol(218.7,9,230,14,7);iCol(213,13.5,215.4,21,7);iCol(218.6,13.5,221,21,7);iCol(213,18.6,221,21,7);
+ for(let i=0;i<12;i++)rockN(rr(211,223),rr(-14,6),rr(.25,.55),.8,rr(0,6),.7);
  IG.bx(217,0,-13.2,2.6,.9,1.3,H('#4a4440'));IG.bx(217,.9,-13.2,2.8,.08,1.4,H('#3a3430'));iCol(215.7,-13.9,218.3,-12.5,.9);
  for(let i=0;i<7;i++)IG.cyl(216.1+i*.3,.98,-13.1+((i*3)%2)*.25,.035,.035,.14+((i*5)%3)*.08,5,H('#efe6c8'));
- for(const[x,z]of CAVE_T){IG.at(mM(mT(x,1.6,z),mRz(x<217?-.5:x>217?.5:0),mRx(z<-20?.5:0)),()=>{IG.cyl(0,0,0,.05,.04,.8,5,H('#3a2a1a'));IG.cyl(0,.8,0,.08,.07,.18,6,H('#2a2018'));});}
- // the paintings: a flat stone face on the north wall, ochre and red strokes
- IG.bx(217,.6,-21.15,12,5.2,.3,H('#4a4238'));const PZ_=-20.98;
- const st=(x0,y0,x1,y1,c,w=.07,z=PZ_)=>{const L=hypot(x1-x0,y1-y0);IG.at(mM(mT((x0+x1)/2,(y0+y1)/2,z),mRz(atan2(y1-y0,x1-x0))),()=>IG.bx(0,-w/2,0,L+w*.6,w,.03,H(c)));};
- const poly=(cx,cy,rx,ry,n,c,w)=>{for(let i=0;i<n;i++){const a0=i/n*2*PI,a1=(i+1)/n*2*PI;st(cx+cos(a0)*rx,cy+sin(a0)*ry,cx+cos(a1)*rx,cy+sin(a1)*ry,c,w);}};
+ for(const[x,z]of CAVE_T){IG.at(mM(mT(x,1.6,z),mRz(x<217?-.5:x>217?.5:0),mRx(z<-16?.5:0)),()=>{IG.cyl(0,0,0,.05,.04,.8,5,H('#3a2a1a'));IG.cyl(0,.8,0,.08,.07,.18,6,H('#2a2018'));});}
+ // the painted rock face: an uneven surface (bulges, ledges), and ochre / red / chalk strokes laid on it in short worn dabs
+ const WZ=-17.7,wd=(x,y)=>WZ+.22*sin(x*1.7+y*.9)+.16*sin(x*3.1-y*2.3)+.08*sin(x*5.3+y*4.1)-.5*((x-217)/6.5)**2-.18*max(0,y-4)**1.3+.06*sin(y*7.7);
+ for(let x=210.5;x<223.5;x+=.5)for(let y=0;y<5.6;y+=.5){const p=(a,b)=>[a,b,wd(a,b)],c=H(['#4a4238','#433b32','#514839','#3e372f'][floor(abs(x*3.7+y*5.3))%4]);
+   IG.quad(p(x,y),p(x+.5,y),p(x+.5,y+.5),p(x,y+.5),c);IG.quad(p(x,y),p(x,y+.5),p(x+.5,y+.5),p(x+.5,y),c);}
+ iCol(210,-18.4,224,-17.4,3);
+ const dab=(x,y,a,L,w,c)=>{if(rnd()<.07)return;const z=wd(x,y)+.035,gx=(wd(x+.05,y)-wd(x-.05,y))/.1,gy=(wd(x,y+.05)-wd(x,y-.05))/.1,k=.75+rnd()*.5,base=H(c);
+   const col=[base[0]*k,base[1]*k,base[2]*k,0];IG.at(mM(mT(x,y,z),mRy(-Math.atan(gx)),mRx(Math.atan(gy)),mRz(a+rr(-.12,.12))),()=>IG.bx(0,-w*k/2,0,L,w*k,.014,col));};
+ const st=(x0,y0,x1,y1,c,w=.08)=>{const L=hypot(x1-x0,y1-y0),n=max(1,Math.ceil(L/.11)),a=atan2(y1-y0,x1-x0);for(let i=0;i<n;i++){const t=(i+.5)/n;dab(x0+(x1-x0)*t+rr(-.012,.012),y0+(y1-y0)*t+rr(-.012,.012),a,L/n*1.25,w,c);}};
+ const poly=(cx,cy,rx,ry,n,c,w)=>{for(let i=0;i<n;i++){const a0=i/n*2*PI,a1=(i+1)/n*2*PI,j0=1+rr(-.08,.08),j1=1+rr(-.08,.08);st(cx+cos(a0)*rx*j0,cy+sin(a0)*ry*j0,cx+cos(a1)*rx*j1,cy+sin(a1)*ry*j1,c,w);}};
+ const blob=(cx,cy,r,c)=>{for(let i=0;i<5;i++)dab(cx+rr(-r,r)*.5,cy+rr(-r,r)*.5,rr(0,3),r*1.2,r*.9,c);};
  const OC='#b07a3a',RD='#8a2a1e',CK='#bab2a2';
- poly(217,3.6,1.5,1.3,12,OC,.1);for(const s of[-1,1]){st(217+s*.5,3.9,217+s*.75,3.75,RD,.14);st(217+s*1.4,4.2,217+s*3.6,5.2,OC);st(217+s*3.6,5.2,217+s*3.2,3.2,OC);st(217+s*3.2,3.2,217+s*1.5,3.4,OC);}
- for(let i=0;i<6;i++){let x=215.9+i*.45,y=2.5;for(let k=0;k<4;k++){const nx=x+sin(i+k*1.7)*.25,ny=y-.42;st(x,y,nx,ny,OC,.07);x=nx;y=ny;}}
- const man=(x,y,fish,c)=>{poly(x,y+.62,.1,.1,6,c,.04);st(x,y+.52,x,y+.2,c,.05);st(x,y+.2,x-.12,y,c,.05);st(x,y+.2,x+.12,y,c,.05);st(x-.16,y+.32,x+.16,y+.46,c,.05);if(fish){st(x-.1,y+.66,x+.18,y+.62,RD,.06);}};
- for(let i=0;i<7;i++)man(211.6+i*.55,.4,i>3,i>3?RD:CK);for(let i=0;i<5;i++)man(219.4+i*.55,.4,i<3,i<3?RD:CK);
- for(let i=0;i<3;i++){let x=211.4;const y=1.3-i*.12;for(let k=0;k<8;k++){st(x,y,x+.4,y+.12*(k%2?-1:1),'#5a7a8a',.05);x+=.4;}}
- for(let i=0;i<9;i++)poly(212+(i%3)*.22,4.4+floor(i/3)*.22,.05,.05,5,RD,.05);
- for(let k=0;k<20;k++){const a=k*.55,r=.08+k*.035;st(221.6+cos(a)*r,4.2+sin(a)*r,221.6+cos(a+.55)*(r+.035),4.2+sin(a+.55)*(r+.035),OC,.05);}
- LAMPS.push(...CAVE_T.map(([x,z])=>[x+(x<217?.6:x>217?-.6:0),2.6,z+(z<-20?.6:0),6,[1,.6,.28]]),[217,1.4,-12.6,4,[1,.75,.4]]);}
-// the cave mouth in the hills north-east of the village (an old quarry): rocks around a black opening
-{const rock=(x,z,s,sy,ry)=>ip(['rock_a','rock_b','rock_c'][floor(abs(x*5+z*3))%3],x,-.3,z,ry,[s,s*sy,s],{k:.7},()=>IG.bx(0,0,0,1.2,1.2,1.2,H('#4a4844')));
- IG.bx(50,0,-46.2,3.2,3.4,.5,H('#030303'));IG.bx(50,0,-45.7,3.4,.05,1.2,H('#1a1816'));
- for(const[x,z,s,sy]of[[46.2,-46.6,8,2.2],[53.8,-46.6,8,2.3],[50,-48.2,10,2.4],[42.6,-45.8,6,1.6],[57.4,-45.8,6,1.7],[47.4,-44.4,2.6,1],[52.8,-44.6,2.4,1.1],[39.6,-46.4,5,1.3],[60.4,-46.4,5,1.4]])rock(x,z,s,sy,x);
- IG.at(mM(mT(50,3.3,-46.2),mRz(.08)),()=>IG.bx(0,0,0,5.4,1.4,2.2,H('#3e3c38')));IG.at(mM(mT(50,4.4,-46.6),mRy(.4)),()=>IG.bx(0,0,0,4.2,1.6,2.6,H('#46443f')));
+ poly(217,3.5,1.45,1.25,14,OC,.11);for(const s of[-1,1]){blob(217+s*.5,3.8,.13,RD);st(217+s*1.4,4.1,217+s*3.4,5.0,OC);st(217+s*3.4,5.0,217+s*3.1,3.2,OC);st(217+s*3.1,3.2,217+s*1.5,3.35,OC);st(217+s*3.3,4.6,217+s*2.2,3.5,OC,.05);}
+ for(let i=0;i<6;i++){let x=215.9+i*.45,y=2.4;for(let k=0;k<4;k++){const nx=x+sin(i+k*1.7)*.25,ny=y-.42;st(x,y,nx,ny,OC,.075);x=nx;y=ny;}}
+ const man=(x,y,fish,c)=>{poly(x,y+.62,.1,.1,6,c,.045);st(x,y+.52,x,y+.2,c,.055);st(x,y+.2,x-.13,y,c,.05);st(x,y+.2,x+.12,y,c,.05);st(x-.17,y+.32,x+.16,y+.47,c,.05);if(fish)st(x-.1,y+.66,x+.2,y+.6,RD,.065);};
+ for(let i=0;i<7;i++)man(211.4+i*.55+rr(-.05,.05),.45+rr(-.05,.05),i>3,i>3?RD:CK);for(let i=0;i<5;i++)man(219.6+i*.55+rr(-.05,.05),.45+rr(-.05,.05),i<3,i<3?RD:CK);
+ for(let i=0;i<3;i++){let x=210.9;const y=2.25-i*.14;for(let k=0;k<7;k++){st(x,y,x+.4,y+.12*(k%2?-1:1),'#5a7a8a',.055);x+=.4;}}
+ for(let i=0;i<7;i++){const hx=211.6+(i%3)*.32+rr(-.06,.06),hy=4.2+floor(i/3)*.34;blob(hx,hy,.09,RD);for(let f=0;f<4;f++)st(hx-.06+f*.04,hy+.06,hx-.08+f*.05,hy+.18,RD,.025);}
+ for(let k=0;k<22;k++){const a=k*.55,r=.08+k*.035;st(222.2+cos(a)*r,4.1+sin(a)*r,222.2+cos(a+.55)*(r+.035),4.1+sin(a+.55)*(r+.035),OC,.055);}
+ LAMPS.push(...CAVE_T.map(([x,z])=>[x+(x<217?.6:x>217?-.6:0),2.6,z+(z<-16?.6:0),6.5,[1,.6,.28]]),[217,1.4,-12.6,4,[1,.75,.4]]);}
+// the cave mouth in the hills north-east of the village (an old quarry): rocks around a black opening, a stone lintel above
+{IG.bx(50,0,-46.2,3.2,3.4,.5,H('#030303'));IG.bx(50,0,-45.7,3.4,.05,1.2,H('#1a1816'));
+ for(const[x,z,r,sy]of[[45.2,-46.8,2.6,2.6],[54.8,-46.8,2.6,2.7],[50,-50.2,3.6,2.4],[41.2,-46.4,2.4,1.9],[58.8,-46.4,2.4,2],[37.6,-47.2,2.2,1.6],[62.2,-47.4,2.2,1.5]])rockN(x,z,r,sy,x,.72);
+ IG.at(mM(mT(50,3.4,-46.4),mRz(.06)),()=>IG.bx(0,0,0,5.6,1.3,2.2,H('#3e3c38')));IG.at(mM(mT(50,4.5,-46.9),mRy(.35)),()=>IG.bx(0,0,0,4.4,1.5,2.4,H('#46443f')));
  for(const[x,z,ry]of[[44.4,-40.6,.3],[55.8,-39.8,1.1],[57.4,-41.8,.5]]){IG.at(mM(mT(x,0,z),mRy(ry)),()=>{IG.bx(0,0,0,1.6,.8,1,H('#6f7775'));IG.bx(.2,.8,0,1.2,.6,.9,H('#666e6c'));});iCol(x-.9,z-.6,x+.9,z+.6,1.4);}
- col(42,-48,48.6,-45,5);col(48.4,-47,51.6,-46,3);col(51.4,-48,58,-45,5);col(47.4,-45.4,48.4,-43.6,1.5);col(51.8,-45.4,53.4,-43.6,1.5);}
+ col(36,-49,48.3,-45.2,5);col(51.7,-49,64,-45.2,5);col(48.4,-47.2,51.6,-46.2,3);}
 
 // ---------------------------------------------------------------- the upstairs: documents, the safe, Father Paul
 const DOC2=[
@@ -216,11 +226,11 @@ async function throwRock(){const near=EN.find(e=>e.active&&e.kind!=='f'&&e.state
   await say(HERO,'Чёрт! Роба зацепилась за осколки и разошлась по швам. Маска — вдребезги. Теперь я снова просто чужак с камерой.',VO.hero);
   toast('<b>Маскировки больше нет.</b> На улице культисты снова узнают вас — бегите и прячьтесь.',6);
   churchScene();}
-async function churchScene(){S.mode='talk';Object.assign(MATT,{show:true,x:214,z:-43.6,rot:0,walk:[210.6,-32.4]});MATT.sp=1.9;
+async function churchScene(){S.mode='talk';Object.assign(MATT,{show:true,x:214,z:-43.6,rot:0});walkPath(MATT,[[214,-32.4],[210.6,-32.4]]);MATT.sp=1.9;   // down the aisle, then between the pews
   murmur();await wait(.6);lookAt(214,1.5,-38);await wait(1.2);
   const m=VO.matt,h=VO.hero;
   await say('Отец Мэттью','Кто здесь?! Через окно?! Это дом Божий! Вам сюда нельзя — никому нельзя, слышите?!',m);lookAt(MATT.x,1.6,MATT.z);
-  while(hypot(MATT.x-210.6,MATT.z+32.4)>.3)await wait(.1);MATT.rot=atan2(P.x-MATT.x,P.z-MATT.z);lookAt(MATT.x,1.6,MATT.z);
+  while(walking(MATT))await wait(.1);MATT.rot=atan2(P.x-MATT.x,P.z-MATT.z);lookAt(MATT.x,1.6,MATT.z);
   await say('Отец Мэттью','Роба… Вы из них?! Убирайтесь! Здесь женщины и дети!',m);
   await say(HERO,'Нет! Роба — маскировка. Я Эдвард Крейн, журналист. Отец Мэттью, прошу, выслушайте меня.',h);
   await say('Отец Мэттью','Мне нечего вам сказать. Уходите тем же путём, каким пришли.',m);
@@ -230,14 +240,14 @@ async function churchScene(){S.mode='talk';Object.assign(MATT,{show:true,x:214,z
   await say('Отец Мэттью','*долгая пауза* …Сегодня он не приходил. Значит, он в пещере — у северного обрыва, за старой каменоломней. Он ходит туда говорить с Ним.',m);
   await say('Отец Мэттью','Когда видения становятся совсем невыносимы. Или когда ему нужен совет — как довести до конца эту проклятую сыворотку.',m);
   await say('Отец Мэттью','А сегодня он прибегал сюда — белый как полотно. Твердил, что видения какого-то приезжего «не сходятся». Что Он показал не то, что обещал. Ушёл спросить Его — почему.',m);
-  await say('Отец Мэттью','*оглядывается на прихожан и отводит вас к стене* Мистер Крейн. Одно слово — наедине.',m);MATT.walk=[208.4,-35.4];await wait(.4);P.x=208.4;P.z=-33.8;lookAt(208.4,1.6,-35.4);await wait(1.2);MATT.rot=atan2(P.x-MATT.x,P.z-MATT.z);
+  await say('Отец Мэттью','*оглядывается на прихожан и отводит вас к стене* Мистер Крейн. Одно слово — наедине.',m);walkPath(MATT,[[213.9,-32.4],[213.9,-35.6],[208.6,-35.6]]);await wait(.6);P.x=208.6;P.z=-34;lookAt(MATT.x,1.6,MATT.z);while(walking(MATT)){lookAt(MATT.x,1.6,MATT.z);await wait(.1);}lookAt(MATT.x,1.6,MATT.z);
   await say('Отец Мэттью','Не причиняйте ему зла. Эдмунд делает эту сыворотку не по своей воле. Каждый раз, когда он противится приказу, видений становится больше, а боль — невыносимей.',m);
   await say('Отец Мэттью','Он не безумный доктор. Он пытается спасти своих людей единственным способом, который ему оставили. Он бедный человек, которого пытает древний бог.',m);
   await say(HERO,'Этот «бедный человек» вколол мне яд, святой отец. Смертельный.',h);
   S.shake=.15;await say('Отец Мэттью','*отшатывается и смотрит на вас широко раскрытыми глазами* Что?.. Нет… Эд не мог… *крестится* Господи, помилуй.',m);
   await say('Отец Мэттью','…И всё же. Я вас прошу. Пощадите его.',m);
   await say('Отец Мэттью','Выходите через дверь — я задвину засов за вами. И да хранит вас Господь… если Он ещё слышит этот город.',m);
-  MATT.walk=[214,-28];S.church=true;S.toCave=true;S.cp=[-87,-9.4];S.cpRoom=null;
+  walkPath(MATT,[[213.9,-35.6],[213.9,-28]]);S.church=true;S.toCave=true;S.cp=[-87,-9.4];S.cpRoom=null;
   setObj('Доберитесь до пещеры у северного обрыва — за старой каменоломней, на северо-востоке.<br><span style="font-size:15px">Маскировки больше нет: культисты узнают вас. Бегите и прячьтесь.</span>');S.mark=[214,-26.6,'church'];S.mode='play';}
 function murmur(){for(let i=0;i<5;i++)mumble(1.4,150+i*30,false,.06,true);}
 addInter(214,-26.7,1.3,'Выйти через дверь',async()=>{MATT.show=false;S.mark=[50,-43,null];await leaveRoom(XD.church);SFX.door();toast('За спиной лязгнул засов.',2.5);},()=>S.inside==='church'&&S.church);
@@ -270,13 +280,26 @@ async function caveTalk(){S.caveTalk=true;S.mode='talk';S.mark=null;chantLoop(fa
   await say(HERO,'Вы хотите, чтобы я пошёл туда? В ваш кошмар?',h);
   await say('Доктор Бернсон','В наш, мистер Крейн. Теперь — в наш. Дайте руку.',d);
   // the cut palms, the handshake, the spell
-  SFX.swing();await wait(.3);noise(.2,{f:3000,type:'highpass',vol:.2});$('flash').style.opacity=.5;await wait(.4);$('flash').style.opacity=0;
-  await say(HERO,'А-а… Полоснул по ладони. И себе тоже.',h);S.shake=.15;await wait(.6);
+  await cutPalms();
   await say('Доктор Бернсон','*сжимает вашу окровавленную ладонь своей* Закройте глаза. И что бы вы ни увидели — идите к Нему. Не останавливайтесь.',d);
-  lids(false,1400);await wait(1.6);for(const p of[58,66,74])mumble(3.2,p,false,.1,true);
+  lids(false,1400);await wait(1.6);S.fpPose=null;Object.assign(AD,{aR:null,aRz:0,cR:null,cL:null,eR:null});for(const p of[58,66,74])mumble(3.2,p,false,.1,true);
   await say('Доктор Бернсон','Пх\'нглуи мглв\'нафх Ктулху Р\'льех вгах\'нагл фхтагн… Пх\'нглуи мглв\'нафх Ктулху Р\'льех…',{pitch:84,vol:.26,dur:5});
   SFX.roar(5,.8);await wait(1.4);rlStart(true);}
 
+// the knife: he cuts the hero's palm, then his own, and they shake the bleeding hands — all seen from the hero's eyes
+const M_knife=(()=>{const g=new Geo(.01);g.bx(0,-.013,-.02,.02,.026,.1,H('#3a2a1a'));g.bx(0,-.004,.035,.024,.014,.012,H('#8a8478',.1));g.bx(0,-.009,.1,.005,.018,.13,H('#c8ccce',.25));return mesh(g);})();
+const bleed=(p,n=6)=>{for(let i=0;i<n;i++)PT.add(1,p[0]+rr(-.03,.03),p[1],p[2]+rr(-.03,.03),rr(-.3,.3),rr(-.2,.4),rr(-.3,.3),.025+Math.random()*.02,.9,[.45,.03,.02,.95],1);};
+async function tween(o,key,to,t){const a=o[key]??0,n=max(1,Math.round(t/.035));for(let i=1;i<=n;i++){o[key]=lerp(a,to,eas(i/n));await wait(.035);}}
+async function cutPalms(){const h=VO.hero;AD.walk=[217,-9.45];await wait(.9);AD.walk=null;AD.rot=0;P.x=217;P.z=-8.4;lookAt(217,1.12,-9.45);
+  S.fpPose='palm';AD.knife=true;await tween(AD,'aR',-1.15,.6);await wait(.5);
+  // across the hero's palm
+  AD.aRz=-.45;await tween(AD,'aRz',.4,.28);SFX.swing();noise(.18,{f:3200,type:'highpass',vol:.18});S.shake=.12;$('flash').style.opacity=.35;bleed(S.fpHand||[P.x,1.2,P.z-.5],10);
+  await wait(.25);$('flash').style.opacity=0;await say(HERO,'Ш-ш… Аккуратно, чёрт возьми.',h);
+  // across his own left palm
+  await tween(AD,'aL',-1.2,.4);AD.cL=.05;await wait(.3);AD.aR=-1.05;AD.aRz=.5;await tween(AD,'aRz',-.35,.3);SFX.swing();noise(.15,{f:3000,type:'highpass',vol:.12});
+  {const fx=sin(AD.rot),fz=cos(AD.rot);bleed([AD.x+fx*.45+fz*.12,1.05,AD.z+fz*.45-fx*.12],10);}await wait(.6);
+  // the knife away, the handshake
+  AD.knife=false;await Promise.all([tween(AD,'aL',0,.4),tween(AD,'aRz',.1,.4),tween(AD,'aR',-1.3,.6)]);AD.eR=.12;AD.cR=.95;AD.walk=[217.1,-9.32];S.fpPose='shake';await wait(.8);AD.walk=null;S.shake=.08;bleed(S.fpHand||[P.x,1.2,P.z-.5],8);}
 // ---------------------------------------------------------------- R'lyeh: the dream walk to the throne
 const RL={on:false,t:0,max:100,fall:[],lp:[800,0],M:null,fly:0,eyes:1,said:0};
 const RRECT=[[797,-6,803,46],[797,40,815,48],[809,42,815,92],[795,86,815,94],[795,88,801,142],[795,136,807,144],[801,138,807,172],[782,166,818,200]];
@@ -325,8 +348,8 @@ async function rlFail(){if(!RL.on)return;RL.on=false;S.mode='talk';S.shake=1.2;S
   await say('Доктор Бернсон','*задыхаясь* Выбросило… Как всегда. Но вы видели — мы прошли дальше, чем я один! Снова, Крейн. Закрывайте глаза.',VO.doc);
   lids(false,900);await wait(1.2);rlStart(false);}
 async function rlWin(){if(!RL.on||RL.fly)return;S.mode='talk';RL.fly=.001;const eye0=[P.x,1.62,P.z];AD.walk=null;
-  const face=()=>RL.M?mP(RL.M.head,[0,7.7,-9]):[800,44,212];
-  S.camFn=()=>{const k=eas(min(1,RL.fly/7)),f=face();CAM.ge=vLerp(eye0,vAdd(f,[0,-1.5,-9]),k);CAM.gt=vLerp([eye0[0],eye0[1]+6,eye0[2]+20],f,min(1,RL.fly/2));CAM.fov=lerp(1.05,.85,k);};CAM.rate=4;
+  const eyes=()=>RL.M?mP(RL.M.head,[0,7.7,-8.4]):[800,44,212],front=()=>RL.M?mP(RL.M.head,[0,7.7,-21]):[800,44,196];
+  S.camFn=()=>{const k=eas(min(1,RL.fly/7));CAM.ge=vLerp(eye0,front(),k);CAM.gt=vLerp([eye0[0],eye0[1]+6,eye0[2]+20],eyes(),min(1,RL.fly/2));CAM.fov=lerp(1.05,.8,k);};CAM.rate=4;
   await say('Доктор Бернсон','Вот Он… Не останавливайтесь! К Нему — к Его лицу!',VO.doc);SFX.rumble(9);SFX.roar(6,.7);
   await wait(2.2);whisper();await say('Шёпот','…наконец… вы… пришли… оба…',VO.wh);
   $('white').style.transitionDuration='5000ms';$('white').style.opacity=1;S.shake=.6;await wait(5.2);SFX.roar(3,1.8);await wait(1);
@@ -341,7 +364,7 @@ async function rlWin(){if(!RL.on||RL.fly)return;S.mode='talk';RL.fly=.001;const 
   await wait(.6);$('fade').style.transitionDuration='2600ms';$('fade').style.opacity=1;await wait(3);credits();}
 function drawRlyeh(){if(S.inside!=='rlyeh'||!M_rl)return;draw(M_rl,null,.05);const k=RL.t/RL.max;
   const sp=FIN.pose,sm=FIN.M,hl=FIN.headLook;const pose=cthPose(26);Object.assign(pose,{x:800,y:15,z:214,sc:.95,yaw:0,sit:1,track:RL.fly?1:.6,eyes:RL.fly?1+kf(RL.fly,1.5,8)*7:1,hand:[[-27,1+sin(S.t*.6)*.6,-15],[27,1+sin(S.t*.6+1)*.6,-15]],curl:[.55,.6]});   // hands on the armrests
-  FIN.headLook=[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);RL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;
+  FIN.headLook=RL.fly?CAM.eye.slice():[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);RL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;
   for(const f of RL.fall)draw(M_rblk,mM(mT(f.x,f.y,f.z),mRx(f.rx),mRz(f.rz),mS(f.s,f.s,f.s)),.04);
   light(800,6,P.z+12,26,[.3,.9,.6]);light(800,30,200,60,[.25,.85,.55]);if(RL.fly)light(800,40,205,60*(1+RL.fly),[1,.9,.8]);
   if(Math.random()<.02+k*.06){R.flash=max(R.flash,.25+k*.3);}}
@@ -359,13 +382,13 @@ function drawAct2(){const t=S.t;
   if(S.inside==='church'){for(const c of CHU){const ch=c.k==='w'?CHF.wom[c.v]:c.k==='k'?CHF.kid[c.v]:CH.v[c.v];if(!ch)continue;const o={ph:c.ph};
       if(c.pose==='sit'){o.sit=1;o.aR=-.7;o.aL=-.75;}else if(c.pose==='pray'){o.crouch=1;o.aR=o.aL=-1.6;o.cR=o.cL=.9;o.look=-.4;}drawChar(ch,c.x,0,c.z,c.rot,o);}
     if(MATT.show)drawChar(CHF.matt,MATT.x,0,MATT.z,MATT.rot,{ph:MATT.ph,mv:MATT.mv});}
-  if(S.inside==='cave'||S.inside==='rlyeh'){if(AD.show){const o={ph:AD.ph,mv:AD.mv};if(AD.pose==='pray'){o.crouch=1;o.aR=-2.2+sin(t*1.3)*.15;o.aL=-2.25+sin(t*1.3+.4)*.15;o.cR=o.cL=.1;o.look=-.5;}else if(AD.pose==='lie')o.lie=true;
+  if(S.inside==='cave'||S.inside==='rlyeh'){if(AD.show){const o={ph:AD.ph,mv:AD.mv,aR:AD.aR,eR:AD.eR,aL:AD.aL,aRz:AD.aRz,aLz:AD.aLz,cL:AD.cL,cR:AD.cR,armed:!!AD.knife,wpn:M_knife};if(AD.pose==='pray'){o.crouch=1;o.aR=-2.2+sin(t*1.3)*.15;o.aL=-2.25+sin(t*1.3+.4)*.15;o.cR=o.cL=.1;o.look=-.5;}else if(AD.pose==='lie')o.lie=true;
       drawChar(CHF.doc,AD.x,0,AD.z,AD.rot,o);}}
   if(S.inside==='cave')for(const[x,z]of CAVE_T){const tx=x+(x<217?.42:x>217?-.42:0),tz=z+(z<-20?.42:0),k=1+sin(t*15+x)*.12;draw(M_flame,mM(mT(tx,2.38,tz),mRy(t*3+z),mS(.7*k,.9*k,.7*k)),0);if(Math.random()<.15)PT.add(5,tx,2.6,tz,rr(-.3,.3),1.2,rr(-.3,.3),.04,1,[1,.6,.2,.9],-.3);}
   if(!S.inside&&S.winBroken)draw(M_brk,null,0);
   drawHalluc();drawRlyeh();}
 const M_brk=(()=>{const g=new Geo(0);g.bx(-94.12,1.2,-18.2,.05,2.6,1,H('#040506'));for(let i=0;i<6;i++){const y=1.25+i*.42,s=i%2?-1:1;g.quad([-94.2,y,-18.7],[-94.2,y+.25,-18.7],[-94.2,y+.12,-18.7+.18+(i%3)*.08],[-94.2,y,-18.7],H('#a8c0c4',.15));g.quad([-94.2,y+.1,-17.7],[-94.2,y+.35,-17.7],[-94.2,y+.2,-17.7-.2-(i%2)*.08],[-94.2,y+.1,-17.7],H('#a8c0c4',.15));}return mesh(g);})();
-function act2Hud(c,w,h){if(!RL.on||S.mode!=='play')return;const k=1-RL.t/RL.max,bw=min(320,w*.5),x=w/2-bw/2,y=58;
+function act2Hud(c,w,h){if(!RL.on||RL.fly||S.mode!=='play')return;const k=1-RL.t/RL.max,bw=min(320,w*.5),x=w/2-bw/2,y=58;
   c.fillStyle='rgba(8,16,14,.75)';c.fillRect(x-4,y-4,bw+8,22);c.fillStyle=k>.35?'#5fd6a0':'#ff6a4a';c.fillRect(x,y,bw*k,14);c.font='15px Georgia';c.fillStyle='#d9cdb0';c.textAlign='center';c.fillText('Р\'льех держится',w/2,y+34);}
 function act2Skip(st){S.inside=null;S.mark=null;
   if(st==='upstairs'){S.inside='doc2';P.x=276.4;P.z=-12.4;P.rot=-PI/2;S.up=true;upObj();}

@@ -88,7 +88,7 @@ function drawChar(ch,x,y,z,rot,p={}){if(!ch.seg)return drawCharOld(ch,x,y,z,rot,
   // arms: shoulder swing/raise, automatic elbow bend, wrist, curled fingers; the right fist grips the weapon
   let grip=null;const sh=ch.sh;
   for(const s of[-1,1]){const R_=s<0;let a=R_?p.aR:p.aL;if(a==null)a=(R_?1:-1)*sw*(ch.f?.38:.48)+(p.sit?0:sin(t*.9+sd+s)*.025);
-    const armed=R_&&p.armed&&ch.wpn;let e=R_?p.eR:p.eL;
+    const armed=R_&&p.armed&&(p.wpn||ch.wpn);let e=R_?p.eR:p.eL;
     if(e==null)e=.14+max(0,-a)*.45*min(1,mv*2)+(a<-.5&&a>-2.4?.32:0)+(armed?.28:0)+(p.sit?.45:0)+sin(t*1.3+sd+s)*.02;
     const U=mM(B,mT(s*sh[0],sh[1]+br,0),mRx(a),mRz(((R_?p.aRz:p.aLz)||0)+s*(.06+(ch.f?.03:0))));
     let c=R_?p.cR:p.cL;if(c==null)c=armed?1.5:p.fist?1.25:.32+sin(t*.7+sd+s)*.06;

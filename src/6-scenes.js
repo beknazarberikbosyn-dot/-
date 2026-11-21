@@ -181,9 +181,9 @@ function drawCorpseSeg(ch,p,t,fall){const base=fall?mM(mT(...p),mRy(t*1.7),mRx(.
   drawArm(ch,mM(base,mT(ch.sh[0],ch.sh[1],0),mRx(fall?-2.2+sin(t*5)*.5:.15+sin(t*3)*.25)),1,.5+sin(t*4)*.4,.2,.03);
   drawLegStraight(ch,mM(base,mT(ch.hip[0],ch.hip[1],0),mRx(.4+sin(t*4)*.3)),.3+sin(t*3)*.3,.03);}
 // the hero's arm in first person: two-bone IK from the shoulder to a wrist target (elbows drop and splay), palms toward the centre
-function fpArm(sp,wr,s,up,f,armed,curl){const ch=S.disguise?heroRobe():CH.hero,r=vNorm(vCross(f,[0,1,0]));if(!ch.seg){draw(armed?ch.armW:ch.arm,mBasis(sp,vSub(wr,sp),vSc(f,-1)),0);return;}
+function fpArm(sp,wr,s,up,f,armed,curl,hd){const ch=S.disguise?heroRobe():CH.hero,r=vNorm(vCross(f,[0,1,0]));if(!ch.seg){draw(armed?ch.armW:ch.arm,mBasis(sp,vSub(wr,sp),vSc(f,-1)),0);return;}
   const q=ik2(sp,wr,RIG.ua,RIG.fa,vAdd(sp,vAdd(vSc(up,-1),vSc(r,s*.8)))),e=q.e,w=q.t,d1=vNorm(vSub(e,sp)),d2=vNorm(vSub(w,e)),bs=s>0?-1:1,hi=s>0?0:1;
-  draw(ch.arm.up,mBasis(sp,d1,up),0);draw(ch.arm.lo,mBasis(e,d2,up),0);const W=mBasis(w,d2,up);draw(ch.hand[hi],W,0);
+  draw(ch.arm.up,mBasis(sp,d1,up),0);draw(ch.arm.lo,mBasis(e,d2,up),0);const W=mBasis(w,hd||d2,up);draw(ch.hand[hi],W,0);
   drawFingers(ch,mM(W,mT(0,-RIG.hand,0)),hi,bs,curl,null,0);if(armed&&ch.wpn)draw(S.weapon&&S.weapon.m||ch.wpn,mM(W,mT(-bs*.022,-.1,0)),0);}
 // where the first-person eye looks while carried: ahead along the flight, toward the Old One; somersaults on the tosses
 function carryLook(u){const e=heroPos(u);let f=vSub(heroPos(u+.2),e);f=vLen(f)>.01?vNorm(f):[0,0,1];
@@ -310,7 +310,9 @@ function drawAll(){talkFrame();
   drawStory();drawFinale();}
 // the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
 function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;
-  for(const s of[1,-1]){let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
+  for(const s of[1,-1]){if(S.fpPose&&s>0){let pl=S.fpPose==='palm',sp=vAdd(e,vAdd(vAdd(vSc(r,.3),vSc(up,-.48)),vSc(f,-.05))),tip=vAdd(sp,vAdd(vAdd(vSc(f,pl?.52:.62),vSc(up,pl?.38:.5)),vSc(r,-.14)));
+      if(!pl)tip=vAdd(tip,vSc(r,-.2));S.fpHand=vAdd(tip,vSc(f,.06));fpArm(sp,tip,s,pl?r:up,f,false,pl?.05:.95,vNorm(vAdd(f,vSc(up,pl?-.1:-.25))));continue;}
+    let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
     const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.3),vSc(up,-.48+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.48+a*.25),vSc(up,.1+a*.42)),vSc(r,-s*(.06+a*.12))));
     fpArm(sp,tip,s,up,f,s>0&&!!S.weapon,s>0&&S.weapon?1.5:P.block||P.atk>0?1.3:.45);}}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;

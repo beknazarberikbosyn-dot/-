@@ -213,13 +213,21 @@ function seaCam(t){let e=[VX,-1.4-min(t,18)*1.25,min(t,20)*1.1],g=vLerp([VX,2,e[
 function visionAtmo(M){if(S.vision==='sea'){R.fog=[.01,.07,.07];R.fogD=1/62;R.fogMin=0;R.fogH=.05;R.amb=[.16,.33,.33];R.sunC=[.08,.2,.22];M.on=false;return;}
   R.fog=[.3,.12,.05];R.fogD=1/120;R.fogMin=.02;R.fogH=.1;R.amb=[.62,.38,.26];R.sunC=[.55,.26,.14];M.den=.55;M.top=9;M.col=[.5,.24,.12];M.maxD=130;}
 function whisper(){mumble(3.2,46,false,.32,true);noise(3,{f:240,vol:.18,att:.8,to:90});tone(55,3.4,{type:'sawtooth',vol:.12,to:41,lp:300});}
-async function injection(){S.injected=true;S.mode='talk';S.mark=null;Object.assign(DOC,{show:true,x:269,z:-28.6,rot:PI,walk:null,flee:false});
+// first person all the way: he comes up from behind without a cut, the hero turns — the syringe is already raised — and it goes into the neck
+const M_syr=(()=>{const g=new Geo(.012),gl=H('#d8ece6',.25),lq=H('#5fd6a0',.7),mt=H('#9aa0a2',.2);g.at(mRx(PI/2),()=>{   // along +Z of the fist: plunger below, glass and needle above
+  g.cyl(0,-.12,0,.008,.008,.12,5,mt);g.cyl(0,-.13,0,.022,.022,.012,6,mt);g.cyl(0,-.005,0,.026,.026,.012,6,mt);
+  g.cyl(0,.0,0,.017,.017,.16,8,gl);g.cyl(0,.02,0,.013,.013,.12,7,lq);g.cyl(0,.16,0,.012,.004,.025,6,mt);g.cyl(0,.18,0,.0022,.0015,.09,4,H('#e2e6e6',.35));});return mesh(g);})();
+async function injection(){S.injected=true;S.mode='talk';S.mark=null;const fx=sin(P.rot),fz=cos(P.rot);
+  Object.assign(DOC,{show:true,x:clamp(P.x-fx*3.4,259,279),z:clamp(P.z-fz*3.4,-41.2,-28.8),rot:P.rot,walk:null,flee:false,syr:false,arm:0,stab:0});
   await say(HERO,'(про себя) Здесь всё: опыты, имена, его безумие… Нужно уходить, пока хозяин не…',VO.hero);
-  SFX.creak();DOC.walk=[P.x-sin(P.rot)*.9,P.z-cos(P.rot)*.9];const pr=P.rot;
-  S.camFn=()=>{CAM.ge=[P.x+sin(pr)*2.8+.8,2.4,P.z+cos(pr)*2.8];CAM.gt=[P.x-sin(pr)*.5,1.4,P.z-cos(pr)*.5];};CAM.rate=2.5;await wait(2.6);
-  await say('???','Любопытство — прекрасное качество, мистер Крейн. Для журналиста. И для подопытного.',VO.doc);
-  noise(.18,{f:3200,type:'highpass',vol:.22});SFX.hurt();S.shake=.5;P.rot=atan2(DOC.x-P.x,DOC.z-P.z);DOC.walk=null;
-  await say(HERO,'А-а! Что вы… что вы мне вкололи?!',VO.hero);S.drug=1;
+  DOC.walk=[clamp(P.x-fx*.95,259,279),clamp(P.z-fz*.95,-41.2,-28.8)];SFX.creak();await wait(2.2);DOC.walk=null;DOC.rot=atan2(P.x-DOC.x,P.z-DOC.z);
+  await say('???','Любопытство — прекрасное качество, мистер Крейн…',VO.doc);
+  {const r0=P.rot,p0=CAM.pitch;let d=atan2(DOC.x-P.x,DOC.z-P.z)-r0;d=((d+PI)%(2*PI)+2*PI)%(2*PI)-PI;DOC.syr=true;
+   for(let k=1;k<=16;k++){P.rot=r0+d*eas(k/16);CAM.yaw=P.rot;CAM.pitch=lerp(p0,.12,eas(k/16));await wait(.03);}}
+  await say('Доктор Бернсон','…для журналиста. И для подопытного.',VO.doc);
+  DOC.stab=.001;SFX.swing();await wait(.22);DOC.x+=(P.x-DOC.x)*.25;DOC.z+=(P.z-DOC.z)*.25;
+  noise(.18,{f:3200,type:'highpass',vol:.22});SFX.hurt();S.shake=.55;$('flash').style.opacity=.8;P.rot+=.32;CAM.yaw=P.rot;CAM.pitch=-.18;await wait(.35);$('flash').style.opacity=0;
+  await say(HERO,'А-а! Шея… Что вы… что вы мне вкололи?!',VO.hero);S.drug=1;DOC.syr=false;DOC.stab=0;DOC.rot=atan2(P.x-DOC.x,P.z-DOC.z);lookAt(DOC.x,1.6,DOC.z);
   await say('Доктор Бернсон','Не бойтесь, это не яд. Это — окно. То самое, через которое смотрю я сам. Эдмунд Бернсон, к вашим услугам.',VO.doc);
   await say('Доктор Бернсон','Вы ведь приехали за правдой о Грейхейвене? Смотрите. Смотрите внимательно…',VO.doc);
   P.lie=true;SFX.thud();lids(false,1400);await wait(1.6);$('fade').style.transitionDuration='600ms';$('fade').style.opacity=1;await wait(.8);
@@ -272,6 +280,7 @@ function stage2(skip){S.stalk=false;S.curfew=true;S.tailed=false;for(const s of 
 // --- per-frame: always (cutscenes too) and in play mode
 function stageTick(dt){
   if(FOUND.on){FOUND.t+=dt;}cellarTick(dt);act2Tick(dt);
+  if(DOC.syr)DOC.arm=min(1,DOC.arm+dt*1.3);if(DOC.stab>0&&DOC.stab<1)DOC.stab=min(1,DOC.stab+dt*5);
   if(DOC.show){DOC.mv=0;if(DOC.flee){if(hypot(269-DOC.x,-28.2-DOC.z)>.4)goDir(DOC,269,-28.2,4.6,dt);}else if(DOC.walk&&hypot(DOC.walk[0]-DOC.x,DOC.walk[1]-DOC.z)>.15)goDir(DOC,DOC.walk[0],DOC.walk[1],1.6,dt);}
   if(S.vision){VIS.t+=dt;}
   if(S.drug){const t=S.t;cv.style.filter='blur('+(.8+.7*sin(t*1.3)).toFixed(2)+'px) saturate(1.6) hue-rotate('+(sin(t*.6)*28).toFixed(1)+'deg)';}
@@ -297,7 +306,7 @@ function drawStage(){
     return;}
   if(FOUND.on){const t=FOUND.t;for(const[i,m]of FOUND.men.entries()){if(t>2.8&&t<4.6)continue;const k=kf(t,0,2.8),x=lerp(m.x,-13.2,k),z=lerp(m.z,-11.8,k),out=t>4.6;
     drawChar(CH.v[m.v],out?-13.2+(t-4.6)*(i?3.6:-3.6):x,0,out?-11.2+(t-4.6)*1.6:z,out?(i?PI/2:-PI/2):PI,{ph:t*7,mv:1});}}
-  if(S.inside==='doc'){for(const[x,z,r,i]of DOCDEAD)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.3,aL:.5});if(DOC.show)drawChar(CHF.doc,DOC.x,0,DOC.z,DOC.rot,{ph:DOC.ph,mv:DOC.mv,aR:DOC.flee?-2.5+sin(S.t*12)*.4:null,aL:DOC.flee?-2.4:null});}
+  if(S.inside==='doc'){for(const[x,z,r,i]of DOCDEAD)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.3,aL:.5});if(DOC.show)drawChar(CHF.doc,DOC.x,0,DOC.z,DOC.rot,{ph:DOC.ph,mv:DOC.mv,aR:DOC.flee?-2.5+sin(S.t*12)*.4:DOC.syr?lerp(lerp(-.15,-1.5,eas(DOC.arm)),-.7,eas(DOC.stab)):null,eR:DOC.syr?lerp(.9,.15,eas(DOC.stab)):null,aRz:DOC.syr?.1-.3*eas(DOC.stab):0,aL:DOC.flee?-2.4:null,armed:DOC.syr,wpn:M_syr,cR:DOC.syr?1.5:null});}
   if(S.inside||FIN.on||S.mode==='finale')return;
   if(!S.curfew&&S.explore){const cx=CAM.tgt[0],cz=CAM.tgt[2];for(const c of CIV)if(abs(c.x-cx)<46&&abs(c.z-cz)<40)drawCiv(c);}
   if(S.stalk){for(const s of SK)if(s.on)drawChar(CH.v[s.v],s.x,0,s.z,s.rot,{ph:s.ph,mv:s.mv});if(S.guardsMet&&!S.inDoc)for(const g of DGU)drawChar(CH.v[g.v],g.x,0,g.z,g.rot,{ph:g.ph,mv:g.mv});}}
