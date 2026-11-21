@@ -68,12 +68,13 @@ class Geo{
   at(m,fn){const o=this.m;this.m=o?mMul(o,m):m;const r=fn();this.m=o;return r;}
   // stamp a Blender model (see MODELS) with the current transform; opt.pal overrides colours by material name, opt.k tints, opt.sway marks vegetation sway weight
   model(name,opt){opt=opt||{};const M=getModel(name);if(!M)return false;const m=this.m||mT(0,0,0),tint=opt.k||1,pal=M.pal.map((p,i)=>{const o=opt.pal&&opt.pal[M.names[i]];const c=o||p;return[c[0]*tint,c[1]*tint,c[2]*tint,opt.em!=null?opt.em:(o?(o[3]||0):c[3])];});
-    const P=M.pos,N=M.sn,ix=M.idx,ao=M.ao,tc=M.tc,nt=ix.length/3,sw=opt.sway||0,ht=M.h||1;this.grow(nt*39);
+    const P=M.pos,N=M.sn,ix=M.idx,ao=M.ao,tc=M.tc,nt=ix.length/3,sw=opt.sway||0,ht=M.h||1;const fdm=(M.names||[]).map(nm=>nm.startsWith('fd_'));this.grow(nt*39);
     const wp=new Float32Array(P.length),wn=new Float32Array(N.length);for(let i=0;i<P.length;i+=3){const p=mP(m,[P[i],P[i+1],P[i+2]]),n=vNorm(mD(m,[N[i],N[i+1],N[i+2]]));wp[i]=p[0];wp[i+1]=p[1];wp[i+2]=p[2];wn[i]=n[0];wn[i+1]=n[1];wn[i+2]=n[2];}
     const det=m[0]*(m[5]*m[10]-m[6]*m[9])-m[4]*(m[1]*m[10]-m[2]*m[9])+m[8]*(m[1]*m[6]-m[2]*m[5]),flip=det<0;
     for(let t=0;t<nt;t++){let a=ix[t*3],b=ix[t*3+1],c=ix[t*3+2];if(flip){const q=b;b=c;c=q;}const col=pal[tc[t]],k=1+(rnd()-.5)*2*(opt.j!=null?opt.j:.04);
       const A=[wp[a*3],wp[a*3+1],wp[a*3+2]],B=[wp[b*3],wp[b*3+1],wp[b*3+2]],C=[wp[c*3],wp[c*3+1],wp[c*3+2]];let n=vCross(vSub(B,A),vSub(C,A));const l=vLen(n);if(l<1e-12)continue;n=vSc(n,1/l);
-      for(const v of[a,b,c]){const o=ao[v]/255*.62+.38,cc=[col[0]*k*o,col[1]*k*o,col[2]*k*o,sw?sw*clamp(P[v*3+1]/ht,0,1):col[3]];this.vert([wp[v*3],wp[v*3+1],wp[v*3+2]],n,cc,[wn[v*3],wn[v*3+1],wn[v*3+2]]);}}
+      const nf=fdm[tc[t]];   // 'fd_' face details: no outline shell, so eyes and lips are not ringed in black
+      for(const v of[a,b,c]){const o=nf?1:ao[v]/255*.62+.38,cc=[col[0]*k*o,col[1]*k*o,col[2]*k*o,sw?sw*clamp(P[v*3+1]/ht,0,1):col[3]];this.vert([wp[v*3],wp[v*3+1],wp[v*3+2]],n,cc,nf?[0,0,0]:[wn[v*3],wn[v*3+1],wn[v*3+2]]);}}
     return true;}
 }
 // --- model decoding (data generated from Blender by tools/glb2js.py)

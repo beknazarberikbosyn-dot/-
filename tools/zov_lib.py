@@ -1143,68 +1143,128 @@ BUILDINGS = ['house_%d' % i for i in range(len(HOUSES))] + ['chapel', 'lighthous
 
 # ================================================================ PEOPLE (part rigs: body / arm / leg)
 def head(a, c, skin, st):
-    """st: hair, hat, beard, eyes ('normal'|'bulge'|'sunken'), ears, nose, brow, mouth"""
-    cx, cy, cz = c; sk = a.m('skin', skin); dk = a.m('eyes', '#1a1410'); wh = a.m('eyewhite', st.get('white', '#d9d2c0')); hr = a.m('hair', st.get('hair', '#3a2a1e')); lip = a.m('lip', mix(skin, '#5a2a2a', .35))
-    bm = sph(.1, .108, .122, (0, 0, 0), 10, 8)
-    for v in bm.verts:
-        if v.co.z < -.02: v.co.x *= 1+(v.co.z+.02)*st.get('jaw', 2.2); v.co.y *= 1+(v.co.z+.02)*1.2
-        if v.co.y > .05: v.co.y *= .92
-    xform(bm, Tr(cx, cy, cz)); a.add(bm, sk)
-    if st.get('ears', True):
-        for s in (-1, 1): a.add(sph(.018, .03, .042, (cx+s*.1, cy+.01, cz), 6, 4), sk)
-    eyes = st.get('eyes', 'normal'); ey = cy-.094; ez = cz+.018
+    """faceted head (no spheres): lofted 10-sided rings = angled plates, carved nose/brow/jaw.
+    Face details use 'fd_' materials: the game skips their outline, so eyes read calm, not ringed in black.
+    st: hair_style (short|side|bun|braids|long|kerchief|none), hair, hat (fedora|beanie|captain|flatcap), beard (full|stubble|mustache),
+        eyes (normal|bulge|sunken), nose (normal|flat|long), jaw, wide_mouth, ears, gills, pipe, glasses, brow"""
+    cx, cy, cz = c; C = V(c); rr = random.Random(int(abs(cx*997+cz*131)) + len(str(st)))
+    sk = a.m('skin', skin); skd = a.m('skin2', mix(skin, '#000000', .14)); hr = a.m('hair', st.get('hair', '#3a2a1e'))
+    jaw = st.get('jaw', 2.2); jw = 1-(jaw-2.2)*.12
+    # rings: (dz, half-width, front depth, back depth, forward shift of the front)
+    L = [(-.175, .046, .046, .05, 0), (-.135, .046, .05, .052, 0), (-.112, .05*jw, .078, .05, .006), (-.086, .07*jw, .094, .066, .004), (-.045, .086, .1, .086, 0), (-.005, .093, .104, .097, 0),
+         (.03, .098, .101, .104, 0), (.064, .097, .099, .107, .003), (.1, .091, .09, .103, 0), (.128, .08, .076, .092, 0), (.148, .058, .052, .068, 0), (.16, .03, .026, .036, 0)]
+    N = 12
+    def ring(dz, hw, fd, bd, sh, k=1.0):
+        out = []
+        for i in range(N):
+            t = i/N*2*pi; x = cos(t)*hw; y = sin(t)
+            y = y*(bd if y > 0 else fd) - (sh if y < 0 else 0)
+            out.append(C + V((x*k, y*k, dz)))
+        return out
+    bm = bmesh.new(); rings = [[bm.verts.new(p) for p in ring(*l)] for l in L]
+    for j in range(len(rings)-1):
+        for i in range(N): bm.faces.new((rings[j][i], rings[j][(i+1) % N], rings[j+1][(i+1) % N], rings[j+1][i]))
+    top = bm.verts.new(C + V((0, .006, .164)))
+    for i in range(N): bm.faces.new((rings[-1][i], rings[-1][(i+1) % N], top))
+    bot = bm.verts.new(C + V((0, 0, -.18)))
+    for i in range(N): bm.faces.new((rings[0][(i+1) % N], rings[0][i], bot))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    a.add(bm, lambda f: skd if (f.normal.z < -.55 or (f.calc_center_median()-C).z < -.09 and f.normal.y > -.3) else sk)
+    fy = cy - .1   # front surface plane at the eyes
+    # brow ridge, cheekbones, jaw corners: low angled plates carved into the face
     for s in (-1, 1):
-        if eyes == 'bulge':
-            a.add(sph(.027, .022, .025, (cx+s*.045, ey-.004, ez), 7, 5), wh); a.add(sph(.012, .01, .014, (cx+s*.047, ey-.026, ez), 6, 4), dk)
-        elif eyes == 'sunken':
-            a.add(sph(.025, .015, .022, (cx+s*.038, ey+.006, ez), 6, 4), dk)
+        a.add(f_loft([C+V((s*.014, -.099, .05)), C+V((s*.045, -.095, .054)), C+V((s*.072, -.075, .048))], [(.006, .004), (.007, .005), (.004, .003)], ref=(0, -1, .4), kind='keel', cap0='chamfer', cap1='point', smooth=0), sk)
+    # nose: wedge
+    nz = st.get('nose', 'normal'); tipy = {'flat': -.112, 'long': -.13}.get(nz, -.121); nl = {'long': .05}.get(nz, .042)
+    nb = bmesh.new(); pts = [V((0, -.101, .035)), V((-.008, -.104, .0)), V((0, tipy, -.009)), V((.008, -.104, .0)), V((-.014, -.103, -.018)), V((.014, -.103, -.018)), V((0, -.107, -.022))]
+    vs = [nb.verts.new(C+p) for p in pts]
+    for f in ((0, 1, 2), (0, 2, 3), (1, 4, 2), (3, 2, 5), (4, 6, 2), (6, 5, 2)):
+        try: nb.faces.new([vs[k] for k in f])
+        except ValueError: pass
+    bmesh.ops.recalc_face_normals(nb, faces=nb.faces); a.add(dbl(nb), sk)
+    # ears: angled plates
+    if st.get('ears', True):
+        for s in (-1, 1): a.add(f_loft([C+V((s*.094, .012, .035)), C+V((s*.104, .02, .005)), C+V((s*.096, .016, -.028))], [(.004, .018), (.006, .022), (.004, .012)], ref=(s, 0, 0), kind='oct', cap0='point', cap1='point', smooth=0), skd)
+    # eyes: flat almonds facing forward (outline-free), upper lid plate, iris; brows as angled strokes
+    eyes = st.get('eyes', 'normal'); ez = cz+.03
+    ew = a.m('fd_eyewhite', st.get('white', '#e2dccb')); ir = a.m('fd_iris', st.get('iris', '#3a2a1c')); lid = a.m('fd_lid', mix(skin, '#000000', .08)); brw = a.m('fd_brow', st.get('hair', '#3a2a1e'))
+    def plate(cxy, w, h, mat, depth, yaw, shape=((1, 0), (.45, .8), (-.45, .8), (-1, 0), (-.45, -.7), (.45, -.7)), tilt=0.0):
+        b2 = bmesh.new(); Rm = Rz(yaw) @ Rx(tilt)
+        vs = [b2.verts.new(C + V(cxy) + (Rm @ V((x*w, -depth, y*h)))) for x, y in shape]
+        b2.faces.new(vs); bmesh.ops.recalc_face_normals(b2, faces=b2.faces)
+        for f in b2.faces:
+            if f.normal.y > 0: f.normal_flip()
+        a.add(b2, mat)
+    for s in (-1, 1):
+        ex = s*.04; yaw = s*.32; e0 = (ex, -.1+.002, ez-cz)
+        if eyes == 'sunken':
+            plate(e0, .021, .012, a.m('fd_socket', mix(skin, '#000000', .45)), .002, yaw); plate((ex, -.1, ez-cz), .006, .005, ir, .004, yaw)
         else:
-            a.add(sph(.02, .012, .014, (cx+s*.04, ey, ez), 6, 4), wh); a.add(sph(.009, .008, .009, (cx+s*.041, ey-.011, ez), 5, 3), dk)
-        a.add(box(.05, .016, .012, (cx+s*.042, ey-.004, ez+.032), T=None), hr if st.get('brow', True) else sk)
-    nz_ = st.get('nose', 'normal')
-    if nz_ == 'flat': a.add(sph(.02, .014, .016, (cx, cy-.11, cz-.012), 6, 4), sk)
-    elif nz_ == 'long': a.add(cyl(.018, .004, .07, 4, T=Tr(cx, cy-.1, cz-.005) @ Rx(-1.75)), sk)
-    else: a.add(cyl(.016, .004, .055, 4, T=Tr(cx, cy-.103, cz-.002) @ Rx(-1.9)), sk)
-    mw = .06 if st.get('wide_mouth') else .04; a.add(box(mw, .012, .009, (cx, cy-.1, cz-.052)), lip)
-    hair = st.get('hair_style', 'short')
-    if hair == 'short' or hair == 'side':
-        hb = sph(.106, .112, .118, (0, 0, 0), 10, 7); bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.03 and f.calc_center_median().z < .07] + ([f for f in hb.faces if f.calc_center_median().z > .06] if hair == 'side' else []), context='FACES')
-        xform(hb, Tr(cx, cy+.008, cz+.01)); a.add(dbl(hb), hr)
-    if hair == 'bun' or hair == 'braids' or hair == 'long':
-        hb = sph(.108, .114, .12, (0, 0, 0), 10, 7); bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.04 and f.calc_center_median().z < .075], context='FACES')
-        xform(hb, Tr(cx, cy+.01, cz+.012)); a.add(dbl(hb), hr)
-        if hair == 'bun': a.add(sph(.055, .05, .05, (cx, cy+.1, cz+.07), 8, 6), hr)
+            big = eyes == 'bulge'
+            plate(e0, .021 if not big else .023, .0098 if not big else .013, ew, .003, yaw)
+            plate((ex+s*.002, -.1, ez-cz-.0005), .0072 if not big else .0045, .0072 if not big else .0045, ir, .005, yaw, shape=[(cos(k*pi/3), sin(k*pi/3)) for k in range(6)])
+            plate((ex+s*.0035, -.1, ez-cz+.0018), .0018, .0018, a.m('fd_glint', '#f4efe2', .3), .0058, yaw, shape=[(cos(k*pi/2), sin(k*pi/2)) for k in range(4)])
+            if not big: plate((ex, -.1, ez-cz+.0065), .021, .0045, lid, .007, yaw, shape=((1, -.2), (.5, 1), (-.5, 1), (-1, -.2), (0, -.6)), tilt=-.35)
+        if st.get('brow', True):
+            plate((ex, -.1, ez-cz+.019), .02, .0042, brw, .01, yaw, shape=((1, -.6), (.3, .5), (-1, .3), (-1, -.5), (.3, -.4)), tilt=-.25)
+    # mouth: lips as a thin carved plate
+    mw = .024 if st.get('wide_mouth') else .019; lp = a.m('fd_lip', mix(skin, '#7a3030', .42))
+    plate((0, -.1, -.052), mw, .0055, lp, .006, 0, shape=((1, 0), (.4, .9), (0, .5), (-.4, .9), (-1, 0), (-.3, -1), (.3, -1)), tilt=.15)
+    if st.get('gills'):
+        gm = a.m('fd_gill', mix(skin, '#3a2a2a', .5))
+        for s in (-1, 1):
+            for k in range(3): plate((s*.074, -.02, -.085-k*.013), .012, .0016, gm, -.03, s*1.3)
+    # hair: faceted cap lofted just outside the skull; the hairline sinks back into the skin at the front
+    hair = st.get('hair_style', 'short'); hat = st.get('hat')
+    if hair in ('short', 'side', 'bun', 'braids', 'long', 'kerchief') and not (hat and hair == 'short'):
+        line = {'side': .07, 'kerchief': .045}.get(hair, .085); col = a.m('kerchief', st.get('scarf', '#6a3a34')) if hair == 'kerchief' else hr
+        hb = bmesh.new(); levels = [l for l in L if l[0] > -.07]; hrs = []
+        for (dz, hw, fd, bd, sh) in levels:
+            row = []
+            for i in range(N):
+                t = i/N*2*pi; y = sin(t); k = 1.075
+                if y < -.35 and dz < line: k = .93            # front, below the hairline: hidden inside the skull
+                if hair == 'side' and cos(t) > .3 and dz < .1 and y < 0: k = .93
+                row.append(hb.verts.new(C + V((cos(t)*hw*k, (y*(bd if y > 0 else fd)-(sh if y < 0 else 0))*k, dz+.004))))
+            hrs.append(row)
+        for j in range(len(hrs)-1):
+            for i in range(N): hb.faces.new((hrs[j][i], hrs[j][(i+1) % N], hrs[j+1][(i+1) % N], hrs[j+1][i]))
+        tp = hb.verts.new(C + V((0, .006, .174)))
+        for i in range(N): hb.faces.new((hrs[-1][i], hrs[-1][(i+1) % N], tp))
+        bmesh.ops.recalc_face_normals(hb, faces=hb.faces); a.add(hb, col)
+        if hair == 'bun': a.add(f_loft([C+V((0, .09, .07)), C+V((0, .13, .085))], [.04, .025], ref=(0, 0, 1), n=6, cap0='chamfer', cap1='chamfer', smooth=0), hr)
         elif hair == 'braids':
-            for s in (-1, 1): a.add(tube([(cx+s*.09, cy+.02, cz-.02), (cx+s*.1, cy+.0, cz-.12), (cx+s*.09, cy-.01, cz-.22)], [.026, .022, .016], 5), hr)
-        else: a.add(box(.2, .06, .26, (cx, cy+.085, cz-.08)), hr)
-    if hair == 'kerchief':
-        kc = a.m('kerchief', st.get('scarf', '#6a3a34')); hb = sph(.118, .124, .13, (0, 0, 0), 10, 7)
-        bmesh.ops.delete(hb, geom=[f for f in hb.faces if f.calc_center_median().y < -.05 and f.calc_center_median().z < .09], context='FACES'); xform(hb, Tr(cx, cy+.012, cz+.012)); a.add(dbl(hb), kc)
-        a.add(dbl(tri_fan([V((cx-.1, cy+.06, cz-.04)), V((cx+.1, cy+.06, cz-.04)), V((cx, cy+.12, cz-.2))])), kc)
+            for s in (-1, 1): a.add(f_loft([C+V((s*.085, .03, -.0)), C+V((s*.095, .01, -.1)), C+V((s*.088, -.0, -.2))], [.022, .018, .01], n=5, cap0='flat', cap1='point', smooth=0), hr)
+        elif hair == 'long': a.add(f_loft([C+V((0, .07, .03)), C+V((0, .085, -.12)), C+V((0, .07, -.22))], [(.085, .03), (.09, .03), (.07, .02)], ref=(0, 1, 0), kind='oct', cap0='flat', cap1='chamfer', smooth=0), hr)
+        elif hair == 'kerchief': a.add(dbl(tri_fan([C+V((-.08, .07, -.03)), C+V((.08, .07, -.03)), C+V((0, .12, -.17))])), col)
     beard = st.get('beard')
     if beard == 'full':
-        b = sph(.1, .09, .09, (cx, cy-.035, cz-.08), 8, 6); displace(b, .012, 30, 3); a.add(b, hr); a.add(box(.07, .02, .014, (cx, cy-.112, cz-.035)), hr)
+        a.add(f_loft([C+V((-.08, -.05, -.03)), C+V((-.06, -.095, -.09)), C+V((0, -.112, -.12)), C+V((.06, -.095, -.09)), C+V((.08, -.05, -.03))], [.022, .03, .034, .03, .022], ref=(0, -1, 0), n=6, cap0='point', cap1='point', smooth=2), hr)
+        plate((0, -.104, -.04), .03, .008, hr, .006, 0, shape=((1, -.3), (.6, .6), (-.6, .6), (-1, -.3), (0, -.5)))
     elif beard == 'stubble':
-        b = sph(.098, .1, .07, (cx, cy-.01, cz-.06), 8, 5); bmesh.ops.delete(b, geom=[f for f in b.faces if f.calc_center_median().z > cz-.045], context='FACES'); a.add(dbl(b), a.m('stubble', mix(skin, '#2a2420', .45)))
+        stb = a.m('fd_stubble', mix(skin, '#2a2420', .45))
+        for s in (-1, 1): plate((s*.05, -.088, -.075), .03, .028, stb, .004, s*.55)
+        plate((0, -.1, -.098), .028, .016, stb, .004, 0)
     elif beard == 'mustache':
-        for s in (-1, 1): a.add(cyl(.012, .006, .05, 5, T=Tr(cx+s*.005, cy-.108, cz-.035) @ Ry(s*1.9)), hr)
-    if st.get('gills'):
-        for s in (-1, 1):
-            for k in range(3): a.add(box(.004, .03, .006, (cx+s*.06, cy+.02, cz-.1-k*.016)), a.m('gill', mix(skin, '#3a2a2a', .5)))
-    hat = st.get('hat'); hc = a.m('hat', st.get('hat_col', '#4a3a2a')); hb_ = a.m('hatband', st.get('band', '#1e1a16'))
+        for s in (-1, 1): plate((s*.012, -.1, -.04), .016, .005, hr, .009, s*.25, shape=((1, -.8), (.2, .6), (-1, .4), (-.6, -.3)), tilt=.2)
+    hc = a.m('hat', st.get('hat_col', '#4a3a2a')); hb_ = a.m('hatband', st.get('band', '#1e1a16'))
     if hat == 'fedora':
-        a.add(cyl(.2, .19, .016, 14, at=(cx, cy, cz+.08)), hc); a.add(lathe([(.118, cz+.09), (.112, cz+.15), (.1, cz+.19), (.05, cz+.2)], 10, rf=lambda ang, z: 1-.12*max(0, cos(ang*2)) if z > cz+.17 else 1, T=Tr(cx, cy, 0)), hc)
-        a.add(cyl(.12, .118, .028, 12, at=(cx, cy, cz+.095)), hb_)
+        a.add(cyl(.19, .18, .016, 10, at=(cx, cy, cz+.088)), hc); a.add(lathe([(.112, cz+.098), (.108, cz+.15), (.094, cz+.19), (.045, cz+.2)], 8, rf=lambda ang, z: 1-.12*max(0, cos(ang*2)) if z > cz+.17 else 1, T=Tr(cx, cy, 0)), hc)
+        a.add(cyl(.114, .112, .028, 8, at=(cx, cy, cz+.1)), hb_)
     elif hat == 'beanie':
-        a.add(sph(.118, .124, .1, (cx, cy+.005, cz+.04), 10, 6, T=None), hc); a.add(cyl(.122, .122, .04, 12, at=(cx, cy+.005, cz+.03)), hb_)
+        a.add(f_loft([C+V((0, .006, .07)), C+V((0, .006, .13)), C+V((0, .004, .175))], [(.112, .118), (.1, .106), (.045, .048)], ref=(0, -1, 0), n=10, cap0='flat', cap1='point', smooth=0), hc)
+        a.add(cyl(.116, .116, .036, 10, at=(cx, cy+.005, cz+.055)), hb_)
     elif hat == 'captain':
-        a.add(cyl(.118, .13, .07, 12, at=(cx, cy+.01, cz+.07)), hc); a.add(cyl(.13, .13, .02, 12, at=(cx, cy+.01, cz+.14)), hc)
-        a.add(box(.17, .09, .012, (cx, cy-.11, cz+.075), T=Tr(cx, cy-.11, cz+.075) @ Rx(-.25) @ Tr(-cx, -(cy-.11), -(cz+.075))), hb_); a.add(box(.04, .01, .025, (cx, cy-.12, cz+.105)), a.m('badge', '#b08d3c', .3))
+        a.add(cyl(.112, .124, .07, 10, at=(cx, cy+.01, cz+.08)), hc); a.add(cyl(.124, .124, .02, 10, at=(cx, cy+.01, cz+.15)), hc)
+        a.add(box(.17, .09, .012, (cx, cy-.11, cz+.085), T=Tr(cx, cy-.11, cz+.085) @ Rx(-.25) @ Tr(-cx, -(cy-.11), -(cz+.085))), hb_); a.add(box(.04, .01, .025, (cx, cy-.12, cz+.115)), a.m('badge', '#b08d3c', .3))
     elif hat == 'flatcap':
-        b = sph(.125, .14, .05, (cx, cy-.015, cz+.085), 10, 5); a.add(b, hc); a.add(box(.16, .07, .015, (cx, cy-.13, cz+.07)), hc)
+        a.add(f_loft([C+V((0, .02, .085)), C+V((0, -.01, .12)), C+V((0, .01, .145))], [(.115, .122), (.118, .126), (.07, .08)], ref=(0, -1, 0), n=10, cap0='flat', cap1='point', smooth=0), hc)
+        a.add(box(.16, .07, .014, (cx, cy-.13, cz+.085), T=Tr(cx, cy-.13, cz+.085) @ Rx(-.12) @ Tr(-cx, -(cy-.13), -(cz+.085))), hc)
     if st.get('pipe'): a.add(tube([(cx+.02, cy-.1, cz-.055), (cx+.05, cy-.17, cz-.07), (cx+.06, cy-.19, cz-.04)], .008, 4), a.m('pipe', '#3a2a1e'))
     if st.get('glasses'):
-        for s in (-1, 1): a.add(tube([V((cx+s*.042+cos(t)*.022, ey-.016, ez+sin(t)*.02)) for t in [k/8*2*pi for k in range(9)]], .003, 3, False, False), a.m('frames', '#2a2a2a'))
+        fr = a.m('fd_frames', '#2a2a2a')
+        for s in (-1, 1): a.add(tube([V((cx+s*.041+cos(t)*.021, cy-.108, ez+sin(t)*.016)) for t in [k/6*2*pi for k in range(7)]], .0028, 3, False, False), fr)
+        a.add(tube([V((cx-.02, cy-.108, ez+.004)), V((cx+.02, cy-.108, ez+.004))], .0025, 3, False, False), fr)
 def torso(a, cfg):
     k = cfg.get('k', 1.0); kz = cfg.get('kz', 1.0); cm = a.m('cloth', cfg['cloth']); c2 = a.m('cloth2', cfg.get('cloth2', mix(cfg['cloth'], '#000000', .2))); sk = cfg['skin']
     secs = [(.84, .165, .115, 0), (.98, .152, .104, 0), (1.12, .16, .11, -.008), (1.28, .182, .125, -.012), (1.4, .2, .122, -.006), (1.48, .17, .1, 0), (1.54, .06, .055, .005), (1.62, .052, .05, .01)]
@@ -1347,7 +1407,7 @@ def woman(a, cloth, skirt_col, head_cfg, apron=None, shawl=None, k=1.0):
     if apron:
         ap = a.m('apron', apron); a.add(dbl(quadstrip([V((-.13*k, -.13, 1.0)), V((.13*k, -.13, 1.0))], [V((-.2*k, -.24, .18)), V((.2*k, -.24, .18))])), ap)
     if shawl:
-        sw = a.m('shawl', shawl); a.add(tube([V((cos(t)*.17*k, sin(t)*.12*k+.01, 1.48+.04*cos(t))) for t in [j/14*2*pi for j in range(15)]], .045, 5, False, False), sw)
+        sw = a.m('shawl', shawl)
         a.add(dbl(tri_fan([V((-.17*k, .06, 1.48)), V((.17*k, .06, 1.48)), V((0, .14, 1.05))])), sw)
 @asset('wom_body_0')
 def _(a): woman(a, '#5a4a5a', '#3a3440', {'hair_style': 'bun', 'hair': '#4a3424'}, shawl='#7a6a58')
