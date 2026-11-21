@@ -193,12 +193,11 @@ const XD={
   office:{x:18,z:39,n:[0,1],room:'office',in:[240,-32.6,PI],pins:5,name:'контора начальника порта'}};
 const chased=()=>EN.some(e=>e.active&&e.state==='chase');
 function roomCp(room){const d=XD[ROOMS[room].door];return[d.x+d.n[0]*1.6,d.z+d.n[1]*1.6];}
-function pzTarget(z){const room=z.room||null;if(room===S.inside)return[z.x,z.z];if(!S.inside&&room){const d=XD[ROOMS[room].door];return[d.x,d.z];}return null;}
 function markTarget(){const m=S.mark;if(!m)return null;const room=m[2]||null;if(room===S.inside)return m;if(!S.inside&&room&&ROOMS[room].door){const d=XD[ROOMS[room].door];return[d.x,d.z];}return null;}
 const setMark=m=>{S.mark=m&&m.n?[m.x+m.n[0]*.95,m.z+m.n[1]*.95]:m;};
 async function goRoom(d){S.mode='talk';SFX.door();await fade(1,380);S.inside=d.room;P.x=d.in[0];P.z=d.in[1];P.rot=d.in[2];S.crouch=false;camSnap();await fade(0,480);S.mode='play';}
 async function leaveRoom(d){S.mode='talk';SFX.door();await fade(1,350);S.inside=null;P.x=d.x+d.n[0]*1.4;P.z=d.z+d.n[1]*1.4;P.rot=atan2(d.n[0],d.n[1]);camSnap();await fade(0,450);S.mode='play';}
-function doorOn(d){if(S.inside||FIN.on||d.k==='doc')return false;if(d.k==='pubF')return S.explore&&!S.alarm;if(d.k==='pubB')return S.kicked&&!S.alarm;return S.escaped;}
+function doorOn(d){if(S.inside||FIN.on||d.k==='doc')return false;if(d.k==='pubF')return S.explore&&!S.alarm;if(d.k==='pubB')return S.kicked&&!S.alarm;return d.on?d.on():false;}
 function doorLabel(d){if(d.k==='pubF')return S.kicked?'Дверь паба «Дьяволов риф»':'Войти в паб «Дьяволов риф»';if(d.k==='pubB')return d.lock?'Вскрыть замок чёрного хода отмычками':'Войти через чёрный ход';
   return(d.lock?'Вскрыть отмычками: ':'Войти: ')+d.name;}
 async function useDoor(d){
@@ -210,7 +209,7 @@ async function useDoor(d){
   if(d.lock)lockpick(d,()=>{d.lock=false;go();});else go();}
 for(const k in XD){const d=XD[k];d.k=k;d.lock=!!d.pins;const o=addInter(d.x+d.n[0]*.95,d.z+d.n[1]*.95,1.6,'',()=>useDoor(d),()=>doorOn(d));Object.defineProperty(o,'label',{get:()=>doorLabel(d)});}
 // exits from the rooms (the doorway gap in the low front wall)
-for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn)&&!(key==='doc'&&!S.escaped));}
+for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn)&&!(key==='doc'&&!S.robe));}
 
 // --- lockpicking: lift the pins one by one to the shear line
 let LP={on:false};const LPT=.68;
@@ -349,25 +348,73 @@ addInter(198,2.6,1.6,'Осмотреть рабочий стол',()=>{if(S.ev<3
   S.noteCb=()=>{addNote('Записки со стола: культ «Спящего», опыты по превращению людей. Подпись — д-р Э. Бернсон, Холмовая ул., 9.');alarmSeq();};
   openNote('Рабочий стол','Журнал наблюдений, исписанный аккуратным почерком:<br><i>«Объект 19. День 6. Чешуя на предплечьях, жаберные щели раскрылись. Во сне повторяет: „Он зовёт“. Перемена идёт хорошо.<br>Объект 20. День 3. Сердце не выдержало. Тело — в угол, до прилива.»</i><br><br>И записка, прижатая подсвечником:<br><i>«Тех, кто не вынесет перемены, — Спящему, на пирс, при факелах. Остальных — в море, к Отцу. Слава Спящему, что видит сны в глубине. Жду отчёт к новолунию.<br>— Д-р Э. Бернсон, Холмовая ул., 9»</i>');},()=>S.inside==='cellar'&&!S.alarm);
 
-// --- the cellar fight: the owner comes down alone — he wants to knock the hero out quietly, not raise the village
+// --- the cellar: the owner comes down alone to knock the hero out quietly — and one of the "dead" fish-men wakes up behind him,
+// tears him down and feeds. His bat flies across the floor: pick it up and beat the thing to death before it turns on you.
 const crier=mkE('v',182.6,-3.4,[[182.6,-3.4]],{v:PUBV,direct:true,sp:2.6,hp:5});
+const fishE=mkE('f',196.5,-3.7,null,{v:DEAD[2],direct:true,sp:3.2,hp:6,state:'dead',rot:1.05});
+const CF={on:false,walk:false,rise:0,leap:0,bat:null,blood:0};
+const BAT=[186.8,-1.7];
 const SHOUTS=['ЧУЖАК!','ОН БЫЛ В ПОДВАЛЕ!','ПРОСЫПАЙТЕСЬ!','ЛОВИТЕ ЕГО!','ОН ВСЁ ВИДЕЛ!'],ALARML=[];
 function alarmLight(){if(ALARML.length>=14)return;const h=HOUSES[floor(Math.random()*HOUSES.length)];ALARML.push([(h[0]+h[2])/2+rr(-3,3),1.7,h[3]+1,6.5,[.95,.62,.3]]);}
 function bellToll(n=3){for(let i=0;i<n;i++){const t=i*1.7;for(const[f,v]of[[196,.15],[392,.08],[588,.035],[790,.03]])tone(f,3.4,{type:'sine',vol:v,att:.004,delay:t});noise(.08,{f:3000,type:'highpass',vol:.05,delay:t});}}
 function fleeE(e,dt){const w=e.wp[e.wi];if(hypot(w[0]-e.x,w[1]-e.z)<1.3){e.wi=(e.wi+1)%e.wp.length;return;}
   const sp=hypot(P.x-e.x,P.z-e.z)<3.5?3.9:3.3;if(!goField(e,field(w[0],w[1],true),sp,dt))goDir(e,w[0],w[1],sp,dt);}
-async function alarmSeq(){S.mode='talk';SFX.creak();await wait(.5);SFX.door();pubOwner.room=null;
-  Object.assign(crier,{x:182.6,z:-3.4,hx:182.6,hz:-3.4,active:true,state:'patrol',hp:5,stun:0,wind:0,aw:0,cd:1.2});crier.rot=atan2(P.x-crier.x,P.z-crier.z);P.rot=atan2(crier.x-P.x,crier.z-P.z);
+function groan(v=.3){tone(70,1.6,{type:'sawtooth',vol:v,to:52,lp:420});noise(1.2,{f:260,type:'bandpass',q:2,vol:v*.6,to:120});}
+function gore(){noise(.22,{f:700,type:'bandpass',q:1.4,vol:.22,to:260});tone(95,.18,{vol:.12,to:60});}
+const gush=(x,z,n=8)=>{for(let i=0;i<n;i++)PT.add(1,x+rr(-.2,.2),.5+rr(0,.3),z+rr(-.2,.2),rr(-1.4,1.4),1+Math.random()*2.2,rr(-1.4,1.4),.06+Math.random()*.05,.9,[.42,.04,.03,.95],1);};
+async function alarmSeq(){S.mode='talk';SFX.creak();await wait(.5);SFX.door();pubOwner.room=null;CF.on=true;
+  Object.assign(crier,{x:182.6,z:-3.4,hx:182.6,hz:-3.4,active:true,state:'script',hp:5,stun:0,wind:0,aw:0,cd:1.2,unarmed:false});
+  Object.assign(fishE,{x:196.5,z:-3.7,hx:196.5,hz:-3.7,rot:1.05,active:true,state:'dead',hp:6,stun:0,wind:0,cd:1});
+  crier.rot=atan2(P.x-crier.x,P.z-crier.z);P.rot=atan2(crier.x-P.x,crier.z-P.z);CAM.pitch=-.05;
   S.alarm=true;S.cellarFight=true;S.cp=[196.6,1.4];S.cpRoom='cellar';
-  await say('Хозяин паба','Я же сказал тебе — НЕ СОВАТЬСЯ!',VO.pub);S.shake=.3;
-  await say('Хозяин паба','*перехватывает дубинку* Тише, тише… Наверху никто не услышит. Уснёшь здесь — а проснёшься уже в клетке. Как те, что до тебя.',VO.pub);
-  await say(HERO,'Он даже не зовёт своих… Хочет вырубить меня сам, по-тихому. Не дождётся!',VO.hero);
-  crier.state='chase';crier.aw=1;crier.ls=[P.x,P.z];SFX.alert();setObj('Хозяин паба хочет вырубить вас. Вырубите его первым!');S.mode='play';
-  toast(touchUI()?'«Удар» — бить, «Блок» в момент удара — парировать, два удара и «Толчок» — нокаут.':'<span class="kb">ЛКМ</span>— удар, <span class="kb">ПКМ</span> в момент его удара — парировать, два удара и <span class="kb">F</span>— нокаут.',6);}
-async function koSeq(){S.mode='talk';S.cellarFight=false;S.cpRoom=null;await wait(.7);
-  await say(HERO,'(тяжело дыша) Всё… Он так и не позвал на помощь. Хотел сделать всё тихо — значит, наверху пока никто ничего не знает.',VO.hero);
-  await say(HERO,'Пока. Скоро его хватятся. Уходить нужно так же тихо, как я пришёл, — через чёрный ход.',VO.hero);
+  await say('Хозяин паба','Я же сказал тебе — НЕ СОВАТЬСЯ!',VO.pub);S.shake=.3;CF.walk=true;
+  await say('Хозяин паба','*перехватывает биту и медленно идёт к вам* Тише, тише… Наверху никто не услышит. Уснёшь здесь — а проснёшься уже в клетке.',VO.pub);
+  while(hypot(P.x-crier.x,P.z-crier.z)>3.3)await wait(.1);
+  groan(.25);CF.rise=.001;await wait(.8);
+  await say(HERO,'(шёпотом) За ним… тело в углу… Оно шевелится.',VO.hero);
+  await say('Хозяин паба','Не пытайся меня отвлечь, писака. Старый трюк.',VO.pub);
+  while(CF.rise<1)await wait(.1);groan(.4);CF.leap=.001;CF.l0=[fishE.x,fishE.z];while(CF.leap<1)await wait(.05);
+  scream(1.6);SFX.thud();S.shake=.9;crier.state='ko';crier.unarmed=true;crier.rot=fishE.rot+PI;
+  CF.bat={p:[crier.x,1.1,crier.z],v:[(BAT[0]-crier.x)/.9,4.2,(BAT[1]-crier.z)/.9],a:0,t:0};SFX.swing();gush(crier.x,crier.z,20);
+  fishE.state='feed';fishE.t=0;
+  await say('Хозяин паба','А-А-А! ПУСТИ! ПУСТИ-И-И!..',{pitch:96,vol:.32,dur:2});await wait(.8);gore();
+  await say(HERO,'Господи… Оно его… грызёт. Бита — отлетела к клеткам. Пока эта тварь занята…',VO.hero);
+  setObj('Подберите биту и забейте мертвеца, пока он не набросился на вас.');setMark([BAT[0],BAT[1],'cellar']);S.mode='play';
+  toast('Кулаками его не взять. Подберите <b>биту</b> (<span class="kb">E</span>) и бейте (<span class="kb">ЛКМ</span>). <span class="kb">ПКМ</span> в момент его броска — отбить.',7);}
+addInter(BAT[0],BAT[1],1.5,'Подобрать биту',()=>{CF.bat.taken=true;S.mark=null;S.weapon={name:'Бита',dmg:2,dur:99,m:segM('wpn_club')};SFX.pick();
+  if(fishE.state==='feed'){fishE.state='chase';groan(.45);}setObj('Забейте мертвеца битой!');},()=>S.cellarFight&&CF.bat&&CF.bat.t>=1&&!CF.bat.taken);
+// per frame (cutscenes too): the owner's walk, the rise, the leap, the flying bat
+function cellarTick(dt){if(!CF.on)return;const t=S.t;
+  if(CF.walk&&crier.state==='script'){crier.mv=0;CF.wi=CF.wi||0;const W=[[184.3,-1.5],[193.6,-1]],w=CF.wi<W.length?W[CF.wi]:[P.x,P.z],dx=w[0]-crier.x,dz=w[1]-crier.z,d=hypot(dx,dz);   // around the cages, ignoring the clutter
+    if(CF.wi<W.length&&d<.3)CF.wi++;else if(CF.wi<W.length||hypot(P.x-crier.x,P.z-crier.z)>2.6){const s_=min(d,1.5*dt);crier.x+=dx/d*s_;crier.z+=dz/d*s_;crier.mv=1;crier.ph+=dt*3.5;faceTo(crier,atan2(dx,dz),dt,6);}else faceTo(crier,atan2(P.x-crier.x,P.z-crier.z),dt,4);}
+  if(CF.rise>0&&CF.rise<1)CF.rise=min(1,CF.rise+dt*.75);
+  if(CF.leap>0&&CF.leap<1){const L0=CF.l0,L=hypot(crier.x-L0[0],crier.z-L0[1])||1;CF.leap=min(1,CF.leap+dt*7/L);const k=CF.leap;fishE.x=lerp(L0[0],crier.x+.45,k);fishE.z=lerp(L0[1],crier.z-.35,k);fishE.rot=atan2(crier.x-fishE.x,crier.z-fishE.z);}
+  const b=CF.bat;if(b&&b.t<1){b.t=min(1,b.t+dt/.9);b.v[1]-=11*dt;b.p=vAdd(b.p,vSc(b.v,dt));b.a+=dt*14;if(b.p[1]<.06){b.p[1]=.06;b.t=1;b.p=[BAT[0],.06,BAT[1]];noise(.15,{f:600,vol:.2});}}
+  if(fishE.state==='feed'){fishE.t+=dt;fishE.rot=atan2(crier.x-fishE.x,crier.z-fishE.z);CF.blood-=dt;if(CF.blood<=0){CF.blood=.5+Math.random()*.6;gush(crier.x,crier.z,4);gore();}
+    if(S.mode==='play'&&(fishE.t>11||hypot(P.x-fishE.x,P.z-fishE.z)<2.4)){fishE.state='chase';groan(.45);}}}
+function updFish(e,dt){if(e.state!=='chase')return;const dx=P.x-e.x,dz=P.z-e.z,d=hypot(dx,dz)||.01;S.chased=.6;
+  if(e.wind>0){e.wind-=dt;faceTo(e,atan2(dx,dz),dt,10);if(e.wind<=0)strike(e,d);return;}
+  if(d<1.45){if(e.cd<=0)e.wind=.42;faceTo(e,atan2(dx,dz),dt,10);return;}goDir(e,P.x,P.z,e.sp,dt);}
+function hitFish(e){if(!S.weapon){SFX.hit();e.stun=max(e.stun,.2);toast('Голыми руками его не остановить — <b>нужна бита!</b>',2.2);return;}
+  SFX.hit();gore();gush(e.x,e.z,6);e.hp-=S.weapon.dmg;e.stun=max(e.stun,.5);moveC(e,sin(P.rot)*.4,cos(P.rot)*.4,.34);if(e.hp<=0){e.state='ko';e.active=true;fishDead();}}
+function drawFish(e){const ch=CH.v[e.v],t=S.t;if(!ch)return;
+  if(e.state==='dead'&&!CF.rise)return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:.3,aL:.45});
+  if(e.state==='ko')return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:-.4,aL:.6});
+  if(e.state==='dead')return drawChar(ch,e.x,0,e.z,e.rot,{lieK:1-eas(CF.rise),noBlob:true,aR:-1.6*CF.rise,aL:-1.5*CF.rise,look:0,cR:1.3,cL:1.3});
+  if(e.state==='feed')return drawChar(ch,e.x,0,e.z,e.rot,{crouch:1,aR:-.7+sin(t*9)*.55,aL:-.9+sin(t*9+1.6)*.55,cR:1.2,cL:1.2,look:sin(t*3)*.25});
+  const up=e.wind>0?-2.6:e.atk>0?lerp(.2,-2.4,e.atk/.3):-1.35+sin(t*7)*.15;
+  drawChar(ch,e.x,0,e.z,e.rot,{ph:e.ph,mv:e.mv,aR:up,aL:up+.1,cR:1.3,cL:1.3,look:0});}
+function drawCellarFight(){if(!CF.on)return;drawFish(fishE);const b=CF.bat;
+  if(b&&!b.taken){const m=segM('wpn_club');if(m)draw(m,b.t<1?mM(mT(...b.p),mRy(b.a*.4),mRx(b.a)):mM(mT(b.p[0],.05,b.p[2]),mRy(.9),mRx(PI/2),mT(0,0,-.45)),.03);}
+  if(crier.state==='ko'&&crier.unarmed)draw(M_pool,mM(mT(crier.x,.02,crier.z),mS(1.6,1,1.3)),0,.85);}
+const M_pool=(()=>{const g=new Geo(0);g.cyl(0,0,0,.6,.6,.01,9,H('#3a0806'));return mesh(g);})();
+async function fishDead(){S.mode='talk';S.cellarFight=false;S.cpRoom=null;S.ownerKO=true;S.mark=null;groan(.2);await wait(.9);
+  await say(HERO,'(тяжело дыша) Всё… Оно больше не встанет. Надеюсь.',VO.hero);
+  await say(HERO,'Хозяин… мёртв. Его загрызло то, что он сам держал в этом подвале.',VO.hero);
+  S.weapon=null;await say(HERO,'Бита треснула пополам. Неважно. Крик наверняка слышали — уходить нужно тихо, через чёрный ход.',VO.hero);
   setObj('Тихо выберитесь из паба через чёрный ход.');setMark([181.6,-2.5,'cellar']);S.mode='play';}
+function cellarReset(){if(!CF.on||!S.cellarFight)return;Object.assign(fishE,{x:crier.x+.5,z:crier.z-.4,state:'feed',t:6,hp:6,stun:0,wind:0,cd:1,active:true});
+  S.weapon=null;if(CF.bat){CF.bat.taken=false;CF.bat.t=1;CF.bat.p=[BAT[0],.06,BAT[1]];}setObj('Подберите биту и забейте мертвеца, пока он не набросился на вас.');setMark([BAT[0],BAT[1],'cellar']);}
 // the robed cultists guarding the car (they show up with the hunt)
 const GUARD=[[-36.2,-20.9,PI],[-40.7,-15.3,-.8],[-34.5,-15.5,.8]].map(([x,z,r])=>mkE('c',x,z,[[x,z]],{rot:r}));GUARD.forEach(g=>g.grp=GUARD[0].grp);
 function startHunt(){S.hunt=true;S.cp=[-23.6,-19.6];for(const n of TOWN)n.c.off=true;owner.x=-44;owner.z=-27.6;con.x=-47;con.z=-23;
@@ -380,8 +427,6 @@ function story(dt){
   if(S.inside==='pub')for(const n of PUBN){if(n.room==='pub'&&hypot(n.x-P.x,n.z-P.z)<4.5&&!S.backIn)faceTo(n,atan2(P.x-n.x,P.z-n.z),dt,2);}
   if(S.booked&&!S.inRoom&&P.x<-55.5&&P.z<-30){S.inRoom=true;(async()=>{S.mode='talk';await say(HERO,'Ну и дыра. Сыростью и рыбой несёт… Зато для выпуска — атмосфера что надо.',VO.hero);
     setObj('Поставьте камеру и запишите вступление к выпуску.');setMark([-57.6,-34.4]);S.mode='play';})();}
-  if(S.cellarFight&&crier.state==='ko'&&!S.ownerKO){S.ownerKO=true;koSeq();}
-  if(S.cellarFight&&S.mode==='play'&&crier.state!=='chase'&&crier.state!=='ko'){crier.state='chase';crier.aw=1;crier.ls=[P.x,P.z];}
   stage(dt);}
 
 // --- drawing: interiors, people, beacons
@@ -392,19 +437,17 @@ function drawStory(){if(!M_int)M_int=mesh(IG);draw(M_int,null,.035);if(FIN.on||S
   if(!S.curfew&&!S.inside)for(const n of TOWN)drawNPC(n);
   if(S.inside==='pub'||S.inside==='cellar'){for(const n of PUBN)if(n.room===S.inside)drawNPC(n);}
   if(S.inside==='pub')light(147,.9,-4.6,8+sin(S.t*11)*.6+sin(S.t*23)*.4,[1,.55,.25]);
-  if(S.inside==='cellar'){for(const[x,z,r,i]of DEADP)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.25,aL:.4});light(190,2.2,0,3+abs(sin(S.t*.7))*1.5,[.5,.45,.3]);}
+  if(S.inside==='cellar'){drawCellarFight();for(const[x,z,r,i]of DEADP)if(i!==2||!CF.on)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.25,aL:.4});light(190,2.2,0,3+abs(sin(S.t*.7))*1.5,[.5,.45,.3]);}
   for(const l of ALARML)light(...l);
-  if(S.escaped&&!S.inside)for(const z of PZ){if(S.solved[z.i]||!z.room)continue;const d=XD[ROOMS[z.room].door],dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);
-    draw(M_beacon,mM(mT(d.x+d.n[0]*.6,2.9+sin(S.t*2+z.i)*.15,d.z+d.n[1]*.6),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(d.x+d.n[0]*1.2,2.2,d.z+d.n[1]*1.2,6.5,[.25,.8,.7]);}
-  if(!S.escaped&&S.mode==='play'){const T=markTarget();if(T)draw(M_beaconY,mM(mT(T[0],2.6+sin(S.t*2.4)*.15,T[1]),mRy(S.t*1.6)),0);}
-  drawStage();}
+  if(S.mode==='play'){const T=markTarget();if(T)draw(M_beaconY,mM(mT(T[0],2.6+sin(S.t*2.4)*.15,T[1]),mRy(S.t*1.6)),0);}
+  drawAct2();drawStage();}
 function storyHud(c,w,h){if(S.rec){const s=floor(S.t-S.recT0);$('recT').textContent='00:'+String(floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
   if(S.mode!=='play')return;c.textAlign='center';c.textBaseline='middle';
   const bub=(x,z)=>{if(hypot(x-P.x,z-P.z)>13)return;const p=proj(x,2.4,z);if(p.w<=0)return;c.save();c.translate(p.x*w,p.y*h);c.fillStyle='rgba(11,20,22,.82)';c.strokeStyle='#d9cdb0';c.lineWidth=2;
     c.beginPath();c.ellipse(0,0,17,12,0,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(-4,10);c.lineTo(-9,19);c.lineTo(3,11);c.fill();c.fillStyle='#d9cdb0';for(const k of[-6,0,6]){c.beginPath();c.arc(k,0,2,0,7);c.fill();}c.restore();};
   if(S.explore&&!S.alarm&&!S.inside)for(const n of TOWN)if(!n.done)bub(n.x,n.z);
   if(S.inside==='pub'&&!S.backIn&&!S.kicked)for(const n of PUBN)if(n.lines&&!n.done)bub(n.x,n.z);
-  stageHud(c,w,h);
+  stageHud(c,w,h);act2Hud(c,w,h);
   if(crier.active&&crier.flee&&crier.yellT>0){const p=proj(crier.x,2.8,crier.z);if(p.w>0){c.font='bold 22px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText(crier.yell,p.x*w,p.y*h-12);c.fillStyle='#ff6a5a';c.fillText(crier.yell,p.x*w,p.y*h-12);}}}
 
 // --- debug: jump to a story stage ('town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play')
@@ -414,7 +457,7 @@ function storySkip(st){S.booked=S.inRoom=S.explore=true;S.hud=true;$('hud').styl
   if(past('pub')){S.asked=3;S.pubKnown=true;for(const n of TOWN)n.done=1;}
   if(past('back')){S.pubIn=S.kicked=true;S.ints=3;for(const n of PUBN)n.done=1;}
   if(past('cellar')){S.backIn=S.cellarIn=true;XD.pubB.lock=false;}
-  if(past('stalk')){S.ev=3;EVID.forEach(e=>e.seen=1);S.alarm=S.ownerKO=true;Object.assign(crier,{active:true,state:'ko',x:184,z:-1.5});pubOwner.room=null;}
+  if(past('stalk')){S.ev=3;EVID.forEach(e=>e.seen=1);S.alarm=S.ownerKO=true;Object.assign(crier,{active:true,state:'ko',x:190,z:-1,unarmed:true});CF.on=true;CF.bat={taken:true,t:1,p:[0,0,0]};Object.assign(fishE,{active:true,state:'ko',x:190.6,z:-1.6});pubOwner.room=null;}
   S.inside=null;S.mark=null;if(!past('alarm'))Object.assign(pubOwner,{room:'pub',x:135.15,z:.5,rot:PI/2});
   if(st==='town'){P.x=-28;P.z=-10;setObj(exploreObj());}
   else if(st==='pub'){P.x=-13.2;P.z=-11;setObj('Найдите паб «Дьяволов риф» — у поворота к мотелю — и поговорите с посетителями.');setMark(XD.pubF);}
@@ -423,5 +466,5 @@ function storySkip(st){S.booked=S.inRoom=S.explore=true;S.hud=true;$('hud').styl
   else if(st==='alarm'){S.ev=3;EVID.forEach(e=>e.seen=1);S.inside='cellar';P.x=197;P.z=2.6;alarmSeq();}
   else if(st==='stalk'){P.x=-6.4;P.z=-20.5;startStalk();}
   else if(st==='doctor'){startStalk();S.carSeen=S.guardsMet=true;S.inside='doc';P.x=269;P.z=-30;P.rot=PI;S.inDoc=true;setObj(docObj());}
-  else{startStalk();S.carSeen=S.guardsMet=S.inDoc=true;DOCEV.forEach(e=>e.seen=1);stage2(true);P.x=-110;P.z=-29;}
+  else{startStalk();S.carSeen=S.guardsMet=S.inDoc=true;DOCEV.forEach(e=>e.seen=1);S.injected=true;stage2(true);S.inside='doc';P.x=271;P.z=-30;P.rot=PI;if(ACT2ST.includes(st))act2Skip(st);}
   camSnap();}

@@ -25,7 +25,7 @@ async function intro(){S.mode='drive';$('skip').style.display='block';$('gear').
   S.fast=false;$('skip').style.display='none';P.vis=true;P.x=-37;P.z=-15.8;P.rot=2.4;S.camFn=null;S.focus=null;CAM.rate=1.6;setTimeout(()=>CAM.rate=5,2500);
   S.hud=true;$('hud').style.display='block';setObj('Войдите в мотель и снимите комнату на ночь.');S.mode='play';SFX.door();fade(0,900);
   toast(document.body.classList.contains('touch')?'Джойстик слева — идти (до упора — бег), кнопки справа — действия':'<span class="kb">WASD</span>— идти, <span class="kb">Shift</span>— бежать, <span class="kb">E</span>— действие',6);}
-$('skip').onclick=()=>{S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());};
+$('skip').onclick=()=>{if(SAC.on)return sacSkip();S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());};
 $('start').onclick=()=>{auInit();$('title').style.display='none';intro();};
 
 // --- the motel, the village and the pub before the hunt: src/5-story.js
@@ -72,9 +72,9 @@ function cthPose(u){const P={};const br=sin(R.t*.55);
   const up=kf(u,14,18.5),down=kf(u,21,25),reach=kf(u,45.5,48.5);P.hand=[];
   for(const s of[-1,1]){let t=[s*24,-6,-6];t=vLerp(t,[s*30,66,-8],up);t=vLerp(t,[s*38,30,-14],down);t=vLerp(t,[s*20,8,-30],reach);t[1]+=sin(R.t*.7+s)*1.5*up;P.hand.push(t);}
   P.curl=[0,1].map(i=>lerp(.35,-.25,up)+sin(R.t*(1.3-i*.2)+i)*.08*up+.5*down*(.5+.5*sin(R.t*.8+i))-.4*reach);return P;}
-function cthMats(P){const root=mM(mT(P.x,P.y,P.z),mS(P.sc,P.sc,P.sc));let T=mM(root,mRx(-P.lean),mS(1+P.br*.018,1+P.br*.012,1+P.br*.02));
+function cthMats(P){const yw=P.yaw||0,root=mM(mT(P.x,P.y,P.z),mRy(yw),mS(P.sc,P.sc,P.sc));let T=mM(root,mRx(-P.lean),mS(1+P.br*.018,1+P.br*.012,1+P.br*.02));
   let yaw=P.hyaw,pit=P.hpitch;
-  if(P.track>0&&FIN.headLook){const hp=mP(T,CL.neck),d=vSub(FIN.headLook,hp);yaw=lerp(yaw,clamp(atan2(-d[0],-d[2]),-.9,.9),P.track);pit=lerp(pit,clamp(atan2(-d[1],hypot(d[0],d[2]))+.15,-.4,.95),P.track);}
+  if(P.track>0&&FIN.headLook){const hp=mP(T,CL.neck),dw=vSub(FIN.headLook,hp),c_=cos(yw),s_=sin(yw),d=[c_*dw[0]-s_*dw[2],dw[1],s_*dw[0]+c_*dw[2]];yaw=lerp(yaw,clamp(atan2(-d[0],-d[2]),-.9,.9),P.track);pit=lerp(pit,clamp(atan2(-d[1],hypot(d[0],d[2]))+.15,-.4,.95),P.track);}
   const head=mM(T,mT(...CL.neck),mRy(yaw),mRx(-pit));const M={root,T,head,arms:[],wings:[]};const sc=P.sc,SC3=mS(sc,sc,sc);
   [-1,1].forEach((s,i)=>{const S=mP(T,[s*CL.sh[0],CL.sh[1],CL.sh[2]]);const tgt=mP(root,P.hand[i]);
     const pole=mP(T,[s*48,8,22]);const k=ik2(S,tgt,CL.L1*sc,CL.L2*sc,pole);const E=k.e,Wr=k.t;
@@ -89,7 +89,7 @@ function drawHand(a){const H_=a.H;draw(CTH.palm,H_,.25,1,5);const kn=[-2.5,-.85,
   kn.forEach((x,i)=>{const sp=(i-1.5)*.13*(1-clamp(a.curl,0,1)*.6);let m=mM(H_,mT(x,-5.3,.2),mRz(sp),mRx(a.curl*.95+abs(i-1.5)*.05));draw(CTH.fa,m,.22,1,5);m=mM(m,mT(0,-3.7,0),mRx(a.curl*1.1+.12));draw(CTH.fb,m,.2,1,5);});
   let t=mM(H_,mT(a.s*3.4,-1.6,-.6),mRz(a.s*(.95-a.curl*.4)),mRx(.3+a.curl*.6),mS(.92,.85,.92));draw(CTH.fa,t,.22,1,5);t=mM(t,mT(0,-3.7,0),mRx(a.curl*.8));draw(CTH.fb,t,.2,1,5);}
 function drawCthulhu(){const P=FIN.pose;if(!P)return;const M=FIN.M;
-  draw(CTH.torso,M.T,.3,1,5);for(const s of[-1,1])draw(CTH.thigh,mM(M.root,mT(s*CL.hip[0],CL.hip[1],CL.hip[2]),mRx(sin(R.t*.3+s)*.08-.1)),.3,1,5);
+  draw(CTH.torso,M.T,.3,1,5);for(const s of[-1,1])draw(CTH.thigh,mM(M.root,mT(s*CL.hip[0],CL.hip[1],CL.hip[2]),mRx(P.sit?-1.35:sin(R.t*.3+s)*.08-.1)),.3,1,5);
   draw(CTH.head,M.head,.3,1,5);
   for(const w of M.wings)draw(w.s<0?CTH.wingL:CTH.wingR,w.m,.25,1,5);
   for(const a of M.arms){draw(CTH.uarm,a.U,.28,1,5);draw(CTH.farm,a.F,.26,1,5);drawHand(a);}
@@ -98,7 +98,7 @@ function drawCthulhu(){const P=FIN.pose;if(!P)return;const M=FIN.M;
   TROOT.forEach((r,i)=>{const row=i>6,x=r[0];let m=mM(M.head,mT(...r),mRz(x*.045),mRx(-.18-ag*.12));const L=row?6+(i%2):7+(i%3);
     for(let k=0;k<L;k++){m=mM(m,mRx(sin(R.t*(1+ag)+i*1.3+k*.6)*(.17+ag*.15)+(k>3?.12*(i%2?1:-1):.03)),mRz(sin(R.t*.8+i+k*.5)*.13));const sc=(row?1.1:1.3)*pow(.9,k);draw(CTH.tent,mMul(m,mS(sc,1,sc)),.22,1,5);m=mMul(m,mT(0,-3.9,0));}});
   // small almond eyes, outer corners raised (the old tilt drooped them and made it look sleepy)
-  if(P.eyes>.02){const g=P.eyes*(1+sin(R.t*7)*.06);for(const e of CL.eyes){const m=mM(M.head,mT(...e),mRz(e[0]<0?-.45:.45),mS(g,g,g));draw(CTH.eye,m,0);}
+  if(P.eyes>.02){const g=min(P.eyes,2.4)*(1+sin(R.t*7)*.06);for(const e of CL.eyes){const m=mM(M.head,mT(...e),mRz(e[0]<0?-.45:.45),mS(g,g,g));draw(CTH.eye,m,0);}
     const ep=mP(M.head,[0,7.7,-11]);light(ep[0],ep[1],ep[2],60*P.eyes,[.95*P.eyes,.12*P.eyes,.05*P.eyes]);}}
 // water pouring off the body while it rises
 const DRIP=[['T',[0,31,4],10],['T',[-15,29,0],8],['T',[15,29,0],8],['T',[0,18,-10],8],['head',[0,15,2],7],['head',[0,9,-9],5]];
@@ -117,7 +117,7 @@ function strike(x,z,yEnd=R.surf,near=false){PT.bolt(x+(Math.random()-.5)*30,170,
 function updStorm(dt){const k=STORM.k;R.flash=max(0,R.flash-dt*(R.flash>1?6:4.5));if(STORM.fl2>0){STORM.fl2-=dt;if(STORM.fl2<=0)R.flash=max(R.flash,.55+Math.random()*.4);}
   R.rain=R.uw?0:k;R.wind=[1+k*2.4,.35+k*.8];R.wave=k*.9+(FIN.u>4?.3*kf(FIN.u,4,20):0);R.wet=k;stormAudio(k,R.uw>0);
   if(k>0){STORM.next-=dt;if(STORM.next<=0){const u=FIN.u;let x=rr(-60,80),z=rr(110,220),near=false;if(u>6&&u<40&&Math.random()<.45){const P=FIN.pose;x=P.x+rr(-35,35);z=P.z+rr(5,30);near=true;}strike(x,z,R.surf,near);STORM.next=(u>4&&u<40?rr(1.2,3.2):rr(4,8))/(.4+k*.6);}}
-  else if(S.solved&&S.solved.filter(v=>v).length>=3&&S.mode==='play'){STORM.dist-=dt;if(STORM.dist<=0){STORM.dist=rr(22,40);R.flash=.3;SFX.thunder(2.2,1.6);}}}
+  else if(S.curfew&&S.mode==='play'){STORM.dist-=dt;if(STORM.dist<=0){STORM.dist=rr(22,40);R.flash=.3;SFX.thunder(2.2,1.6);}}}
 
 // ================= IMPS («бесы»): the Old One's winged spawn =================
 const IMP={body:cthPart('imp_body',g=>{g.sph(0,0,0,.28,.45,.22,CTHC.a,6,4);g.sph(0,.6,-.05,.18,.2,.18,CTHC.c,6,4);}),
@@ -181,10 +181,10 @@ function drawCorpseSeg(ch,p,t,fall){const base=fall?mM(mT(...p),mRy(t*1.7),mRx(.
   drawArm(ch,mM(base,mT(ch.sh[0],ch.sh[1],0),mRx(fall?-2.2+sin(t*5)*.5:.15+sin(t*3)*.25)),1,.5+sin(t*4)*.4,.2,.03);
   drawLegStraight(ch,mM(base,mT(ch.hip[0],ch.hip[1],0),mRx(.4+sin(t*4)*.3)),.3+sin(t*3)*.3,.03);}
 // the hero's arm in first person: two-bone IK from the shoulder to a wrist target (elbows drop and splay), palms toward the centre
-function fpArm(sp,wr,s,up,f,armed,curl){const ch=CH.hero,r=vNorm(vCross(f,[0,1,0]));if(!ch.seg){draw(armed?ch.armW:ch.arm,mBasis(sp,vSub(wr,sp),vSc(f,-1)),0);return;}
+function fpArm(sp,wr,s,up,f,armed,curl){const ch=S.disguise?heroRobe():CH.hero,r=vNorm(vCross(f,[0,1,0]));if(!ch.seg){draw(armed?ch.armW:ch.arm,mBasis(sp,vSub(wr,sp),vSc(f,-1)),0);return;}
   const q=ik2(sp,wr,RIG.ua,RIG.fa,vAdd(sp,vAdd(vSc(up,-1),vSc(r,s*.8)))),e=q.e,w=q.t,d1=vNorm(vSub(e,sp)),d2=vNorm(vSub(w,e)),bs=s>0?-1:1,hi=s>0?0:1;
   draw(ch.arm.up,mBasis(sp,d1,up),0);draw(ch.arm.lo,mBasis(e,d2,up),0);const W=mBasis(w,d2,up);draw(ch.hand[hi],W,0);
-  drawFingers(ch,mM(W,mT(0,-RIG.hand,0)),hi,bs,curl,null,0);if(armed&&ch.wpn)draw(ch.wpn,mM(W,mT(-bs*.022,-.1,0)),0);}
+  drawFingers(ch,mM(W,mT(0,-RIG.hand,0)),hi,bs,curl,null,0);if(armed&&ch.wpn)draw(S.weapon&&S.weapon.m||ch.wpn,mM(W,mT(-bs*.022,-.1,0)),0);}
 // where the first-person eye looks while carried: ahead along the flight, toward the Old One; somersaults on the tosses
 function carryLook(u){const e=heroPos(u);let f=vSub(heroPos(u+.2),e);f=vLen(f)>.01?vNorm(f):[0,0,1];
   const cre=vNorm(vSub(mP(FIN.M.head,[0,8,-6]),e));let d=vNorm(vAdd(vAdd(vSc(f,.55),vSc(cre,.45)),[0,-.2,0]));
@@ -212,37 +212,51 @@ function finEvents(){const H_=VO.hero;return[
   [51.8,()=>{$('fade').style.transitionDuration='2600ms';$('fade').style.opacity=1;}]];}
 // ================= FINALE (first person from the safe to the end) =================
 function lids(open,ms=900){const L=$('lids');L.style.display='block';for(const e of L.children){e.style.transitionDuration=ms+'ms';e.style.transform=open?(e.className==='t'?'translateY(-100%)':'translateY(100%)'):'translateY(0)';}}
-function fpTarget(eye,tgt){const d=vNorm(vSub(tgt,eye));let yaw=atan2(d[0],d[2]),pit=Math.asin(clamp(d[1],-1,1));yaw+=FIN.lx;pit=clamp(pit+FIN.ly,-1.5,1.5);return vAdd(eye,[sin(yaw)*cos(pit)*10,sin(pit)*10,cos(yaw)*cos(pit)*10]);}
+function fpTarget(eye,tgt){if(!tgt)tgt=vAdd(eye,[0,1,10]);const d=vNorm(vSub(tgt,eye));let yaw=atan2(d[0],d[2]),pit=Math.asin(clamp(d[1],-1,1));yaw+=FIN.lx;pit=clamp(pit+FIN.ly,-1.5,1.5);return vAdd(eye,[sin(yaw)*cos(pit)*10,sin(pit)*10,cos(yaw)*cos(pit)*10]);}
 const ALTAR_EYE=[10,1.78,74.9];
-async function finale(){S.mode='finale';S.fear=1;S.hud=false;$('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='none';{const f=$('face');f.style.width=f.style.height='150px';f.style.left='auto';f.style.right='16px';f.style.bottom='auto';f.style.top='16px';}for(const e of EN)e.active=false;
-  const z=PZ[5],eye=[z.ix,1.62,z.iz];FIN.attacker={x:eye[0]-1.9,z:eye[2]+.5,rot:atan2(1.9,-.5),arm:-1.2};
-  FIN.look=[z.x,z.y,z.z];CAM.fp=true;CAM.rate=4;S.camFn=()=>{CAM.ge=eye;CAM.gt=fpTarget(eye,FIN.look);};
-  await say(HERO,'Ключи от катера… и моё имя в их книге. Они уже всё решили за меня…',VO.hero);
-  SFX.creak();await wait(.5);await say(HERO,'Кто здесь?!',VO.hero);FIN.look=[FIN.attacker.x,1.7,FIN.attacker.z];CAM.rate=3.2;await wait(1.1);S.fear=3;
-  FIN.atkSwing=1;SFX.swing();await wait(.32);SFX.thud();S.shake=1;$('flash').style.opacity=1;FIN.look=vAdd(eye,[-2,-1.4,1]);CAM.rate=9;S.camFn=()=>{CAM.ge=[eye[0],lerp(CAM.ge[1],.35,.08),eye[2]];CAM.gt=fpTarget(CAM.ge,FIN.look);};
-  await wait(.35);lids(false,250);await wait(.5);$('fade').style.transitionDuration='300ms';$('fade').style.opacity=1;$('flash').style.opacity=0;FIN.attacker=null;
-  noise(2.5,{f:200,vol:.25,att:1,delay:.6});await wait(3.2);
+// --- caught by the robed cult in the curfew: knocked down, carried to the pier and given to the Old One (the old finale),
+// then — it was only what WILL happen — back to the last hiding place. The scene can be skipped (button / Esc).
+const SAC={on:false,skip:false};
+const sw=t=>SAC.skip?Promise.resolve():wait(t),ss=(w,t,o)=>SAC.skip?Promise.resolve():say(w,t,o);
+function sacSkip(){if(!SAC.on||SAC.skip)return;SAC.skip=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());}
+async function sacrifice(){if(SAC.on)return;SAC.on=true;SAC.skip=false;S.mode='finale';S.fear=3;S.hud=false;S.deaths++;
+  $('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='none';
+  {const f=$('face');f.style.width=f.style.height='150px';f.style.left='auto';f.style.right='16px';f.style.bottom='auto';f.style.top='16px';}
+  SAC.shows=[owner.show,con.show,loaf.show];for(const e of EN)e.wasOn=e.active,e.active=false;
+  P.lie=true;SFX.thud();S.shake=1;$('flash').style.opacity=1;await wait(.35);lids(false,250);await wait(.5);
+  $('fade').style.transitionDuration='300ms';$('fade').style.opacity=1;$('flash').style.opacity=0;noise(2.5,{f:200,vol:.25,att:1,delay:.6});await wait(2.6);
+  $('skip').style.display='block';FIN.attacker=null;
   // --- the pier at night: storm, torches, altar
   FIN.on=true;S.inside=null;P.vis=false;pierGate.off=true;owner.show=con.show=loaf.show=false;STORM.k=.55;R.rain=.55;PT.update(0,ALTAR_EYE);
   for(let i=0;i<10;i++){const a=1.05+i/9*(2*PI-2.1);FIN.cult.push({x:10+sin(a)*6.2,z:76+cos(a)*5.6,rot:a+PI,ph:i*1.7,kneel:0});}
   FIN.priest={x:6.2,z:80.6,rot:.5,ph:.3};
   S.camFn=()=>{const e=ALTAR_EYE;CAM.ge=e;CAM.gt=fpTarget(e,FIN.look);};FIN.look=[10.4,14,77.5];CAM.rate=2.2;CAM.fov=1.05;camSnap();
-  S.fear=1;cv.style.filter='blur(7px)';lids(false,10);await wait(.2);$('fade').style.transitionDuration='1800ms';$('fade').style.opacity=0;
-  await wait(1);lids(true,1300);await wait(1.5);lids(false,260);await wait(.4);lids(true,700);cv.style.transition='filter 3s';cv.style.filter='blur(1.2px)';
-  await say(HERO,'Голова… Дождь… Где я? Верёвки — я не могу пошевелиться!',VO.hero);cv.style.filter='';
-  FIN.look=[4,1.8,76];await wait(1.6);FIN.look=[16,1.8,77];FIN.chant=true;await wait(1.8);FIN.look=[10,2.4,80];
-  await say('Культисты','Пх\'нглуи мглв\'нафх Ктулху Р\'льех вгах\'нагл фхтагн!',VO.cult);FIN.armUp=1;
-  await say('Жрец','Звёзды встали верно! Спящий в глубине — прими чужую кровь и восстань!',{pitch:58,vol:.24});
+  S.fear=1;cv.style.filter='blur(7px)';lids(false,10);await sw(.2);$('fade').style.transitionDuration='1800ms';$('fade').style.opacity=0;
+  await sw(1);lids(true,1300);await sw(1.5);lids(false,260);await sw(.4);lids(true,700);cv.style.transition='filter 3s';cv.style.filter='blur(1.2px)';
+  await ss(HERO,'Голова… Дождь… Где я? Верёвки — я не могу пошевелиться!',VO.hero);cv.style.filter='';
+  FIN.look=[4,1.8,76];await sw(1.6);FIN.look=[16,1.8,77];FIN.chant=true;await sw(1.8);FIN.look=[10,2.4,80];
+  await ss('Культисты','Пх\'нглуи мглв\'нафх Ктулху Р\'льех вгах\'нагл фхтагн!',VO.cult);FIN.armUp=1;
+  await ss('Жрец','Звёзды встали верно! Спящий в глубине — прими чужую кровь и восстань!',{pitch:58,vol:.24});
   // --- the awakening, far out at sea
-  FIN.look=[10,8,CTHZ];CAM.rate=1.6;FIN.u=0;FIN.ev=finEvents();STORM.k=1;R.rip=[10,CTHZ,0,0];SFX.rumble(18);S.fear=2;await wait(1.5);
-  say(HERO,'Там, вдали… море кипит… Что-то поднимается со дна!',VO.hero);await wait(4.5);
-  FIN.look=[10,18,CTHZ];await wait(1.2);SFX.roar(4,1.25);S.fear=3;await wait(3.8);   // eyes ignite (u≈7..9)
-  FIN.look=[10,34,CTHZ];SFX.roar(5,1);S.shake=.5;await wait(5);                     // wings unfold
-  FIN.look=[10,46,CTHZ];SFX.roar(5.5,.85);await wait(5);                             // arms rise, claws bared
-  FIN.look=[10,42,CTHZ];SFX.rumble(8);SFX.roar(6.5,.7);S.shake=.7;await wait(4.5);  // full rise; the swarm bursts out of it (u≈23.4)
+  FIN.look=[10,8,CTHZ];CAM.rate=1.6;FIN.u=0;FIN.ev=finEvents();STORM.k=1;R.rip=[10,CTHZ,0,0];SFX.rumble(18);S.fear=2;await sw(1.5);
+  ss(HERO,'Там, вдали… море кипит… Что-то поднимается со дна!',VO.hero);await sw(4.5);
+  FIN.look=[10,18,CTHZ];await sw(1.2);SFX.roar(4,1.25);S.fear=3;await sw(3.8);   // eyes ignite (u≈7..9)
+  FIN.look=[10,34,CTHZ];SFX.roar(5,1);S.shake=.5;await sw(5);                     // wings unfold
+  FIN.look=[10,46,CTHZ];SFX.roar(5.5,.85);await sw(5);                             // arms rise, claws bared
+  FIN.look=[10,42,CTHZ];SFX.rumble(8);SFX.roar(6.5,.7);S.shake=.7;await sw(4.5);  // full rise; the swarm bursts out of it (u≈23.4)
   // from here the timeline runs off FIN.u in updFinale: imps cross the sea, seize the hero, toss and tear him, drop the body
-  FIN.look=null;while(FIN.u<54.5)await wait(.25);
-  FIN.on=false;STORM.k=0;R.rain=0;R.uw=0;$('uw').style.opacity=0;$('tun').style.opacity=0;$('flash').style.opacity=0;stormAudio(0,false);await wait(.6);credits();}
+  FIN.look=null;while(FIN.u<54.5&&!SAC.skip)await wait(.25);
+  sacEnd();}
+async function sacEnd(){$('skip').style.display='none';$('fade').style.transitionDuration='500ms';$('fade').style.opacity=1;await new Promise(r=>setTimeout(r,600));
+  Object.assign(FIN,{on:false,t:0,u:-1,cult:[],imps:[],ev:[],fall:null,pieces:[],hands:0,red:0,armUp:0,chant:false,look:null,priest:null,pose:null,M:null,carryLook:null,headLook:null,tce:null});
+  STORM.k=0;R.rain=0;R.uw=0;R.rip=[0,0,0,0];R.flash=0;$('uw').style.opacity=0;$('tun').style.opacity=0;$('flash').style.opacity=0;$('lids').style.display='none';stormAudio(0,false);
+  cv.style.transition='';cv.style.filter='';pierGate.off=false;[owner.show,con.show,loaf.show]=SAC.shows;
+  {const f=$('face');f.style.width=f.style.height=f.style.left=f.style.right=f.style.bottom=f.style.top='';}
+  $('bars').style.display=$('obj').style.display=$('prompt').style.display=$('det').style.display='';S.hud=true;S.fear=0;
+  CAM.fp=false;S.camFn=null;P.vis=true;P.lie=false;S.hp=100;S.st=100;S.crouch=false;S.inside=S.cpRoom||null;P.x=S.cp[0];P.z=S.cp[1];
+  for(const e of EN){e.active=e.wasOn;if(!e.active||e.state==='ko')continue;e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}
+  SAC.on=false;SAC.skip=false;S.mode='play';camSnap();await fade(0,900);
+  toast('<b>Так всё и закончится</b>, если они поймают вас снова. Вы — у последнего укрытия.',5);}
 function updFinale(dt){
   if(FIN.on){FIN.t+=dt;if(FIN.u>=0)FIN.u+=dt;const u=FIN.u;
     FIN.lx=lerp(FIN.lx,-FIN.mx*.5,min(1,dt*3));FIN.ly=lerp(FIN.ly,-FIN.my*.35,min(1,dt*3));
@@ -272,9 +286,9 @@ function drawFinale(){if(FIN.attacker){const a=FIN.attacker;if(FIN.atkSwing)FIN.
   if(FIN.hands){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f);for(const s of[-1,1]){const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.32),vSc(up,-.42)),vSc(f,.05)));
     const tip=vAdd(sp,vAdd(vAdd(vSc(f,.38),vSc(up,.3+sin(S.t*14+s)*.05)),vSc(r,-s*.06)));fpArm(sp,tip,s,up,f,false,.05+abs(sin(S.t*9+s))*.3);}}}
 function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';$('lids').style.display='none';cv.style.filter='';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
-  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Эдварда Крейна больше никто не видел.<br>Через неделю Уолтеру пришло видео с его номера:<br>шторм над пирсом, факелы, крылатые тени над водой — и что-то огромное в море.</div><h4>Конец первой главы</h4>'+
-   '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, ведущий канала «За гранью»<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Хозяин паба «Дьяволов риф»<br>Жители Грейхейвена<br>Жрец и братья в робах<br>и Тот, кто спит в Р\'льехе'+
-   '<h4>Ваше расследование</h4>Знаков культа найдено: 5 / 5<br>Находок-отсылок: '+n+' / '+EGGS.length+'<br>Потерь сознания: '+S.deaths+'<br>Время в деревне: ~'+mins+' мин'+
+  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Свет в глазах Спящего погас — и они очнулись на холодном полу пещеры.<br>Кровь на ладонях уже запеклась.<br>А где-то далеко в море что-то шевельнулось во сне.</div><h4>Конец первой главы</h4><div class="hand" style="font-size:28px">Продолжение следует…</div>'+
+   '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, ведущий канала «За гранью»<br>Доктор Эдмунд Бернсон<br>Отец Пол, жрец культа<br>Отец Мэттью, настоятель новой церкви<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Хозяин паба «Дьяволов риф»<br>Жители Грейхейвена<br>Братья в робах<br>и Тот, кто спит в Р\'льехе'+
+   '<h4>Ваше расследование</h4>Пережито видений: '+(S.hallN||0)+'<br>Находок-отсылок: '+n+' / '+EGGS.length+'<br>Смертей и потерь сознания: '+S.deaths+'<br>Время в Грейхейвене: ~'+mins+' мин'+
    '<h4>Прототип</h4>Модели — Blender, графика — WebGL, звук синтезирован в браузере<br><br><br><span class="hand" style="font-size:34px">«Не мертво то, что в вечности пребудет…»</span><br><br><br>Спасибо за игру';
   const r=$('roll');let y=innerHeight;const hgt=r.offsetHeight;const step=()=>{y-=innerHeight/900*1.6;r.style.top=y+'px';if(y>-hgt+innerHeight*.55)requestAnimationFrame(step);else $('again').style.display='block';};step();setTimeout(()=>$('again').style.display='block',12000);}
 $('again').onclick=()=>{try{location.reload();}catch(e){}};
@@ -283,18 +297,15 @@ $('again').onclick=()=>{try{location.reload();}catch(e){}};
 function drawAll(){talkFrame();
   draw(M_ground,null,0,1,1);draw(M_world,null,.035);draw(M_far,null,0);R.items[R.items.length-1].nodepth=1;draw(M_veg,null,0,1,3);draw(M_sea,mT(0,-.55,0),0,1,2);
   for(const l of LAMPS)light(l[0],l[1],l[2],l[3]*(1+sin(S.t*8+l[0])*.03),l[4]);
-  for(const e of EN){if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
+  for(const e of EN){if(e.kind==='f')continue;if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
     let aR=c?-1.25:e.state==='chase'?-.7:null;if(e.wind>0)aR=-2.7;if(e.atk>0){e.atk-=.016;aR=lerp(.4,-2.6,e.atk/.3);}
     if(e.flee&&e.state!=='ko'&&e.stun<=0)aR=-2.6+sin(S.t*10)*.35;   // the pub owner waving his arms while he yells
     const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active&&!e.unarmed,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
     if(c&&e.state!=='ko')torchFx(m,e.ph);}
-  if(S.fpPlay&&P.vis&&!P.lie)drawFpArms();
+  if(S.fpPlay&&P.vis&&!P.lie&&!S.seated)drawFpArms();
   if(P.vis&&!CAM.fp&&!S.fpPlay){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}
   draw(M_car,mM(mT(CAR.x,0,CAR.z),mRy(CAR.rot)),.04);if(!CAR.parked){const fx=CAR.x+sin(CAR.rot)*7,fz=CAR.z+cos(CAR.rot)*7;light(fx,1.5,fz,15,[1,.9,.6]);light(CAR.x,3,CAR.z,7,[.5,.5,.45]);}
-  if(S.explore&&!FIN.on&&S.mode!=='finale')for(const p of pickups)if(!p.taken)draw(p.t==='m'?M_med:M_wpn,mM(mT(p.x,.55+sin(S.t*2+p.x)*.08,p.z),mRy(S.t*1.2)),.03);
-  if(S.escaped&&!FIN.on&&S.mode!=='finale'){
-    for(const z of PZ){if(S.solved[z.i])continue;const dim=z.i===5&&S.solved.slice(0,5).some(v=>!v);draw(M_beacon,mM(mT(z.x,2.7+sin(S.t*2+z.i)*.15,z.z),mRy(S.t*1.5),mS(dim?.5:1,dim?.5:1,dim?.5:1)),0);if(!dim)light(z.x,2.2,z.z+.8,6.5,[.25,.8,.7]);}}
   for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
   drawStory();drawFinale();}
 // the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
@@ -303,7 +314,8 @@ function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,
     const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.3),vSc(up,-.48+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.48+a*.25),vSc(up,.1+a*.42)),vSc(r,-s*(.06+a*.12))));
     fpArm(sp,tip,s,up,f,s>0&&!!S.weapon,s>0&&S.weapon?1.5:P.block||P.atk>0?1.3:.45);}}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
-  if(S.vision){visionAtmo(M);return;}
+  if(S.vision||S.halluc){visionAtmo(M);return;}
+  if(S.inside==='rlyeh'){rlAtmo(M);return;}
   if(R.uw){R.fog=[.012,.05,.056];R.fogD=1/30;R.fogMin=0;R.amb=[.12,.2,.22];R.sunC=[.05,.1,.12];M.on=false;return;}
   R.sunC=[.34,.42,.46];
   if(FIN.on){const g=FIN.u>0?kf(FIN.u,4,20):0;R.fog=[lerp(.06,.13,g),lerp(.13,.25,g),lerp(.145,.27,g)];R.fogD=S.fogK/lerp(80,175,g);R.fogMin=.03;R.fogH=.04;R.amb=[.3,.41,.45];
@@ -319,13 +331,14 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
     updFinale(dt);stageTick(dt);PT.update(dt,CAM.eye);if(S.hud||S.mode==='finale')updHud(dt);}
   camGoal();if(document.pointerLockElement===cv&&(S.pause||S.mode!=='play'||S.camFn))document.exitPointerLock();const k=S.fast||S.fpPlay&&!S.camBlend?1:1-exp(-dt*CAM.rate);if(S.fpPlay&&S.camBlend)S.camBlend=max(0,S.camBlend-dt);for(let i=0;i<3;i++){CAM.eye[i]=lerp(CAM.eye[i],CAM.ge[i],k);CAM.tgt[i]=lerp(CAM.tgt[i],CAM.gt[i],k);}
   S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*(CAM.fp?.22:.55):0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
-  atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();render(eye,CAM.tgt,CAM.fov);hud2d();requestAnimationFrame(frame);}
+  atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();let up=null;if(CAM.roll){const f=vNorm(vSub(CAM.tgt,eye)),r=vNorm(vCross(f,[0,1,0])),u=vCross(r,f);up=vAdd(vSc(u,cos(CAM.roll)),vSc(r,sin(CAM.roll)));}render(eye,CAM.tgt,CAM.fov,up);hud2d();requestAnimationFrame(frame);}
 // title backdrop
 $('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
 // debug / test hooks
-window.DBG={R,S,P,EN,CAM,FIN,PB,PZ,PT,STORM,cols,blocked,field,finale,solvePuzzle,openPuzzle,closePuzzle,cthPose,waveH,
-  // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play' (default: the puzzle hunt)
-  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,CIV,SK,DGU,DOCEV,VIS,get LP(){return LP;}};
+window.DBG={R,S,P,EN,CAM,FIN,PT,STORM,cols,blocked,field,cthPose,waveH,
+  // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play' (the curfew, before the upstairs),
+  // 'upstairs', 'paul', 'church', 'churchin', 'cave', 'rlyeh'
+  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,CIV,SK,DGU,DOCEV,VIS,RL,HL,halluc,sacrifice,get LP(){return LP;}};
 </script>
 </body>
 </html>
