@@ -1905,12 +1905,12 @@ def deep_hand(a, w, d, s, sk, nail, web, stage):
     w = V(w); d = V(d).normalized(); pn = V((-s, 0, 0)); fr = V((0, -1, 0)); k = 1 + .14*max(0, stage-2)
     a.add(f_loft([w + d*.005, w + d*.05, w + d*.095*k], [(.018, .036), (.021, .042), (.018, .045)], ref=(0, -1, 0), kind='oct', ch=.45, cap0='chamfer', cap1='chamfer', smooth=0), sk)
     K = w + d*.095*k; tips = []; mids = []; bases = []
-    for j, (y, L) in enumerate(((-.031, .07), (-.011, .078), (.011, .073), (.03, .06))):
-        L *= 1 + .3*max(0, stage-2); b = K + fr*y*k; m = b + d*L*.52 + pn*.008; t = b + d*L + pn*.022
+    for j, (y, L) in enumerate(((-.031, .07), (-.011, .078), (.011, .073), (.03, .06))):   # y<0: index finger at the front, next to the thumb
+        L *= 1 + .3*max(0, stage-2); b = K - fr*y*k; m = b + d*L*.52 + pn*.008; t = b + d*L + pn*.022
         a.add(f_loft([b, m, t], [(.0105, .0095), (.0095, .009), (.007, .007)], ref=(0, -1, 0), kind='n', n=6, cap0='chamfer', cap1='chamfer' if stage < 4 else 2.2, smooth=0), sk)
         if stage >= 3: a.add(f_loft([t - d*.004, t + d*(.018 if stage == 3 else .034) + pn*.012], [(.0065, .006), (.001, .001)], kind='n', n=5, cap0='flat', cap1='point', smooth=0), nail)
         tips.append(t); mids.append(m); bases.append(b)
-    th = [w + d*.02 + fr*-.03 + pn*.01, w + d*.05 + fr*-.052 + pn*.025, w + d*.08 + fr*-.06 + pn*.035]
+    th = [w + d*.02 + fr*.03 + pn*.01, w + d*.05 + fr*.052 + pn*.025, w + d*.08 + fr*.06 + pn*.035]   # the thumb on the front edge
     a.add(f_loft(th, [(.012, .012), (.011, .011), (.008, .008)], kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk)
     if stage >= 2:   # webs between the fingers (and the thumb), a little behind the palm line
         reach = {2: .45, 3: .75, 4: .95}[stage]
@@ -1918,7 +1918,7 @@ def deep_hand(a, w, d, s, sk, nail, web, stage):
             bm = bmesh.new(); p = [bases[i], bases[i+1], bases[i+1].lerp(tips[i+1], reach), bases[i].lerp(tips[i], reach)]
             mid = (p[2]+p[3])/2 - d*.006; vs = [bm.verts.new(q + pn*.002) for q in p]; mv = bm.verts.new(mid)
             bm.faces.new((vs[0], vs[1], vs[2], mv)); bm.faces.new((vs[0], mv, vs[3])); a.add(dbl(bm), web)
-        bm = bmesh.new(); vs = [bm.verts.new(q) for q in (w + d*.03 + fr*-.03, th[-1], bases[0].lerp(tips[0], reach*.6), bases[0])]; bm.faces.new(vs); a.add(dbl(bm), web)
+        bm = bmesh.new(); vs = [bm.verts.new(q) for q in (w + d*.03 + fr*.03, th[-1], bases[0].lerp(tips[0], reach*.6), bases[0])]; bm.faces.new(vs); a.add(dbl(bm), web)
     return tips
 DEEP_SKIN = {1: '#bba893', 2: '#a8a48c', 3: '#8a9884', 4: '#5f7468'}
 DEEP_HEAD = {
@@ -1962,7 +1962,7 @@ def deep_one(a, stage):
         limbL(a, [K_ + V((0, 0, .04)), K_, (K_+A_)/2 + V((0, .01, 0)), A_ + V((0, 0, .02))], [(.056, .056), (.064, .062), (.058, .056), (.05, .05)], legm)
     a.bm.normal_update(); bvh = BVHTree.FromBMesh(a.bm)
     # ---- scales (on the skin, under the clothes that come later)
-    notface = lambda p: not ((p - C).y < -.06 and abs((p-C).x) < .075 and -.1 < (p-C).z < .07)
+    notface = lambda p: not ((p - C).y < -.06 and abs((p-C).x) < .065 and -.11 < (p-C).z < .06)
     if stage == 1:
         scale_cover(a, bvh, (0, 0, 1.5), (0, 0, 1.64), .06, .016, sc, 1, ang=(-.4, .9))
         scale_cover(a, bvh, C + V((0, 0, -.075)), C + V((0, 0, .01)), .1, .015, sc, 2, ang=(-1.15, -.45))
@@ -1991,6 +1991,27 @@ def deep_one(a, stage):
             scale_cover(a, bvh, W_ + (W_-E).normalized()*.1, W_, .03, .013, sc, 50+j)
         if stage == 4:
             for s in (-1, 1): scale_cover(a, bvh, V((s*.1, 0, .1)), V((s*.095, 0, .96)), .07, big*.85, sc, 60+s)
+    if stage >= 3:
+        hs_ = DEEP_HEAD[stage]; es_, ew_, eh_ = hs_['es'], hs_['ew'], hs_['eh']; ez_ = C.z + .03; mz_ = C.z + .03 - .082*hs_['fl']; fl_ = a.m('face_ridge', mix(skin, '#000000', .1))
+        ewm = a.m('eyeball', hs_.get('white', '#d8d4bc')); irm = a.m('eye_iris', hs_['iris']); pum = a.m('eye_pupil', '#0a0a08'); lidm = a.m('eye_lid', mix(skin, '#000000', .2))
+        for s in (-1, 1):
+            loc, nn = surf_hit(bvh, V((s*es_, -.5, ez_)), V((0, 1, 0)))
+            if loc is None: continue
+            o = V((s*.45, -1, 0)).normalized(); bulge = ew_*(1.05 if stage == 3 else 1.25)
+            a.add(f_loft([loc - o*.006, loc + o*bulge*.55, loc + o*bulge*.95], [(ew_*1.12, eh_*1.35), (ew_*1.05, eh_*1.25), (ew_*.7, eh_*.8)], ref=(0, 0, 1), kind='n', n=10, cap0=None, cap1='chamfer', smooth=0), ewm)
+            tip = loc + o*bulge*1.02
+            a.add(f_loft([tip - o*.004, tip + o*.004], [(eh_*.62, eh_*.62), (eh_*.5, eh_*.5)], ref=(0, 0, 1), kind='n', n=8, cap0=None, cap1='flat', smooth=0), irm)
+            a.add(f_loft([tip + o*.003, tip + o*.006], [(eh_*.18, eh_*.42), (eh_*.14, eh_*.36)], ref=(0, 0, 1), kind='n', n=6, cap0=None, cap1='flat', smooth=0), pum)
+            a.add(f_loft([loc - o*.004, loc + o*bulge*.35], [(ew_*1.32, eh_*1.6), (ew_*1.22, eh_*1.48)], ref=(0, 0, 1), kind='n', n=10, cap0=None, cap1=None, smooth=0), lidm)   # the socket rim
+            a.add(f_loft([loc + V((s*-.012, -.012, eh_*1.7)), loc + V((s*.012, -.016, eh_*1.95)), loc + V((s*.032, -.006, eh_*1.6))], [(.006, .01), (.008, .012), (.005, .008)], ref=(0, -1, 0), kind='oct', cap0='chamfer', cap1='point', smooth=0), fl_)   # brow ridge
+            a.add(f_loft([C + V((s*.03, -.09, -.03)), C + V((s*.065, -.07, -.045)), C + V((s*.085, -.03, -.07))], [(.008, .008), (.01, .009), (.006, .006)], kind='oct', cap0='chamfer', cap1='point', smooth=0), fl_)   # cheek ridge
+            loc2, nn2 = surf_hit(bvh, V((s*.009, -.5, mz_ + .028)), V((0, 1, 0)))
+            if loc2 is not None: a.add(f_loft([loc2 + V((0, -.004, .004)), loc2 + V((s*.004, -.009, -.006))], [(.0035, .002), (.002, .0015)], kind='n', n=5, cap0='flat', cap1='flat', smooth=0), pum)   # nostril slit
+        loc, nn = surf_hit(bvh, V((0, -.5, mz_ - .02)), V((0, 1, 0)))
+        if loc is not None:   # jutting lower jaw and a lipless upper ridge: the mouth sits in a snout, not on a flat face
+            jw_ = hs_['mw']*1.35
+            a.add(f_loft([loc + V((-jw_, .02, .006)), loc + V((-jw_*.45, -.01, -.004)), loc + V((0, -.016, -.008)), loc + V((jw_*.45, -.01, -.004)), loc + V((jw_, .02, .006))], [(.012, .016), (.014, .02), (.015, .022), (.014, .02), (.012, .016)], ref=(0, 0, 1), kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk)
+            a.add(f_loft([loc + V((-jw_*.9, .012, .03)), loc + V((0, -.012, .028)), loc + V((jw_*.9, .012, .03))], [(.007, .008), (.009, .009), (.007, .008)], ref=(0, 0, 1), kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk2)
     # ---- gills, fins, spines
     for s in (-1, 1):
         for k in range(3 if stage < 4 else 4):
@@ -2038,16 +2059,54 @@ def deep_one(a, stage):
         skirtl(a, cfg, [.99, .84], [.012, .02], a.m('cloth', shirt_c))
         for s in (-1, 1): place(a, lambda t: foot_(t, '#1c1a18', '#0e0d0c'), Tr(s*.1, 0, .085))
     elif stage == 3:
-        rag = a.m('rag', mix(shirt_c, '#5a4a38', .3)); rag2 = a.m('rag2', mix(tr_c, '#2a2a26', .2))
-        bm = loft(list(reversed([tring_at(cfg, z, g, 16) for z, g in ((1.49, .02), (1.4, .022), (1.25, .024), (1.1, .024), (.97, .026))])), False, False)
-        for v in bm.verts:
-            if v.co.z < .975: v.co.z += rr.uniform(0, .09)
-        bmesh.ops.delete(bm, geom=[f for f in bm.faces if rr.random() < .22 or (f.calc_center_median().y > .05 and abs(f.calc_center_median().x) < .05)], context='FACES'); a.add(dbl(bm), rag)
-        for (s, S_, E, W_) in arms:
-            ring = f_loft([S_ + V((0, 0, .06)), S_ + (E-S_)*.42], [(.082, .078), (.078, .074)], kind='oct', cap0=None, cap1=None, smooth=0)
-            for v in ring.verts:
-                if (v.co - S_).dot((E-S_).normalized()) > .05: v.co += (E-S_).normalized()*rr.uniform(-.05, .04)
-            a.add(dbl(ring), rag)
+        rag = a.m('rag', mix(shirt_c, '#5a4a38', .3)); rag2 = a.m('rag2', mix(tr_c, '#2a2a26', .2)); rin = a.m('rag_in', mix(shirt_c, '#000000', .45)); rdk = a.m('rag_dirt', mix(shirt_c, '#3a3020', .5))
+        def shred(rings_z, grows, n, holes, seed, cut=None, fringe=3):
+            # fine cloth: many small facets, crumpled, holes torn in clusters, the hem cut into hanging strips; dark inside
+            r_ = random.Random(seed); rings = [tring_at(cfg, z, g, n) for z, g in zip(rings_z, grows)]
+            bm = bmesh.new(); P_ = [[p + V((r_.uniform(-1, 1)*.004, r_.uniform(-1, 1)*.004, r_.uniform(-1, 1)*.006)) for p in r] for r in rings]
+            V_ = [[bm.verts.new(p) for p in r] for r in P_]; Vi = [[bm.verts.new(V((p.x*.985, p.y*.985, p.z))) for p in r] for r in P_]   # inner layer
+            F = {}; Fi = {}
+            for jz in range(len(V_)-1):
+                for ia in range(n):
+                    F[(jz, ia)] = (V_[jz+1][ia], V_[jz+1][(ia+1) % n], V_[jz][(ia+1) % n], V_[jz][ia]); Fi[(jz, ia)] = (Vi[jz][ia], Vi[jz][(ia+1) % n], Vi[jz+1][(ia+1) % n], Vi[jz+1][ia])
+            gone = set()
+            for (hz, ha, hr) in holes:
+                for (jz, ia) in F:
+                    da = min(abs(ia-ha), n-abs(ia-ha)); dz = abs(jz-hz)
+                    if (da/hr[0])**2 + (dz/hr[1])**2 < 1 + r_.uniform(-.5, .3): gone.add((jz, ia))
+            last = len(V_)-2
+            for ia in range(n):   # the hem: strips of uneven length
+                ln = r_.choice([0, 0, 1, 2, 3][:fringe+2])
+                for q in range(ln): gone.add((last-q, ia)) if (ia % 3 == 0 or r_.random() < .3) else None
+            for key, vs in F.items():
+                if key in gone or (cut and cut(sum((v.co for v in vs), V())/4)): continue
+                f = bm.faces.new(vs); f.material_index = rdk if r_.random() < .12 else rag
+                g = bm.faces.new(Fi[key]); g.material_index = rin
+            for v in bm.verts:
+                if not v.link_faces: bm.verts.remove(v)
+            a.add(bm, lambda f: f.material_index)
+        zs = [1.5 - k*.036 for k in range(15)]; gs = [.018 + .004*min(1, k/3) for k in range(15)]
+        shred(zs, gs, 34, [(4, 6, (3.2, 2.2)), (8, 22, (2.6, 2)), (2, 27, (2, 1.6)), (10, 12, (4, 2.4)), (6, 30, (2.2, 3)), (11, 2, (2.5, 2)), (3, 15, (1.6, 1.4))], 7)
+        for (s, S_, E, W_) in arms:   # sleeve stumps of the same cloth, frayed
+            dirv = (E-S_).normalized(); r_ = random.Random(int(s*5+9)); n = 14; bm = bmesh.new(); rows = []
+            for k in range(6):
+                c_ = S_ + V((0, 0, .05)) + dirv*(k*.03); rad = .082 - k*.002
+                u_ = V((1, 0, 0)) if abs(dirv.x) < .9 else V((0, 1, 0)); u_ = (u_ - dirv*u_.dot(dirv)).normalized(); w_ = dirv.cross(u_)
+                pts_ = [c_ + (u_*cos(t*2*pi/n) + w_*sin(t*2*pi/n))*rad*(1 + r_.uniform(-.06, .06)) for t in range(n)]
+                rows.append(([bm.verts.new(p) for p in pts_], [bm.verts.new(c_ + (p-c_)*.95) for p in pts_]))
+            for k in range(5):
+                for t in range(n):
+                    if k >= 3 and (t % 2 or r_.random() < .35) and k >= 3 + r_.randrange(2): continue
+                    if r_.random() < .1: continue
+                    o_, i_ = (rows[k][0], rows[k+1][0]), (rows[k][1], rows[k+1][1])
+                    f = bm.faces.new((o_[0][t], o_[0][(t+1) % n], o_[1][(t+1) % n], o_[1][t])); f.material_index = rag
+                    g = bm.faces.new((i_[1][t], i_[1][(t+1) % n], i_[0][(t+1) % n], i_[0][t])); g.material_index = rin
+            bm.normal_update()
+            for f in bm.faces:
+                cc = f.calc_center_median(); out = cc - (S_ + dirv*(cc-S_).dot(dirv))
+                if (f.material_index == rag) != (f.normal.dot(out) > 0): f.normal_flip()
+            for v in [v for v in bm.verts if not v.link_faces]: bm.verts.remove(v)
+            a.add(bm, lambda f: f.material_index)
         for s in (-1, 1):   # trousers torn off at the shins, bare webbed feet
             ring = f_loft([V((s*.1, -.03, .5)), V((s*.1, -.02, .32))], [(.072, .07), (.07, .068)], kind='oct', cap0=None, cap1=None, smooth=0)
             for v in ring.verts:
