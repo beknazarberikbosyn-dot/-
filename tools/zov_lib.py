@@ -1855,6 +1855,228 @@ def _(a):
     rr = random.Random(8)
     for i in range(5):
         b = ico(.45, 1, (rr.uniform(-1, 1), rr.uniform(-5, -3.5), 2.4)); xform(b, Sc(1, 1, .5)); displace(b, .1, 3, i); a.add(b, a.m('net', '#3d4a44'))
+# ================================================================ THE SERUM: a man turning into a deep one, four stages (deep_1 .. deep_4)
+# 1: patches of real scales (angled overlapping plates) on the neck, cheek, forearms, hands
+# 2: wider scales, little fins on the forearms, webs between the fingers, small gill slits
+# 3: fish face (no lips, no hair, bulging eyes, flat nose), crest and dorsal ridge, gill flaps, torn and ragged clothes
+# 4: a fish-mutant that is still man-shaped: hunched, huge fins and spines, gill fans, barbels, teeth, clawed webbed hands and feet
+def scale_cover(a, bvh, p0, p1, r0, s, mats, seed=0, ang=(-pi, pi), keep=None, R=.6, lift=.2, edge=.3):
+    """overlapping fish scales over the surface around the axis p0 -> p1 (scales point towards p0)"""
+    rr = random.Random(seed); p0 = V(p0); p1 = V(p1); ax = (p1-p0); L = ax.length; ax.normalize()
+    ref = V((0, 1, 0)) if abs(ax.z) >= .9 else V((0, 0, 1)); u = ref.cross(ax).normalized(); w = ax.cross(u).normalized()
+    bm = bmesh.new(); row = 0; t = 0.0
+    while t <= L:
+        da = s/r0; a0 = ang[0] + (da*.5 if row % 2 else 0); an = a0
+        while an <= ang[1]:
+            # ragged patch edges
+            ea = min(an-ang[0], ang[1]-an)/max(.01, ang[1]-ang[0]); et = min(t, L-t)/max(.01, L)
+            if min(ea, et) < edge*rr.random()*.6: an += da; continue
+            c = p0 + ax*t; d = u*cos(an) + w*sin(an)
+            loc, nn, i_, d_ = bvh.ray_cast(c + d*R + V((rr.uniform(-1, 1), rr.uniform(-1, 1), rr.uniform(-1, 1)))*s*.12, -d, R*1.2)
+            if loc is not None and ((loc-c) - ax*(loc-c).dot(ax)).length > r0*2.6: loc = None   # hit some other part (clothes, another limb)
+            if loc is not None and (keep is None or keep(loc)):
+                nn = nn.normalized(); uu = ax.cross(nn)
+                if uu.length > 1e-3:
+                    uu.normalize(); vv = nn.cross(uu)
+                    k = s*(.78+rr.uniform(0, .14)); b = loc + nn*.0015   # a flat shield of angled plates, tip down, overlapping the row below
+                    ring = [b + vv*k*.5 + nn*k*.02, b + uu*k*.52 + vv*k*.12, b + uu*k*.38 - vv*k*.45, b - vv*k*.85 + nn*k*lift*.6, b - uu*k*.38 - vv*k*.45, b - uu*k*.52 + vv*k*.12]
+                    vs = [bm.verts.new(p) for p in ring]; ap = bm.verts.new(b - vv*k*.25 + nn*k*lift); m = mats[rr.randrange(len(mats))]
+                    for i in range(6):
+                        f = bm.faces.new((vs[i], vs[(i+1) % 6], ap)); f.material_index = m
+            an += da
+        t += s*.62; row += 1
+    bm.normal_update()
+    for f in bm.faces:
+        cc = f.calc_center_median(); tt = (cc-p0).dot(ax); out = cc - (p0 + ax*tt)
+        if f.normal.dot(out) < 0: f.normal_flip()
+    a.add(bm, lambda f: f.material_index)
+def fin(a, base, tops, mat, ray=None):
+    """a thin fin (double sided) between a base line and a jagged top line, with darker rays"""
+    bm = bmesh.new(); B = [bm.verts.new(V(p)) for p in base]; T = [bm.verts.new(V(p)) for p in tops]
+    for i in range(len(B)-1): bm.faces.new((B[i], B[i+1], T[i+1], T[i]))
+    a.add(dbl(bm), mat)
+    if ray is not None:
+        for b, t in zip(base, tops): a.add(f_loft([V(b), V(t)], [(.006, .006), (.0025, .0025)], kind='n', n=4, cap0='flat', cap1=1.2, smooth=0), ray)
+def surf_hit(bvh, o, d, far=2.0):
+    loc, n, i_, d_ = bvh.ray_cast(V(o), V(d).normalized(), far); return (loc, n) if loc is not None else (None, None)
+def limbL(a, pts, rad, mat): a.add(f_loft([V(p) for p in pts], rad, kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), mat)
+def deep_hand(a, w, d, s, sk, nail, web, stage):
+    """palm faces the body (normal (-s,0,0)); fingers curl a little towards the palm; webs and claws by stage"""
+    w = V(w); d = V(d).normalized(); pn = V((-s, 0, 0)); fr = V((0, -1, 0)); k = 1 + .14*max(0, stage-2)
+    a.add(f_loft([w + d*.005, w + d*.05, w + d*.095*k], [(.018, .036), (.021, .042), (.018, .045)], ref=(0, -1, 0), kind='oct', ch=.45, cap0='chamfer', cap1='chamfer', smooth=0), sk)
+    K = w + d*.095*k; tips = []; mids = []; bases = []
+    for j, (y, L) in enumerate(((-.031, .07), (-.011, .078), (.011, .073), (.03, .06))):
+        L *= 1 + .3*max(0, stage-2); b = K + fr*y*k; m = b + d*L*.52 + pn*.008; t = b + d*L + pn*.022
+        a.add(f_loft([b, m, t], [(.0105, .0095), (.0095, .009), (.007, .007)], ref=(0, -1, 0), kind='n', n=6, cap0='chamfer', cap1='chamfer' if stage < 4 else 2.2, smooth=0), sk)
+        if stage >= 3: a.add(f_loft([t - d*.004, t + d*(.018 if stage == 3 else .034) + pn*.012], [(.0065, .006), (.001, .001)], kind='n', n=5, cap0='flat', cap1='point', smooth=0), nail)
+        tips.append(t); mids.append(m); bases.append(b)
+    th = [w + d*.02 + fr*-.03 + pn*.01, w + d*.05 + fr*-.052 + pn*.025, w + d*.08 + fr*-.06 + pn*.035]
+    a.add(f_loft(th, [(.012, .012), (.011, .011), (.008, .008)], kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk)
+    if stage >= 2:   # webs between the fingers (and the thumb), a little behind the palm line
+        reach = {2: .45, 3: .75, 4: .95}[stage]
+        for i in range(3):
+            bm = bmesh.new(); p = [bases[i], bases[i+1], bases[i+1].lerp(tips[i+1], reach), bases[i].lerp(tips[i], reach)]
+            mid = (p[2]+p[3])/2 - d*.006; vs = [bm.verts.new(q + pn*.002) for q in p]; mv = bm.verts.new(mid)
+            bm.faces.new((vs[0], vs[1], vs[2], mv)); bm.faces.new((vs[0], mv, vs[3])); a.add(dbl(bm), web)
+        bm = bmesh.new(); vs = [bm.verts.new(q) for q in (w + d*.03 + fr*-.03, th[-1], bases[0].lerp(tips[0], reach*.6), bases[0])]; bm.faces.new(vs); a.add(dbl(bm), web)
+    return tips
+DEEP_SKIN = {1: '#bba893', 2: '#a8a48c', 3: '#8a9884', 4: '#5f7468'}
+DEEP_HEAD = {
+ 1: {'hair_style': 'short', 'hair': '#3a2e24', 'stubble': .35, 'fl': 1.02, 'jw': 1.06, 'iris': '#4a4a3a', 'age': .35, 'bt': .005},
+ 2: {'hair_style': 'short', 'recede': .6, 'hair': '#3a2e24', 'stubble': .2, 'fl': 1.0, 'jw': 1.1, 'eh': .012, 'ew': .022, 'lid': .05, 'es': .043, 'nw': .016, 'np': .017,
+     'iris': '#2a2a1c', 'age': .4, 'bt': .004, 'gills': 1, 'lip_c': '#8a6a5e'},
+ 3: {'hair_style': 'none', 'eyes': 'bulge', 'ew': .027, 'eh': .017, 'es': .05, 'tilt': -.12, 'nl': .65, 'np': .007, 'nw': .021, 'mw': .033, 'lu': .0012, 'll': .0014,
+     'lip_c': '#5e6a5a', 'brow': False, 'ears': False, 'gills': 1, 'hw': 1.12, 'hd': 1.02, 'jw': 1.28, 'chin': -.8, 'fl': .95, 'cheek': 0., 'cr': .92, 'socket': 0., 'iris': '#1a1a10'},
+ 4: {'hair_style': 'none', 'eyes': 'bulge', 'ew': .032, 'eh': .021, 'es': .058, 'tilt': -.18, 'nl': .45, 'np': .003, 'nw': .024, 'mw': .046, 'lu': .001, 'll': .001,
+     'lip_c': '#2a3a30', 'brow': False, 'ears': False, 'gills': 1, 'hw': 1.3, 'hd': 1.14, 'jw': 1.5, 'chin': -1.1, 'fl': .9, 'cheek': 0., 'cr': .84, 'socket': 0., 'iris': '#e0c040',
+     'white': '#c8c49a'}}
+def deep_one(a, stage):
+    rr = random.Random(stage*31); skin = DEEP_SKIN[stage]
+    sk = a.m('skin', skin); sk2 = a.m('skin2', mix(skin, '#000000', .14)); belly = a.m('belly', mix(skin, '#e8e2c8', .35 if stage == 4 else .18))
+    sc = [a.m('scale%d' % i, c) for i, c in enumerate([mix(skin, '#2a4a44', .25+.1*stage), mix(skin, '#6a8a7a', .2+.08*stage), mix(skin, '#1e2e2a', .2+.12*stage)])]
+    finm = a.m('fin', mix(skin, '#7a5a4a' if stage < 4 else '#3a5a52', .45)); ray = a.m('finray', mix(skin, '#1a1410', .5)); web = a.m('web', mix(skin, '#c89a8a', .35))
+    nail = a.m('claw', '#2a2620'); shirt_c = '#7a6248'; tr_c = '#34363c'
+    clothed_torso = stage <= 2
+    cfg = {'cloth': shirt_c if clothed_torso else skin, 'skin': skin, 'k': 1.0 + .08*max(0, stage-2), 'trousers': tr_c if stage < 4 else skin, 'nobelt': stage >= 3}
+    torso(a, cfg)
+    C = V((0, -.005, 1.725)); head(a, C, skin, DEEP_HEAD[stage]); head(a, C, skin, DEEP_HEAD[stage], 'jaw') if stage < 4 else None
+    # arms: shoulder → elbow → wrist; rolled sleeves (1, 2), a torn stump of a sleeve (3), bare (4)
+    arms = []
+    for s in (-1, 1):
+        S_ = V((s*.2, 0, 1.4)); E = V((s*.3, -.03, 1.12)); W_ = V((s*.335, -.1, .885))
+        wd = 1 + .08*max(0, stage-2)
+        if stage <= 2:
+            limbL(a, [S_ + V((0, 0, .05)), S_, (S_+E)/2, E], [(.06*wd, .06), (.074, .07), (.066, .064), (.058, .056)], a.m('cloth', shirt_c))
+            limbL(a, [E + (E-S_).normalized()*-.02, E + (W_-E)*.18], [(.066, .064), (.064, .062)], a.m('cloth2', mix(shirt_c, '#000000', .2)))
+        else:
+            limbL(a, [S_ + V((0, 0, .05)), S_, (S_+E)/2, E], [(.06*wd, .06*wd), (.076*wd, .072*wd), (.068*wd, .066*wd), (.058*wd, .056*wd)], sk)
+        limbL(a, [E, (E+W_)/2 + V((s*.004, 0, 0)), W_], [(.052*wd, .05*wd), (.048*wd, .046*wd), (.034*wd, .03*wd)], sk)
+        arms.append((s, S_, E, W_))
+    tips = {}
+    for (s, S_, E, W_) in arms: tips[s] = deep_hand(a, W_, (W_-E), s, sk, nail, web, stage)
+    # legs (trousers; stage 3 ragged; stage 4 bare scaled legs)
+    legm = a.m('trousers', tr_c) if stage < 4 else sk
+    for s in (-1, 1):
+        H_ = V((s*.095, 0, .9)); K_ = V((s*.1, -.03, .48)); A_ = V((s*.1, 0, .085))
+        limbL(a, [H_ + V((0, 0, .06)), H_, (H_+K_)/2, K_], [(.07, .068), (.09, .088), (.078, .076), (.064, .062)], legm)
+        limbL(a, [K_ + V((0, 0, .04)), K_, (K_+A_)/2 + V((0, .01, 0)), A_ + V((0, 0, .02))], [(.056, .056), (.064, .062), (.058, .056), (.05, .05)], legm)
+    a.bm.normal_update(); bvh = BVHTree.FromBMesh(a.bm)
+    # ---- scales (on the skin, under the clothes that come later)
+    notface = lambda p: not ((p - C).y < -.06 and abs((p-C).x) < .075 and -.1 < (p-C).z < .07)
+    if stage == 1:
+        scale_cover(a, bvh, (0, 0, 1.5), (0, 0, 1.64), .06, .016, sc, 1, ang=(-.4, .9))
+        scale_cover(a, bvh, C + V((0, 0, -.075)), C + V((0, 0, .01)), .1, .015, sc, 2, ang=(-1.15, -.45))
+        for j, (s, S_, E, W_) in enumerate(arms):
+            scale_cover(a, bvh, W_ + (E-W_)*.15, W_ + (E-W_)*.7, .05, .018, sc, 3+j, ang=(-2.4, .6) if j else (-.6, 2.4))
+            scale_cover(a, bvh, W_ + (W_-E).normalized()*.08, W_ + (W_-E).normalized()*.01, .03, .013, sc, 5+j, ang=(-1.2, 1.2))
+        scale_cover(a, bvh, C + V((0, 0, .03)), C + V((0, 0, .1)), .1, .015, sc, 7, ang=(-2.9, -2.1))
+    elif stage == 2:
+        scale_cover(a, bvh, (0, 0, 1.48), (0, 0, 1.64), .06, .018, sc, 1, ang=(-1.4, 1.6))
+        scale_cover(a, bvh, (0, 0, 1.48), (0, 0, 1.64), .06, .018, sc, 11, ang=(1.9, 3.6))
+        for i, (a0, a1) in enumerate(((-1.25, -.35), (-2.8, -1.9))): scale_cover(a, bvh, C + V((0, 0, -.09)), C + V((0, 0, .06)), .1, .017, sc, 20+i, ang=(a0, a1))
+        scale_cover(a, bvh, C + V((0, 0, .02)), C + V((0, 0, .16)), .1, .018, sc, 25, ang=(1.0, 2.6))
+        for j, (s, S_, E, W_) in enumerate(arms): scale_cover(a, bvh, W_, E, .05, .017, sc, 30+j, ang=(-pi, pi))
+        for j, (s, S_, E, W_) in enumerate(arms): scale_cover(a, bvh, W_ + (W_-E).normalized()*.09, W_, .03, .012, sc, 40+j, ang=(-pi, pi))
+    else:
+        big = .024 if stage == 3 else .028
+        belly_ = lambda p: not (stage == 4 and abs(p.x) < .1 and p.y < 0 and .96 < p.z < 1.42)
+        scale_cover(a, bvh, (0, 0, .95 if stage == 4 else 1.0), (0, 0, 1.66), .16, big, sc, 1, R=.7, keep=belly_)
+        if stage == 4:   # pale ventral plates down the belly
+            for k in range(7):
+                z = 1.4 - k*.062; w_ = .085 - k*.004
+                cband(a, bvh, V((0, 0, 0)), [(-w_, z), (0, z+.012), (w_, z)], [(-w_*.9, z-.05), (0, z-.04), (w_*.9, z-.05)], belly, .006)
+        scale_cover(a, bvh, C + V((0, 0, -.16)), C + V((0, 0, .2)), .11, big*.8, sc, 2, R=.5, keep=notface, lift=.3)
+        for j, (s, S_, E, W_) in enumerate(arms):
+            scale_cover(a, bvh, E, S_ + V((0, 0, .04)), .07, big*.85, sc, 30+j); scale_cover(a, bvh, W_, E, .055, big*.75, sc, 40+j)
+            scale_cover(a, bvh, W_ + (W_-E).normalized()*.1, W_, .03, .013, sc, 50+j)
+        if stage == 4:
+            for s in (-1, 1): scale_cover(a, bvh, V((s*.1, 0, .1)), V((s*.095, 0, .96)), .07, big*.85, sc, 60+s)
+    # ---- gills, fins, spines
+    for s in (-1, 1):
+        for k in range(3 if stage < 4 else 4):
+            z = 1.6 - k*.024; g = .2 + .25*stage
+            if stage == 2:
+                a.add(f_loft([V((s*.058, -.01+k*.004, z)), V((s*.062, .03, z-.012))], [(.004, .006), (.003, .004)], kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk2)
+            elif stage >= 3:
+                base = [V((s*.056, -.02, z)), V((s*.058, .01, z-.004)), V((s*.056, .04, z-.01))]
+                tops = [b + V((s*(.012 + .012*(stage-3)), .012, -.016*g)) for b in base]; fin(a, base, tops, sk2 if stage == 3 else finm, None)
+    def outward_fin(p0, p1, nrm, h, n, spike=1.0, back=V((0, 0, 0))):
+        base, tops = [], []
+        for i in range(n):
+            t = i/(n-1); b = V(p0).lerp(V(p1), t); loc, nn = surf_hit(bvh, b + V(nrm)*.5, -V(nrm), 1.0)
+            if loc is None: continue
+            hh = h*sin(pi*min(1, t*1.15+.05))**.6*(1 + (.35*spike if i % 2 else -.1))
+            base.append(loc - V(nrm)*.004); tops.append(loc + V(nrm)*hh + back*hh)
+        if len(base) > 2: fin(a, base, tops, finm, ray)
+    if stage >= 2:   # forearm fins on the outer edge
+        for (s, S_, E, W_) in arms: outward_fin(E + (W_-E)*.15, E + (W_-E)*.8, V((s, .3, 0)).normalized(), {2: .03, 3: .055, 4: .1}[stage], 7, back=(E-W_).normalized()*.4)
+    if stage >= 3:   # dorsal ridge along the spine, crest over the skull
+        outward_fin(V((0, 0, .98 if stage == 3 else .9)), V((0, 0, 1.52)), V((0, 1, .15)), .06 if stage == 3 else .2, 11 if stage == 3 else 15, back=V((0, 0, .25)))
+        outward_fin(C + V((0, -.07, .1)), C + V((0, .12, .02)), V((0, .1, 1)), .04 if stage == 3 else .11, 8, back=V((0, .4, 0)))
+    if stage == 4:   # cheek frills, calf fins, barbels, teeth
+        for s in (-1, 1):
+            outward_fin(C + V((s*.08, -.02, .06)), C + V((s*.085, .04, -.08)), V((s, .4, 0)), .09, 7, back=V((0, .6, 0)))
+            outward_fin(V((s*.1, 0, .44)), V((s*.1, 0, .14)), V((s*.2, 1, 0)), .08, 7, back=V((0, 0, -.3)))
+            mz = .03 - .082*.9
+            for k in range(2):
+                p = C + V((s*(.03+k*.012), -.105, mz-.012)); a.add(f_loft([p, p + V((s*.02, -.03, -.06)), p + V((s*.035, -.02, -.13-.03*k))], [.006, .004, .0015], kind='n', n=5, cap0='flat', cap1='point', smooth=0), finm)
+            # webbed feet with claws
+        fy = .085
+        for s in (-1, 1):
+            A_ = V((s*.1, 0, .085)); a.add(f_loft([A_ + V((0, .03, -.02)), A_ + V((0, -.08, -.06)), A_ + V((0, -.2, -.075))], [(.05, .03), (.065, .022), (.08, .01)], ref=(0, 0, 1), kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk)
+            for j in (-1, 0, 1): p = A_ + V((j*.035, -.2, -.075)); a.add(f_loft([p, p + V((j*.012, -.05, -.004))], [(.008, .006), (.001, .001)], kind='n', n=5, cap0='flat', cap1='point', smooth=0), nail)
+        mzw = C + V((0, -.1, .03-.082*.9))
+        for k in range(9):
+            x = (k-4)/4*.04; loc, nn = surf_hit(bvh, mzw + V((x, -.4, .004)), V((0, 1, 0)))
+            if loc is None: continue
+            a.add(f_loft([loc + V((0, -.004, 0)), loc + V((0, -.006, -.016))], [.0035, .0008], kind='n', n=4, cap0='flat', cap1='point', smooth=0), a.m('teeth', '#d8d0b0'))
+            loc, nn = surf_hit(bvh, mzw + V((x*.9, -.4, -.014)), V((0, 1, 0)))
+            if loc is not None: a.add(f_loft([loc + V((0, -.004, 0)), loc + V((0, -.006, .013))], [.003, .0008], kind='n', n=4, cap0='flat', cap1='point', smooth=0), a.m('teeth', '#d8d0b0'))
+    # ---- clothes over the skin
+    if stage <= 2:
+        a.add(loft([tring_at(cfg, 1.49, .014), tring_at(cfg, 1.54, .011)], True, True), a.m('cloth2', mix(shirt_c, '#000000', .2)))
+        skirtl(a, cfg, [.99, .84], [.012, .02], a.m('cloth', shirt_c))
+        for s in (-1, 1): place(a, lambda t: foot_(t, '#1c1a18', '#0e0d0c'), Tr(s*.1, 0, .085))
+    elif stage == 3:
+        rag = a.m('rag', mix(shirt_c, '#5a4a38', .3)); rag2 = a.m('rag2', mix(tr_c, '#2a2a26', .2))
+        bm = loft(list(reversed([tring_at(cfg, z, g, 16) for z, g in ((1.49, .02), (1.4, .022), (1.25, .024), (1.1, .024), (.97, .026))])), False, False)
+        for v in bm.verts:
+            if v.co.z < .975: v.co.z += rr.uniform(0, .09)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if rr.random() < .22 or (f.calc_center_median().y > .05 and abs(f.calc_center_median().x) < .05)], context='FACES'); a.add(dbl(bm), rag)
+        for (s, S_, E, W_) in arms:
+            ring = f_loft([S_ + V((0, 0, .06)), S_ + (E-S_)*.42], [(.082, .078), (.078, .074)], kind='oct', cap0=None, cap1=None, smooth=0)
+            for v in ring.verts:
+                if (v.co - S_).dot((E-S_).normalized()) > .05: v.co += (E-S_).normalized()*rr.uniform(-.05, .04)
+            a.add(dbl(ring), rag)
+        for s in (-1, 1):   # trousers torn off at the shins, bare webbed feet
+            ring = f_loft([V((s*.1, -.03, .5)), V((s*.1, -.02, .32))], [(.072, .07), (.07, .068)], kind='oct', cap0=None, cap1=None, smooth=0)
+            for v in ring.verts:
+                if v.co.z < .4: v.co.z += rr.uniform(-.03, .07)
+            a.add(dbl(ring), rag2)
+            A_ = V((s*.1, 0, .085)); a.add(f_loft([A_ + V((0, .03, -.02)), A_ + V((0, -.08, -.06)), A_ + V((0, -.17, -.072))], [(.048, .03), (.058, .022), (.064, .012)], ref=(0, 0, 1), kind='oct', cap0='chamfer', cap1='chamfer', smooth=0), sk)
+            for j in (-1, 0, 1): p = A_ + V((j*.03, -.17, -.072)); a.add(f_loft([p, p + V((j*.008, -.03, -.004))], [(.007, .005), (.001, .001)], kind='n', n=5, cap0='flat', cap1='point', smooth=0), nail)
+    else:
+        rag = a.m('rag', '#3a3a32')
+        bm = loft(list(reversed([tring_at(cfg, z, g, 16) for z, g in ((.98, .03), (.86, .04), (.72, .06))])), False, False)
+        for v in bm.verts:
+            if v.co.z < .73: v.co.z += rr.uniform(0, .12)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if rr.random() < .3], context='FACES'); a.add(dbl(bm), rag)
+        a.add(loft([tring_at(cfg, .96, .036), tring_at(cfg, .99, .036)], False, False), a.m('rope', '#6a5a3a'))
+    # ---- stage 4: hunch the upper body forward, a bigger frame
+    if stage == 4:
+        piv = V((0, 0, .92)); M_ = Tr(0, 0, .92) @ Rx(.34) @ Tr(0, 0, -.92)
+        for v in a.bm.verts:
+            if not (abs(v.co.x) < .19 and v.co.z < .92): v.co = M_ @ v.co   # everything but the legs
+        for v in a.bm.verts: v.co = V((v.co.x*1.12, v.co.y*1.12, v.co.z*1.1))
+def place(a, fn, T, recol=None):
+    t = A('tmp'); fn(t); idx = {}
+    for i, (nm, col, em) in enumerate(t.ml):
+        c = recol[nm] if recol and nm in recol else '#%02x%02x%02x' % tuple(int(v*255) for v in col)
+        idx[i] = a.m(nm, c, em)
+    a.add(t.bm, lambda f: idx[f.material_index], T)
+for _i in (1, 2, 3, 4):
+    BUILDERS['deep_%d' % _i] = ((lambda st: (lambda a: deep_one(a, st)))(_i), {'ao': .8})
+DEEP = ['deep_1', 'deep_2', 'deep_3', 'deep_4']
 PEOPLE = list(HEADS) + [n+'_'+p for n in HEADS for p in ('head', 'jaw', 'lids')]
 PEOPLE += ['arm_up', 'arm_lo', 'robe_up', 'robe_lo', 'hand_R', 'hand_L', 'fing_R', 'fing_L', 'fist_R', 'fist_L', 'leg_up', 'leg_lo', 'foot', 'shoe', 'stock_lo', 'wpn_crowbar', 'wpn_club', 'wpn_torch', 'flame']
 TOWNPROPS = ['stall', 'schooner']
