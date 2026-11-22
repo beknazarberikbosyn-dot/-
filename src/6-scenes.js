@@ -256,7 +256,7 @@ async function sacEnd(){$('skip').style.display='none';$('fade').style.transitio
   CAM.fp=false;S.camFn=null;P.vis=true;P.lie=false;S.hp=100;S.st=100;S.crouch=false;S.inside=S.cpRoom||null;P.x=S.cp[0];P.z=S.cp[1];
   for(const e of EN){e.active=e.wasOn;if(!e.active||e.state==='ko')continue;e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}
   SAC.on=false;SAC.skip=false;S.mode='play';camSnap();await fade(0,900);
-  toast('<b>Так всё и закончится</b>, если они поймают вас снова. Вы — у последнего укрытия.',5);}
+  act3Respawn();toast('<b>Так всё и закончится</b>, если они поймают вас снова. Вы — у последнего укрытия.',5);}
 function updFinale(dt){
   if(FIN.on){FIN.t+=dt;if(FIN.u>=0)FIN.u+=dt;const u=FIN.u;
     FIN.lx=lerp(FIN.lx,-FIN.mx*.5,min(1,dt*3));FIN.ly=lerp(FIN.ly,-FIN.my*.35,min(1,dt*3));
@@ -286,7 +286,7 @@ function drawFinale(){if(FIN.attacker){const a=FIN.attacker;if(FIN.atkSwing)FIN.
   if(FIN.hands){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f);for(const s of[-1,1]){const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.32),vSc(up,-.42)),vSc(f,.05)));
     const tip=vAdd(sp,vAdd(vAdd(vSc(f,.38),vSc(up,.3+sin(S.t*14+s)*.05)),vSc(r,-s*.06)));fpArm(sp,tip,s,up,f,false,.05+abs(sin(S.t*9+s))*.3);}}}
 function credits(){S.mode='credits';$('hud').style.display='none';$('gear').style.display='none';$('sub').style.display='none';$('lids').style.display='none';cv.style.filter='';const c=$('credits');c.style.display='flex';const n=EGGS.filter(e=>S.eggs[e.id]).length,mins=Math.round((S.t-S.t0)/60);
-  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Свет в глазах Спящего погас — и они очнулись на холодном полу пещеры.<br>Кровь на ладонях уже запеклась.<br>А где-то далеко в море что-то шевельнулось во сне.</div><h4>Конец первой главы</h4><div class="hand" style="font-size:28px">Продолжение следует…</div>'+
+  $('roll').innerHTML='<h1>ЗОВ ИЗ ТУМАНА</h1><div class="hand" style="font-size:30px;color:#c4b693">Игла вошла в шею отца Мэттью.<br>Крик Эдмунда Бернсона ещё долго метался под сводами старой часовни.<br>А где-то далеко в море Спящий открыл глаза — и ждал.</div><h4>Конец первой главы</h4><div class="hand" style="font-size:28px">Продолжение следует…</div>'+
    '<h4>По мотивам</h4>Г. Ф. Лавкрафт — «Зов Ктулху» (1928)<h4>В ролях</h4>Эдвард Крейн, ведущий канала «За гранью»<br>Доктор Эдмунд Бернсон<br>Отец Пол, жрец культа<br>Отец Мэттью, настоятель новой церкви<br>Уолтер, голос в трубке<br>Хозяин мотеля<br>Хозяин паба «Дьяволов риф»<br>Жители Грейхейвена<br>Братья в робах<br>и Тот, кто спит в Р\'льехе'+
    '<h4>Ваше расследование</h4>Пережито видений: '+(S.hallN||0)+'<br>Находок-отсылок: '+n+' / '+EGGS.length+'<br>Смертей и потерь сознания: '+S.deaths+'<br>Время в Грейхейвене: ~'+mins+' мин'+
    '<h4>Прототип</h4>Модели — Blender, графика — WebGL, звук синтезирован в браузере<br><br><br><span class="hand" style="font-size:34px">«Не мертво то, что в вечности пребудет…»</span><br><br><br>Спасибо за игру';
@@ -309,7 +309,7 @@ function drawAll(){talkFrame();
   for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
   drawStory();drawFinale();}
 // the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
-function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;
+function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;if(S.tied)return;if(S.rifle){drawFpRifle(e,f,r,up);return;}
   for(const s of[1,-1]){if(S.fpPose&&s>0){let pl=S.fpPose==='palm',sp=vAdd(e,vAdd(vAdd(vSc(r,.3),vSc(up,-.48)),vSc(f,-.05))),tip=vAdd(sp,vAdd(vAdd(vSc(f,pl?.52:.62),vSc(up,pl?.38:.5)),vSc(r,-.14)));
       if(!pl)tip=vAdd(tip,vSc(r,-.2));S.fpHand=vAdd(tip,vSc(f,.06));fpArm(sp,tip,s,pl?r:up,f,false,pl?.05:.95,vNorm(vAdd(f,vSc(up,pl?-.1:-.25))));continue;}
     let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
@@ -339,8 +339,8 @@ $('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,
 // debug / test hooks
 window.DBG={R,S,P,EN,CAM,FIN,PT,STORM,cols,blocked,field,cthPose,waveH,
   // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play' (the curfew, before the upstairs),
-  // 'upstairs', 'paul', 'church', 'churchin', 'cave', 'rlyeh'
-  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,CIV,SK,DGU,DOCEV,VIS,RL,HL,halluc,sacrifice,get LP(){return LP;}};
+  // 'upstairs', 'paul', 'church', 'churchin', 'cave', 'rlyeh', 'return', 'chase', 'defense', 'escort', 'chapelend'
+  toPlay(st='play'){S.fast=true;if(sub)sub.res();const w=waits;waits=[];w.forEach(x=>x.r());setTimeout(()=>{S.fast=false;storySkip(st);},300);},storySkip,XD,ROOMS,CIV,SK,DGU,DOCEV,VIS,RL,HL,halluc,sacrifice,A3,DEF,get LP(){return LP;}};
 </script>
 </body>
 </html>

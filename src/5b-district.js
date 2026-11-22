@@ -279,13 +279,13 @@ function stage2(skip){S.stalk=false;S.curfew=true;S.tailed=false;for(const s of 
 
 // --- per-frame: always (cutscenes too) and in play mode
 function stageTick(dt){
-  if(FOUND.on){FOUND.t+=dt;}cellarTick(dt);act2Tick(dt);
+  if(FOUND.on){FOUND.t+=dt;}cellarTick(dt);act2Tick(dt);act3Tick(dt);
   if(DOC.syr)DOC.arm=min(1,DOC.arm+dt*1.3);if(DOC.stab>0&&DOC.stab<1)DOC.stab=min(1,DOC.stab+dt*5);
   if(DOC.show){DOC.mv=0;if(DOC.flee){if(hypot(269-DOC.x,-28.2-DOC.z)>.4)goDir(DOC,269,-28.2,4.6,dt);}else if(DOC.walk&&hypot(DOC.walk[0]-DOC.x,DOC.walk[1]-DOC.z)>.15)goDir(DOC,DOC.walk[0],DOC.walk[1],1.6,dt);}
   if(S.vision){VIS.t+=dt;}
   if(S.drug){const t=S.t;cv.style.filter='blur('+(.8+.7*sin(t*1.3)).toFixed(2)+'px) saturate(1.6) hue-rotate('+(sin(t*.6)*28).toFixed(1)+'deg)';}
   if(!S.curfew&&S.explore&&!FIN.on)for(const c of CIV)updCiv(c,dt);}
-function stage(dt){act2Play(dt);
+function stage(dt){act2Play(dt);act3Play(dt);
   if(S.stalk){SKFt-=dt;S.tailed=SK.some(s=>s.on&&s.state==='tail');if(S.tailed&&SKFt<=0){SKFt=.4;SKF=field(P.x,P.z);}
     for(const s of SK)updSK(s,dt);if(S.guardsMet&&!S.inDoc)for(const g of DGU)updGuard(g,dt);
     if(!S.carSeen&&!S.inside&&hypot(P.x+38,P.z+18)<17)carScene();

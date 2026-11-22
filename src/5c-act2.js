@@ -126,7 +126,7 @@ const DOC2=[
   note:'Вырезка 1898 года: спасение маленького Эдмунда. «Пол так и не простил мне, что знак был дан не ему».'}];
 for(const e of DOC2)addInter(e.x,e.z,1.5,e.label,()=>{if(!e.seen){e.seen=1;S.noteCb=()=>{addNote(e.note);upObj();};}openNote(e.t,e.b);},()=>S.inside==='doc2'&&!S.paul);
 const upObj=()=>{const n=DOC2.filter(e=>e.seen).length;setObj('Осмотрите второй этаж дома доктора: бумаги — '+n+' / 3, спальня.'+(n>=2?'<br><span style="font-size:15px">В спальне, за портретом, — сейф в стене.</span>':''));if(n>=2)S.mark=[266.4,-23.2,'doc2'];};
-addInter(271.4,-29.4,1.4,'Подняться на второй этаж',()=>stairs(true),()=>S.inside==='doc'&&S.escaped);
+addInter(271.4,-29.4,1.4,'Подняться на второй этаж',()=>stairs(true),()=>S.inside==='doc'&&S.escaped&&!A3.ph);
 addInter(277.8,-12.2,1.3,'Спуститься по лестнице',()=>stairs(false),()=>S.inside==='doc2'&&(S.paul||!S.paulScene));
 async function stairs(up){S.mode='talk';SFX.creak();await fade(1,320);S.inside=up?'doc2':'doc';if(up){P.x=276.4;P.z=-12.4;P.rot=-PI/2;}else{P.x=271;P.z=-30;P.rot=PI;}CAM.pitch=0;camSnap();await fade(0,420);S.mode='play';
   if(up&&!S.up){S.up=true;S.mode='talk';await say(HERO,'(шёпотом) Библиотека… Полки до потолка. И спальня — дверь нараспашку. Он и правда жил одной работой.',VO.hero);upObj();S.mode='play';}}
@@ -361,7 +361,7 @@ async function rlWin(){if(!RL.on||RL.fly)return;S.mode='talk';RL.fly=.001;const 
   await say('Доктор Бернсон','Вы видели?.. Он открыл глаза. Он… посмотрел на нас.',VO.doc);
   await say(HERO,'Я видел только свет. Один только свет.',VO.hero);
   await say('Доктор Бернсон','Значит — получилось. Да поможет нам Бог, мистер Крейн… Получилось.',VO.doc);
-  await wait(.6);$('fade').style.transitionDuration='2600ms';$('fade').style.opacity=1;await wait(3);credits();}
+  await wait(.6);act3Start();}
 function drawRlyeh(){if(S.inside!=='rlyeh'||!M_rl)return;draw(M_rl,null,.05);const k=RL.t/RL.max;
   const sp=FIN.pose,sm=FIN.M,hl=FIN.headLook;const pose=cthPose(26);Object.assign(pose,{x:800,y:15,z:214,sc:.95,yaw:0,sit:1,track:RL.fly?1:.6,eyes:RL.fly?1+kf(RL.fly,1.5,8)*7:1,hand:[[-27,1+sin(S.t*.6)*.6,-15],[27,1+sin(S.t*.6+1)*.6,-15]],curl:[.55,.6]});   // hands on the armrests
   FIN.headLook=RL.fly?CAM.eye.slice():[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);RL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;
