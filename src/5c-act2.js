@@ -126,7 +126,7 @@ const DOC2=[
   note:'Вырезка 1898 года: спасение маленького Эдмунда. «Пол так и не простил мне, что знак был дан не ему».'}];
 for(const e of DOC2)addInter(e.x,e.z,1.5,e.label,()=>{if(!e.seen){e.seen=1;S.noteCb=()=>{addNote(e.note);upObj();};}openNote(e.t,e.b);},()=>S.inside==='doc2'&&!S.paul);
 const upObj=()=>{const n=DOC2.filter(e=>e.seen).length;setObj('Осмотрите второй этаж дома доктора: бумаги — '+n+' / 3, спальня.'+(n>=2?'<br><span style="font-size:15px">В спальне, за портретом, — сейф в стене.</span>':''));if(n>=2)S.mark=[266.4,-23.2,'doc2'];};
-addInter(271.4,-29.4,1.4,'Подняться на второй этаж',()=>stairs(true),()=>S.inside==='doc'&&S.escaped);
+addInter(271.4,-29.4,1.4,'Подняться на второй этаж',()=>stairs(true),()=>S.inside==='doc'&&S.escaped&&!A3.ph);
 addInter(277.8,-12.2,1.3,'Спуститься по лестнице',()=>stairs(false),()=>S.inside==='doc2'&&(S.paul||!S.paulScene));
 async function stairs(up){S.mode='talk';SFX.creak();await fade(1,320);S.inside=up?'doc2':'doc';if(up){P.x=276.4;P.z=-12.4;P.rot=-PI/2;}else{P.x=271;P.z=-30;P.rot=PI;}CAM.pitch=0;camSnap();await fade(0,420);S.mode='play';
   if(up&&!S.up){S.up=true;S.mode='talk';await say(HERO,'(шёпотом) Библиотека… Полки до потолка. И спальня — дверь нараспашку. Он и правда жил одной работой.',VO.hero);upObj();S.mode='play';}}

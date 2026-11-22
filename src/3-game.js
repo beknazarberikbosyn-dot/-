@@ -248,11 +248,11 @@ function updPlayer(dt){
   let sx=(K.KeyD?1:0)-(K.KeyA?1:0),fw=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){sx=TJ.x;fw=-TJ.y;}
   P.rot+=((K.ArrowLeft?1:0)-(K.ArrowRight?1:0))*dt*2.2;CAM.yaw=P.rot;
   const fx=sin(P.rot),fz=cos(P.rot);let mx=fx*fw-fz*sx,mz=fz*fw+fx*sx;const mov=!!(sx||fw);
-  P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;if(S.st<=0)S.tired=true;if(S.st>25)S.tired=false;
+  P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;S.st=100;S.tired=false;   // no stamina any more
   P.running=mov&&(K.ShiftLeft||K.ShiftRight||(TJ.on&&hypot(TJ.x,TJ.y)>.92))&&!S.tired&&!S.crouch&&!P.block;
   const sp=S.crouch?2.2:P.running?6.7:P.block?1.7:4.1;
   if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
-  P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
+  P.mv=mov?1:0;
   if(S.frozen){P.mv=0;CAM.yaw=P.rot;return;}
   if(S.hp<100&&S.t-(S.lastHurt||0)>6&&!(S.chased>0)&&!DEF.on)S.hp=min(100,S.hp+dt*3);   // no medkits: wounds close while he stays out of trouble
   P.atk-=dt;P.cd-=dt;P.hurt-=dt;if(P.comboT>0){P.comboT-=dt;if(P.comboT<=0)P.combo=0;}
@@ -272,13 +272,13 @@ function drawFace(){const c=fctx,f=S.fear,sh=f>=3?(Math.random()-.5)*5:f>=2?(Mat
   if(f>=2){c.fillStyle='#9fd8e8';for(const[x,y]of f>=3?[[30,46],[75,50],[34,66]]:[[30,46]]){c.beginPath();c.moveTo(x,y-4);c.quadraticCurveTo(x+4,y+3,x,y+4);c.quadraticCurveTo(x-4,y+3,x,y-4);c.fill();}}
   c.strokeStyle='rgba(11,20,22,.35)';c.lineWidth=1.2;for(let i=0;i<5;i++){c.beginPath();c.moveTo(66+i*2,62+i*2);c.lineTo(72+i*.6,74+i);c.stroke();}}
 let faceT=0;
-function updHud(dt){$('bhp').firstChild.style.width=S.hp+'%';$('bst').firstChild.style.width=S.st+'%';$('bst').style.opacity=S.tired?.55:1;
+function updHud(dt){
   $('items').innerHTML=(S.weapon?'🔧 '+S.weapon.name+' &nbsp; ':'')+(S.disguise?'🜏 в робе культиста &nbsp; ':'')+(S.crouch?'▾ пригнулся':'');
   const o=S.mode==='play'&&!S.pause?curInter():null,p=$('prompt');if(o){p.style.display='block';p.innerHTML='<kbd>E</kbd>'+o.label;}else p.style.display='none';
   let mx=0;for(const e of EN)if(e.active&&e.state!=='ko')mx=max(mx,e.state==='chase'?2:e.aw);
   $('det').innerHTML=S.chased>0?'<span style="color:#ff6a5a">● Погоня! Бегите и прячьтесь</span>':S.tailed?'<span style="color:#f0c060">◉ За вами следят — оторвитесь или скройтесь из виду</span>':'';
   const f=S.mode==='finale'?S.fear:S.chased>0||S.hp<30?2:mx>.15||S.tailed?1:0;faceT-=dt;if(f!==S.fear||f>=2&&faceT<=0||faceT<-5){if(S.mode!=='finale')S.fear=f;drawFace();faceT=.08;}
-  $('flash').style.opacity=clamp(P.hurt*1.6,0,.8)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
+  $('flash').style.opacity=clamp(P.hurt*2.2,0,.95)+(S.hp<30&&S.mode==='play'?.18+.1*sin(S.t*5):0);
   if(S.chased>0){S.chased-=dt;S.hbT=(S.hbT||0)-dt;if(S.hbT<=0){SFX.heart();S.hbT=.75;}}}
 function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0,w,h);if(!S.hud||CAM.fp||S.mode==='finale')return;c.textAlign='center';c.textBaseline='middle';
   if(S.fpPlay&&S.mode==='play'){c.fillStyle='rgba(230,225,205,.7)';c.beginPath();c.arc(w/2,h/2,2.4,0,7);c.fill();if(document.pointerLockElement!==cv&&!document.body.classList.contains('touch')){c.font='15px Georgia';c.fillStyle='rgba(230,225,205,.8)';c.fillText('Щёлкните, чтобы управлять взглядом мышью',w/2,h/2+34);}}
@@ -293,4 +293,4 @@ function edgeArrow(c,w,h,wx,wz,col,icon){const p=proj(wx,1.5,wz);let x=(p.x-.5),
   c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();icon();c.rotate(a);c.fillStyle=col;c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}
 function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();S.camBlend=0;}
 function camGoal(){S.fpPlay=false;if(S.camFn){S.hadCam=1;S.camFn();return;}if(S.hadCam){S.hadCam=0;S.camBlend=1.1;CAM.rate=4;}S.fpPlay=true;CAM.fov=1.15;
-  const h=P.lie?.35:S.kneel?.95:S.seated?1.2:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,cp=cos(CAM.pitch);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(CAM.pitch)*10,P.z+cos(P.rot)*cp*10];}
+  const h=P.lie?.35:S.kneel?.95:S.seated?1.2:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,pt=CAM.pitch+(S.rifle?RIF.kick*.035:0),cp=cos(pt);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(pt)*10,P.z+cos(P.rot)*cp*10];}

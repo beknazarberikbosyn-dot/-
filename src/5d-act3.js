@@ -13,7 +13,7 @@ const ESCN=[NPC2({}),NPC2({})];   // the two brothers who escort the prisoners
 async function act3Start(){A3.ph='cave';S.inside='cave';P.lie=false;Object.assign(AD,{show:true,x:217.8,z:-9.2,pose:'stand',rot:atan2(P.x-217.8,P.z+9.2)});
   await say('Доктор Бернсон','Теперь — в лабораторию. Закончить сыворотку можно только там. Идёмте ко мне, мистер Крейн. И держитесь рядом.',VO.doc);
   setObj('Вернитесь с доктором Бернсоном в его дом на Холмовой улице.');S.mark=[217,10.2,'cave'];$('fade').style.transitionDuration='900ms';$('fade').style.opacity=0;S.mode='play';}
-addInter(217,10.4,1.6,'Выйти из пещеры',async()=>{S.mark=[-110,-33.8,null];await leaveRoom(XD.cave);A3.ph='walk';S.escort=true;S.cp=[50,-41];Object.assign(AD,{show:true,x:51.4,z:-41.4,walk:null,pose:'walk'});walkTalk();},()=>S.inside==='cave'&&A3.ph==='cave');
+addInter(217,10.4,1.6,'Выйти из пещеры',async()=>{S.mark=null;await leaveRoom(XD.cave);walkStart();},()=>S.inside==='cave'&&A3.ph==='cave');
 async function walkTalk(){await wait(2.5);const d=VO.doc,h=VO.hero;
   for(const[w,t]of[[HERO,'Доктор… скажите честно. Вы правда хотите вколоть это всем? Женщинам, детям — тем, кто ни в чём не виноват?'],
     ['Доктор Бернсон','Вы так ничего и не поняли. Сыворотка не делает из человека высшее существо. Ни памяти, ни разума — только тварь. Пустая, голодная тварь.'],
@@ -23,11 +23,20 @@ async function walkTalk(){await wait(2.5);const d=VO.doc,h=VO.hero;
     ['Доктор Бернсон','А моя кровь — Его дар — позволит мне потянуть их за собой. В воду. На дно. Навсегда.'],
     ['Доктор Бернсон','И тогда Грейхейвен впервые за сто лет станет просто городом. Люди будут свободны.'],
     [HERO,'(тихо) А вы?'],['Доктор Бернсон','А я пойду первым.']]){if(A3.ph!=='walk')return;await say(w,t,w===HERO?h:d);await wait(.5);}}
-// the doctor follows the hero in the streets
+// the doctor leads along the road past the old chapel; the hero has to stay close behind him (an invisible leash)
+const WALK_PATH=[[50.6,-38],[48.4,-30],[47.2,-20],[46.2,-12.4],[42.4,-8.6],[34.6,-8.4]];
+function walkStart(){A3.ph='walk';A3.wi=0;S.escort=true;S.cp=[50,-41];S.mark=null;Object.assign(AD,{show:true,x:51.2,z:-40.6,walk:null,pose:'walk'});
+  setObj('Идите за доктором Бернсоном. Не отставайте и не отходите от него.');walkTalk();}
+function walkLead(dt){const w=WALK_PATH[min(A3.wi,WALK_PATH.length-1)],dw=hypot(w[0]-AD.x,w[1]-AD.z),d=hypot(P.x-AD.x,P.z-AD.z);AD.mv=0;
+  if(dw<.5&&A3.wi<WALK_PATH.length-1)A3.wi++;
+  else if(dw>=.2&&d<4.6){const s=min(dw,1.9*dt);AD.x+=(w[0]-AD.x)/dw*s;AD.z+=(w[1]-AD.z)/dw*s;AD.mv=1;AD.ph+=dt*4.4;AD.rot=atan2(w[0]-AD.x,w[1]-AD.z);}
+  else if(d>=4.6||dw<.2)faceTo(AD,atan2(P.x-AD.x,P.z-AD.z),dt,3);
+  if(d>6.5){const k=6.5/d;P.x=AD.x+(P.x-AD.x)*k;P.z=AD.z+(P.z-AD.z)*k;A3.warn=(A3.warn||0)-dt;if(A3.warn<=0){A3.warn=3;toast('<b>Не отходите от доктора.</b> Без него вас схватят на первой же улице.',3);}}
+  if(A3.wi>=WALK_PATH.length-1&&dw<.3&&d<4.5)encounter();}
 function adFollow(dt){const d=hypot(P.x-AD.x,P.z-AD.z);if(d>2.4){const tx=P.x-sin(P.rot)*1.6+cos(P.rot)*1.1,tz=P.z-cos(P.rot)*1.6-sin(P.rot)*1.1;if(!goDir(AD,tx,tz,max(3.6,d*1.4),dt)&&d>9){AD.x=tx;AD.z=tz;}}else AD.rot=atan2(P.x-AD.x,P.z-AD.z);}
 // ---------------------------------------------------------------- 2. the old chapel: the brothers, Father Paul, the quarrel, the flight
 async function encounter(){A3.ph='enc';S.mode='talk';S.mark=null;const d=VO.doc,p=VO.paul,c=VO.cult,h=VO.hero;
-  P.x=clamp(P.x,30,40);P.z=-8.4;AD.x=P.x-1.5;AD.z=-10;P.rot=-PI/2;AD.rot=-PI/2;
+  P.x=37;P.z=-8.4;AD.x=35.4;AD.z=-9.4;P.rot=-PI/2;AD.rot=-PI/2;
   const G=[[26.6,-5.4],[28.2,-4.6],[25.2,-4.8]];ENC.forEach((e,i)=>{e.x=e.hx=G[i][0];e.z=e.hz=G[i][1];e.rot=atan2(P.x-e.x,P.z-e.z);});A3.encShow=true;
   lookAt(27,1.5,-5);await wait(.6);
   await say('Брат в робе','Доктор Бернсон? Почему вы ходите с чужаком? Его ищет весь город.',c);
@@ -57,8 +66,8 @@ function chaseTick(dt){if(S.t-A3.chaseT>2.4)for(const e of ENC)if(!e.active&&!e.
   else AD.rot=atan2(P.x-AD.x,P.z-AD.z);
   if(hypot(P.x+110,P.z+33.8)<3.2&&hypot(AD.x+110,AD.z+33.6)<4)houseIn();}
 // ---------------------------------------------------------------- 3. the siege: the chair, the rifle, two minutes at the windows
-const DWIN=[{x:261.2,z:-28.2,n:[0,-1]},{x:277.2,z:-28.2,n:[0,-1]},{x:279.8,z:-31.6,n:[-1,0]},{x:258.2,z:-30.6,n:[1,0]}];
-const DEF={on:false,t:0,next:2,cul:[],dur:120};const RIF={cd:0,kick:0,flash:0};
+const DWIN=[{x:261.2,z:-28.2,n:[0,-1]},{x:264.7,z:-41.8,n:[0,1]},{x:279.8,z:-31.6,n:[-1,0]},{x:258.2,z:-40.4,n:[1,0]}];   // clear of the stairs, the bookcase and the armchair
+const DEF={on:false,t:0,next:2,cul:[],dur:120,adHp:100};const LABP=[[271.4,-36.9],[269.6,-37.4],[268.4,-31.1],[272.6,-38.4],[270.2,-36.2]];const RIF={cd:0,kick:0,flash:0};
 for(const w of DWIN){const fr=PAL.woodD,side=w.n[0]!==0;   // frames and sills (the panes are drawn per frame: whole or broken)
   const bx=(dx,y,dz,sx,sy,sz)=>side?IG.bx(w.x+w.n[0]*.03,y,w.z+dx,sz,sy,sx,fr):IG.bx(w.x+dx,y,w.z+w.n[1]*.03,sx,sy,sz,fr);
   bx(0,.94,0,1.36,.08,.14);bx(0,2.3,0,1.36,.08,.14);bx(-.64,.94,0,.08,1.44,.14);bx(.64,.94,0,.08,1.44,.14);bx(0,.94,0,.06,1.4,.1);}
@@ -81,10 +90,11 @@ async function houseIn(){A3.ph='house';S.mode='talk';S.mark=null;for(const e of[
   await say('Доктор Бернсон','Держите! Винтовка отца — из спальни. Заряжена. Стреляйте в каждого, кто полезет в окно.',VO.doc);
   await say('Доктор Бернсон','Мне нужно две минуты. Всего две минуты!',VO.doc);
   Object.assign(AD,{walk:[271.4,-36.6],pose:'work'});S.rifle=true;SFX.pick();defStart();}
-function defStart(){Object.assign(DEF,{on:true,t:0,next:1.5,cul:[]});DEF.broken=DEF.broken||[false,false,false,false];S.cp=[269,-31];S.cpRoom='doc';S.hp=100;
+function defStart(){Object.assign(DEF,{on:true,t:0,next:1.5,cul:[],adHp:100,lab:0,labT:0});AD.walk=LABP[0];AD.pose='work';DEF.broken=DEF.broken||[false,false,false,false];S.cp=[269,-31];S.cpRoom='doc';S.hp=100;
   setObj('Отстреливайтесь от культистов в окнах, пока доктор заканчивает сыворотку.');S.mode='play';
-  toast((touchUI()?'«Удар»':'<span class="kb">ЛКМ</span>')+' — выстрел. Цельтесь в тех, кто лезет в окна. Продержитесь <b>две минуты</b>.',6);}
+  toast((touchUI()?'«Удар»':'<span class="kb">ЛКМ</span>')+' — выстрел. Цельтесь в тех, кто лезет в окна, — и не дайте им добраться до доктора.',6);}
 function defTick(dt){if(!DEF.on)return;DEF.t+=dt;RIF.cd-=dt;
+  DEF.labT-=dt;if(!walking(AD)&&DEF.labT<=0){DEF.labT=3+Math.random()*3;DEF.lab=(DEF.lab+1+floor(Math.random()*(LABP.length-1)))%LABP.length;AD.walk=LABP[DEF.lab];AD.sp=1.5;}
   if(DEF.t>=DEF.dur){defEnd();return;}
   DEF.next-=dt;const alive=DEF.cul.filter(c=>c.st!=='dead').length;
   if(DEF.next<=0&&alive<5&&DEF.t<DEF.dur-4){const free=DWIN.map((w,i)=>i).filter(i=>!DEF.cul.some(c=>c.w===i&&c.st==='sill'));
@@ -93,12 +103,14 @@ function defTick(dt){if(!DEF.on)return;DEF.t+=dt;RIF.cd-=dt;
     DEF.next=lerp(5.2,2.1,DEF.t/DEF.dur)*(.75+Math.random()*.5);}
   for(const c of DEF.cul){const w=DWIN[c.w];
     if(c.st==='sill'){c.t+=dt;const k=min(1,c.t/5);c.x=w.x+w.n[0]*(.3+1.1*k);c.z=w.z+w.n[1]*(.3+1.1*k);c.y=k<.85?.86:.86*(1-(k-.85)/.15);if(k>=1){c.st='in';c.y=0;}}
-    else if(c.st==='in'){const dx=P.x-c.x,dz=P.z-c.z,d=hypot(dx,dz);c.rot=atan2(dx,dz);c.atk-=dt;c.mv=0;
-      if(d>1.25){moveC(c,dx/d*2.2*dt,dz/d*2.2*dt,.3);c.mv=1;c.ph+=dt*7;}else if(c.atk<=0&&S.mode==='play'){c.atk=1.4;c.swing=.3;SFX.swing();damage(15,null);}
+    else if(c.st==='in'){const dp=hypot(P.x-c.x,P.z-c.z),dd=hypot(AD.x-c.x,AD.z-c.z),toDoc=c.goDoc??(c.goDoc=Math.random()<.45);   // some go for the hero, some for the doctor
+      const tx=toDoc?AD.x:P.x,tz=toDoc?AD.z:P.z,dx=tx-c.x,dz=tz-c.z,d=hypot(dx,dz)||.01;c.rot=atan2(dx,dz);c.atk-=dt;c.mv=0;
+      if(d>1.2){const s=2.2*dt;if(!moveC(c,dx/d*s,dz/d*s,.3)){c.x+=dx/d*s;c.z+=dz/d*s;}c.mv=1;c.ph+=dt*7;}
+      else if(c.atk<=0&&S.mode==='play'){c.atk=1.4;c.swing=.3;SFX.swing();if(toDoc){DEF.adHp-=20;SFX.hurt();S.shake=.15;if(DEF.adHp<=0){defFail();return;}if(!sub)say('Доктор Бернсон','Крейн! Помогите!',{pitch:120,vol:.3,dur:1.4});}else damage(15,null);}
       if(c.swing>0)c.swing-=dt;}
     else c.dead+=dt;}
   DEF.cul=DEF.cul.filter(c=>c.dead<4);}
-function fireRifle(){if(RIF.cd>0){return;}RIF.cd=.8;RIF.kick=1;RIF.flash=.08;CAM.pitch=min(1.2,CAM.pitch+.035);
+function fireRifle(){if(RIF.cd>0){return;}RIF.cd=.8;RIF.kick=1;RIF.flash=.08;   // the kick is only visual: the aim comes back by itself
   noise(.35,{f:2200,to:180,vol:.6});tone(70,.35,{vol:.5,to:35});noise(.6,{f:400,to:90,vol:.2,delay:.1});setTimeout(()=>{SFX.click();noise(.15,{f:1500,type:'bandpass',vol:.08});},450);
   const o=CAM.eye,d=vNorm(vSub(CAM.tgt,o));let best=null,bt=1e9;
   for(const c of DEF.cul){if(c.st==='dead')continue;for(let h=.35;h<=1.75;h+=.2){const q=[c.x,c.y+h,c.z],v=vSub(q,o),t=vDot(v,d);if(t<.2)continue;const off=vLen(vSub(v,vSc(d,t)));if(off<.33&&t<bt){bt=t;best=c;}}}
@@ -171,9 +183,9 @@ async function chapelScene(){A3.ph='chapel';S.inside='chapel';S.tied=true;setObj
 function act3Tick(dt){RIF.kick=max(0,RIF.kick-dt*5);RIF.flash-=dt;
   if(PAUL.syr)PAUL.arm=min(1,(PAUL.arm||0)+dt*1.2);if(PAUL.stab>0&&PAUL.stab<1)PAUL.stab=min(1,PAUL.stab+dt*5);
   if(A3.ph==='escort'&&S.mode==='talk')escortPlace(dt);
-  if(A3.ph==='house'&&!DEF.on&&AD.show)npcStep(AD,dt);if(A3.ph==='chapel'){for(const n of ESCN)npcStep(n,dt);}
+  if(A3.ph==='house'&&AD.show)npcStep(AD,dt);if(A3.ph==='chapel'){for(const n of ESCN)npcStep(n,dt);}
   defTick(dt);}
-function act3Play(dt){if(A3.ph==='walk'){adFollow(dt);if(P.x<42&&P.x>28&&abs(P.z+8.4)<7)encounter();}else if(A3.ph==='chase')chaseTick(dt);}
+function act3Play(dt){if(A3.ph==='walk')walkLead(dt);else if(A3.ph==='chase')chaseTick(dt);}
 function drawAct3(){const t=S.t;
   if(!S.inside&&AD.show&&(A3.ph==='walk'||A3.ph==='enc'||A3.ph==='chase'))drawChar(CHF.doc,AD.x,0,AD.z,AD.rot,{ph:AD.ph,mv:AD.mv,aR:A3.ph==='chase'&&AD.mv?-1.1+sin(AD.ph)*.6:null,aL:A3.ph==='chase'&&AD.mv?-1.1-sin(AD.ph)*.6:null});
   if(!S.inside&&A3.encShow)for(const e of ENC){const m=drawChar(CH.c,e.x,0,e.z,e.rot,{armed:true,aR:-1.25});torchFx(m,e.ph);}
@@ -182,7 +194,7 @@ function drawAct3(){const t=S.t;
     drawChar(CHF.matt,MATT.x,0,MATT.z,MATT.rot,{ph:MATT.ph,mv:1,aR:-.55,aL:-.55,cR:1.2,cL:1.2});for(const n of ESCN){const m=drawChar(CH.c,n.x,0,n.z,n.rot,{ph:n.ph,mv:1,armed:true,aR:-1.25});torchFx(m,n.ph);}}
   if(S.inside==='doc'){for(const[i,w]of DWIN.entries()){const side=w.n[0]!==0,M=mM(mT(w.x+w.n[0]*.02,.97,w.z+w.n[1]*.02),mRy(side?PI/2:0));draw(DEF.broken&&DEF.broken[i]?M_hole:M_pane,M,0);}
     if(A3.chair)draw(M_chair,mM(mT(269,0,-28.75),mRy(PI),mRx(-.42),mT(0,0,0)),.03);
-    if(A3.ph==='house'&&AD.show){const wk=AD.pose==='work';drawChar(CHF.doc,AD.x,0,AD.z,AD.rot,{ph:AD.ph,mv:AD.mv,aR:wk?-1.1+sin(t*5)*.25:null,aL:wk?-1.0+sin(t*4+1)*.25:null});}
+    if(A3.ph==='house'&&AD.show){const wk=AD.pose==='work'&&!AD.mv;drawChar(CHF.doc,AD.x,0,AD.z,AD.rot,{ph:AD.ph,mv:AD.mv,aR:wk?-1.1+sin(t*5)*.25:null,aL:wk?-1.0+sin(t*4+1)*.25:null});}
     for(const c of DEF.cul){const o={noBlob:c.st==='sill'};if(c.st==='sill'){o.crouch=1;o.aR=-1.5;o.aL=-1.6;}else if(c.st==='in'){o.ph=c.ph;o.mv=c.mv;o.aR=c.swing>0?lerp(.3,-2.4,c.swing/.3):-2.2;o.aL=-1.2;}else{o.lie=true;}
       drawChar(CH.c,c.x,c.y,c.z,c.rot,o);}
     if(RIF.flash>0){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e));light(e[0]+f[0]*1.2,e[1]+f[1]*1.2,e[2]+f[2]*1.2,14,[1,.8,.45]);}}
@@ -196,13 +208,14 @@ function drawFpRifle(e,f,r,up){const k=RIF.kick,b=vAdd(e,vAdd(vAdd(vSc(r,.15),vS
   const ch=CH.hero,sp1=vAdd(e,vAdd(vAdd(vSc(r,.3),vSc(up,-.48)),vSc(f,-.05))),sp2=vAdd(e,vAdd(vAdd(vSc(r,-.26),vSc(up,-.46)),vSc(f,-.02)));
   fpArm(sp1,mP(M,[0,-.08,-.14]),1,up,f,false,1.35,vNorm(vAdd(vSc(up,-1),vSc(f,.35))));fpArm(sp2,mP(M,[-.01,-.07,.3]),-1,up,f,false,1.0,vNorm(vAdd(vSc(up,-.7),vSc(r,.7))));
   if(RIF.flash>0){const mz=mP(M,[0,.0,.9]);for(let i=0;i<4;i++)PT.add(5,mz[0],mz[1],mz[2],f[0]*4+rr(-1,1),f[1]*4+rr(-1,1),f[2]*4+rr(-1,1),.05,.12,[1,.85,.4,1],0);}}
-function act3Hud(c,w,h){if(!DEF.on||S.mode!=='play')return;const left=max(0,DEF.dur-DEF.t),m=floor(left/60),s=floor(left%60);
-  c.font='bold 26px Georgia';c.textAlign='center';c.lineWidth=5;c.strokeStyle='#0b1416';const tx='Продержитесь: '+m+':'+String(s).padStart(2,'0');c.strokeText(tx,w/2,64);c.fillStyle='#f0c060';c.fillText(tx,w/2,64);
+function act3Hud(c,w,h){if(!DEF.on||S.mode!=='play')return;
   if(RIF.cd>0){c.font='15px Georgia';c.fillStyle='#d9cdb0';c.fillText('перезарядка…',w/2,h/2+46);}}
-function act3Respawn(){if(DEF.on){Object.assign(DEF,{t:0,next:2,cul:[]});S.hp=100;setObj('Отстреливайтесь от культистов в окнах, пока доктор заканчивает сыворотку.');toast('Они прорвались… Ещё раз. Две минуты.',4);}
+async function defFail(){S.mode='talk';scream(1.2);await say('Доктор Бернсон','А-а-а…',{pitch:110,dur:1.4});await fade(1,600);
+  P.x=269;P.z=-31;P.rot=PI;Object.assign(AD,{x:LABP[0][0],z:LABP[0][1],walk:null});camSnap();act3Respawn();await fade(0,600);S.mode='play';}
+function act3Respawn(){if(DEF.on){Object.assign(DEF,{t:0,next:2,cul:[],adHp:100});S.hp=100;setObj('Отстреливайтесь от культистов в окнах, пока доктор заканчивает сыворотку.');toast(DEF.adHp<=0?'Доктора убили… Защищайте и его. Ещё раз.':'Они прорвались… Ещё раз.',4);DEF.adHp=100;}
   if(A3.ph==='chase'){Object.assign(AD,{x:P.x-1.2,z:P.z-1,ci:0});A3.chaseT=S.t+1;for(const[i,e]of ENC.entries()){e.active=false;e.x=e.hx=P.x+18+i;e.z=e.hz=-6+i;e.state='patrol';}}}
 function act3Skip(st){S.up=S.paulScene=S.paul=S.robe=true;S.h1=S.h2=S.h3=S.knock=S.rock=S.winBroken=S.church=S.toCave=S.inCave=S.caveTalk=true;tearRobe();S.cp=[-87,-9.4];
-  if(st==='return'){S.inside=null;P.x=50;P.z=-41;P.rot=PI;A3.ph='walk';S.escort=true;Object.assign(AD,{show:true,x:51.4,z:-41.4});S.mark=[-110,-33.8,null];setObj('Вернитесь с доктором Бернсоном в его дом на Холмовой улице.');walkTalk();}
+  if(st==='return'){S.inside=null;P.x=50.4;P.z=-42;P.rot=PI;walkStart();}
   else if(st==='chase'){S.inside=null;P.x=34;P.z=-8.4;P.rot=-PI/2;Object.assign(AD,{show:true,x:33,z:-9.4});ENC.forEach((e,i)=>{e.x=26.6-i;e.z=-5;});startChase();}
   else if(st==='defense'){S.inside='doc';P.x=269;P.z=-31;P.rot=PI;A3.ph='house';A3.chair=true;Object.assign(AD,{show:true,x:271.4,z:-36.6,rot:PI,pose:'work'});DEF.broken=[true,false,false,false];S.rifle=true;defStart();}
   else if(st==='escort'){S.mode='talk';escortStart();}
