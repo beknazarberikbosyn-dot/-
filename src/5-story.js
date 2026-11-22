@@ -209,7 +209,7 @@ async function useDoor(d){
   if(d.lock)lockpick(d,()=>{d.lock=false;go();});else go();}
 for(const k in XD){const d=XD[k];d.k=k;d.lock=!!d.pins;const o=addInter(d.x+d.n[0]*.95,d.z+d.n[1]*.95,1.6,'',()=>useDoor(d),()=>doorOn(d));Object.defineProperty(o,'label',{get:()=>doorLabel(d)});}
 // exits from the rooms (the doorway gap in the low front wall)
-for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn)&&!(key==='doc'&&!S.robe));}
+for(const key in ROOMS){const r=ROOMS[key];if(r.gap==null)continue;addInter(r.gap,r.z1-.55,1,'Выйти на улицу',()=>leaveRoom(XD[r.door]),()=>S.inside===key&&!(key==='pub'&&S.backIn)&&!(key==='doc'&&(!S.robe||A3.ph)));}
 
 // --- lockpicking: lift the pins one by one to the shear line
 let LP={on:false};const LPT=.68;
@@ -440,14 +440,14 @@ function drawStory(){if(!M_int)M_int=mesh(IG);draw(M_int,null,.035);if(FIN.on||S
   if(S.inside==='cellar'){drawCellarFight();for(const[x,z,r,i]of DEADP)if(i!==2||!CF.on)drawChar(CH.v[DEAD[i]],x,0,z,r,{lie:true,noBlob:true,aR:.25,aL:.4});light(190,2.2,0,3+abs(sin(S.t*.7))*1.5,[.5,.45,.3]);}
   for(const l of ALARML)light(...l);
   if(S.mode==='play'){const T=markTarget();if(T)draw(M_beaconY,mM(mT(T[0],2.6+sin(S.t*2.4)*.15,T[1]),mRy(S.t*1.6)),0);}
-  drawAct2();drawStage();}
+  drawAct3();drawAct2();drawStage();}
 function storyHud(c,w,h){if(S.rec){const s=floor(S.t-S.recT0);$('recT').textContent='00:'+String(floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
   if(S.mode!=='play')return;c.textAlign='center';c.textBaseline='middle';
   const bub=(x,z)=>{if(hypot(x-P.x,z-P.z)>13)return;const p=proj(x,2.4,z);if(p.w<=0)return;c.save();c.translate(p.x*w,p.y*h);c.fillStyle='rgba(11,20,22,.82)';c.strokeStyle='#d9cdb0';c.lineWidth=2;
     c.beginPath();c.ellipse(0,0,17,12,0,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(-4,10);c.lineTo(-9,19);c.lineTo(3,11);c.fill();c.fillStyle='#d9cdb0';for(const k of[-6,0,6]){c.beginPath();c.arc(k,0,2,0,7);c.fill();}c.restore();};
   if(S.explore&&!S.alarm&&!S.inside)for(const n of TOWN)if(!n.done)bub(n.x,n.z);
   if(S.inside==='pub'&&!S.backIn&&!S.kicked)for(const n of PUBN)if(n.lines&&!n.done)bub(n.x,n.z);
-  stageHud(c,w,h);act2Hud(c,w,h);
+  stageHud(c,w,h);act2Hud(c,w,h);act3Hud(c,w,h);
   if(crier.active&&crier.flee&&crier.yellT>0){const p=proj(crier.x,2.8,crier.z);if(p.w>0){c.font='bold 22px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText(crier.yell,p.x*w,p.y*h-12);c.fillStyle='#ff6a5a';c.fillText(crier.yell,p.x*w,p.y*h-12);}}}
 
 // --- debug: jump to a story stage ('town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play')
@@ -466,5 +466,5 @@ function storySkip(st){S.booked=S.inRoom=S.explore=true;S.hud=true;$('hud').styl
   else if(st==='alarm'){S.ev=3;EVID.forEach(e=>e.seen=1);S.inside='cellar';P.x=197;P.z=2.6;alarmSeq();}
   else if(st==='stalk'){P.x=-6.4;P.z=-20.5;startStalk();}
   else if(st==='doctor'){startStalk();S.carSeen=S.guardsMet=true;S.inside='doc';P.x=269;P.z=-30;P.rot=PI;S.inDoc=true;setObj(docObj());}
-  else{startStalk();S.carSeen=S.guardsMet=S.inDoc=true;DOCEV.forEach(e=>e.seen=1);S.injected=true;stage2(true);S.inside='doc';P.x=271;P.z=-30;P.rot=PI;if(ACT2ST.includes(st))act2Skip(st);}
+  else{startStalk();S.carSeen=S.guardsMet=S.inDoc=true;DOCEV.forEach(e=>e.seen=1);S.injected=true;stage2(true);S.inside='doc';P.x=271;P.z=-30;P.rot=PI;if(ACT2ST.includes(st))act2Skip(st);else if(ACT3ST.includes(st))act3Skip(st);}
   camSnap();}

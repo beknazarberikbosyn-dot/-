@@ -361,7 +361,7 @@ async function rlWin(){if(!RL.on||RL.fly)return;S.mode='talk';RL.fly=.001;const 
   await say('Доктор Бернсон','Вы видели?.. Он открыл глаза. Он… посмотрел на нас.',VO.doc);
   await say(HERO,'Я видел только свет. Один только свет.',VO.hero);
   await say('Доктор Бернсон','Значит — получилось. Да поможет нам Бог, мистер Крейн… Получилось.',VO.doc);
-  await wait(.6);$('fade').style.transitionDuration='2600ms';$('fade').style.opacity=1;await wait(3);credits();}
+  await wait(.6);act3Start();}
 function drawRlyeh(){if(S.inside!=='rlyeh'||!M_rl)return;draw(M_rl,null,.05);const k=RL.t/RL.max;
   const sp=FIN.pose,sm=FIN.M,hl=FIN.headLook;const pose=cthPose(26);Object.assign(pose,{x:800,y:15,z:214,sc:.95,yaw:0,sit:1,track:RL.fly?1:.6,eyes:RL.fly?1+kf(RL.fly,1.5,8)*7:1,hand:[[-27,1+sin(S.t*.6)*.6,-15],[27,1+sin(S.t*.6+1)*.6,-15]],curl:[.55,.6]});   // hands on the armrests
   FIN.headLook=RL.fly?CAM.eye.slice():[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);RL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;

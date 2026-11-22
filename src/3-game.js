@@ -60,7 +60,7 @@ function partSet(prefix,fb,opt={}){const bn=opt.bodyName||prefix+'_body',h=HUMS[
 // who is talking: the nearest non-hero person to the camera while an NPC line is being spoken (the lower lip follows the syllables)
 const TK={on:false,open:0,cand:null,cd:1e9,cur:null};
 function talkTick(dt){let tg=0;TK.on=false;
-  if(sub&&sub.who&&sub.who!==HERO&&!S.vision&&!/Уолтер|Шёпот|Голос/.test(sub.who)){const L=sub.text.length,ws=max(.6,min(sub.dur-.9,L*.05));
+  if(sub&&sub.who&&sub.who!==HERO&&!S.vision&&!/Уолтер|Шёпот|Голос/.test(sub.who)&&!/^\*за дверью/.test(sub.text)){const L=sub.text.length,ws=max(.6,min(sub.dur-.9,L*.05));
     if(sub.t<ws){TK.on=true;const c=(sub.text[floor(sub.t/ws*L)]||' ').toLowerCase();tg=/[аеёиоуыэюяaeiou]/.test(c)?.7+.3*abs(sin(sub.t*23)):/[\s,.!?…—-]/.test(c)?.05:.3;}}
   TK.open+=(tg-TK.open)*min(1,dt*20);}
 function talkFrame(){TK.cur=TK.on?TK.cand:null;TK.cand=null;TK.cd=1e9;}
@@ -178,8 +178,8 @@ function updEnemy(e,dt){
   const dx=P.x-e.x,dz=P.z-e.z,d=hypot(dx,dz)||.01;
   // perception
   const Rv=(e.kind==='c'?14:11)*S.diff*(S.crouch?.55:1);e.rv=Rv;e.lr=(e.kind==='c'?16:12.5)*S.diff;const fx=sin(e.rot),fz=cos(e.rot),dt_=(dx*fx+dz*fz)/d;
-  let sees=d<Rv&&dt_>.3&&los(e.x,e.z,P.x,P.z,S.crouch);if(d<2.3&&los(e.x,e.z,P.x,P.z,S.crouch))sees=true;if(P.lie||S.disguise)sees=false;
-  if(e.state!=='chase'){if(sees)e.aw+=dt*(2.4*(1-d/Rv)+.45)*S.diff;else e.aw-=dt*.3;if(P.running&&d<7.5&&!S.disguise){e.aw+=dt*.55;faceTo(e,atan2(dx,dz),dt,3);}e.aw=clamp(e.aw,0,1);if(e.aw>=1)alertE(e);}
+  let sees=d<Rv&&dt_>.3&&los(e.x,e.z,P.x,P.z,S.crouch);if(d<2.3&&los(e.x,e.z,P.x,P.z,S.crouch))sees=true;if(P.lie||S.disguise||S.escort)sees=false;
+  if(e.state!=='chase'){if(sees)e.aw+=dt*(2.4*(1-d/Rv)+.45)*S.diff;else e.aw-=dt*.3;if(P.running&&d<7.5&&!S.disguise&&!S.escort){e.aw+=dt*.55;faceTo(e,atan2(dx,dz),dt,3);}e.aw=clamp(e.aw,0,1);if(e.aw>=1)alertE(e);}
   if(e.state==='chase'){S.chased=.6;
     const out=d>e.lr&&!e.direct;if(sees&&!out||e.direct){e.ls=[P.x,P.z];e.lose=0;}else{e.lose+=dt;if(out||e.lose>2.5){e.state='search';e.st=4;e.F=field(e.ls[0],e.ls[1]);e.aw=.2;e.wind=0;if(!EN.some(o=>o.active&&o.state==='chase'))toast('Вас потеряли из виду. Не попадайтесь снова.',3);return;}}
     if(e.wind>0){e.wind-=dt;faceTo(e,atan2(dx,dz),dt,10);if(e.wind<=0){strike(e,d);}return;}
@@ -199,7 +199,7 @@ function strike(e,d){e.cd=e.kind==='c'?1.5:e.kind==='f'?1.15:1.25;e.atk=.3;SFX.s
   if(P.block&&facing){if(e.kind!=='c'){e.stun=e.kind==='f'?.9:1.3;S.st=max(0,S.st-10);SFX.parry();toast('Парировано! Бейте, пока он оглушён.',2);return;}S.st=max(0,S.st-30);damage(18,e);return;}
   damage(e.kind==='c'?34:e.kind==='f'?30:14,e);}
 function damage(n,e){if(S.mode!=='play')return;S.hp-=n;P.hurt=.5;S.shake=max(S.shake,.35);SFX.hurt();if(e){const a=atan2(P.x-e.x,P.z-e.z);moveC(P,sin(a)*.7,cos(a)*.7);}S.lastHurt=S.t;if(S.hp<=0){S.hp=0;die(e);}}
-function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return;const cost=shove?14:9;if(S.st<cost){toast('Нет сил...',1.5);return;}S.st-=cost;P.cd=shove?.6:.42;P.atk=.28;P.shove=shove;SFX.swing();
+function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return;if(S.rifle){fireRifle();return;}const cost=shove?14:9;if(S.st<cost){toast('Нет сил...',1.5);return;}S.st-=cost;P.cd=shove?.6:.42;P.atk=.28;P.shove=shove;SFX.swing();
   let best=null,bd=2.05;for(const e of EN){if(!e.active||e.state==='ko')continue;const d=hypot(e.x-P.x,e.z-P.z);if(d<bd&&cos(P.rot-atan2(e.x-P.x,e.z-P.z))>-.2){bd=d;best=e;}}
   if(!best){P.combo=0;return;}
   if(best.kind==='f'){hitFish(best);return;}
@@ -212,7 +212,7 @@ function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return
   if(best.state!=='ko'&&best.state!=='chase')alertE(best);}
 async function die(e){if(e&&e.kind==='c'&&S.curfew){S.hp=0;sacrifice();return;}S.mode='dead';S.deaths++;P.lie=true;SFX.thud();toast('Удар… темнота.',3);await fade(1,900);await wait(1.2);
   S.inside=S.cpRoom||null;P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active||e.kind==='f')continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
-  if(S.cellarFight){cellarReset();toast('Тварь вцепилась вам в горло… Ещё раз — бита лежит у клеток.',4);}else toast('Вы очнулись в тени. Кажется, вас потеряли из виду…',4);S.mode='play';camSnap();await fade(0,900);}
+  act3Respawn();if(S.cellarFight){cellarReset();toast('Тварь вцепилась вам в горло… Ещё раз — бита лежит у клеток.',4);}else toast('Вы очнулись в тени. Кажется, вас потеряли из виду…',4);S.mode='play';camSnap();await fade(0,900);}
 
 // --- input
 addEventListener('keydown',e=>{if(e.code==='Tab'||e.code==='Space')e.preventDefault();if(K[e.code])return;K[e.code]=1;onKey(e.code);});
@@ -253,7 +253,8 @@ function updPlayer(dt){
   const sp=S.crouch?2.2:P.running?6.7:P.block?1.7:4.1;
   if(mov){const l=hypot(mx,mz);mx/=l;mz/=l;moveC(P,mx*sp*dt,mz*sp*dt);P.ph+=dt*sp*2.3;P.stepT-=dt*sp;if(P.stepT<=0){P.stepT=S.crouch?3.2:2.6;if(!S.crouch)SFX.step();}}
   P.mv=mov?1:0;S.st=clamp(S.st+(P.running?-21:P.block?2:14)*dt,0,100);
-  if(S.hp<100&&S.t-(S.lastHurt||0)>6&&!(S.chased>0))S.hp=min(100,S.hp+dt*3);   // no medkits: wounds close while he stays out of trouble
+  if(S.frozen){P.mv=0;CAM.yaw=P.rot;return;}
+  if(S.hp<100&&S.t-(S.lastHurt||0)>6&&!(S.chased>0)&&!DEF.on)S.hp=min(100,S.hp+dt*3);   // no medkits: wounds close while he stays out of trouble
   P.atk-=dt;P.cd-=dt;P.hurt-=dt;if(P.comboT>0){P.comboT-=dt;if(P.comboT<=0)P.combo=0;}
   if(!S.explore&&!S.inside&&(P.x>-24.6||P.z>-6.4)){P.x=min(P.x,-24.6);P.z=min(P.z,-6.4);if(toastT<=0)toast(S.booked?'Сначала — в номер: занести вещи и записать вступление к выпуску.':'Ночь, туман… Сначала нужно снять комнату в мотеле.',3);}
 }
@@ -292,4 +293,4 @@ function edgeArrow(c,w,h,wx,wz,col,icon){const p=proj(wx,1.5,wz);let x=(p.x-.5),
   c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();icon();c.rotate(a);c.fillStyle=col;c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}
 function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();S.camBlend=0;}
 function camGoal(){S.fpPlay=false;if(S.camFn){S.hadCam=1;S.camFn();return;}if(S.hadCam){S.hadCam=0;S.camBlend=1.1;CAM.rate=4;}S.fpPlay=true;CAM.fov=1.15;
-  const h=P.lie?.35:S.seated?1.2:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,cp=cos(CAM.pitch);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(CAM.pitch)*10,P.z+cos(P.rot)*cp*10];}
+  const h=P.lie?.35:S.kneel?.95:S.seated?1.2:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,cp=cos(CAM.pitch);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(CAM.pitch)*10,P.z+cos(P.rot)*cp*10];}
