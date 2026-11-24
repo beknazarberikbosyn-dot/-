@@ -111,11 +111,12 @@ function defTick(dt){if(!DEF.on)return;DEF.t+=dt;RIF.cd-=dt;
     else c.dead+=dt;}
   DEF.cul=DEF.cul.filter(c=>c.dead<4);}
 function fireRifle(){if(RIF.cd>0){return;}RIF.cd=.8;RIF.kick=1;RIF.flash=.08;   // the kick is only visual: the aim comes back by itself
-  noise(.35,{f:2200,to:180,vol:.6});tone(70,.35,{vol:.5,to:35});noise(.6,{f:400,to:90,vol:.2,delay:.1});setTimeout(()=>{SFX.click();noise(.15,{f:1500,type:'bandpass',vol:.08});},450);
+  SFX.shot();setTimeout(()=>SFX.bolt(),420);{const o=CAM.eye,d=vNorm(vSub(CAM.tgt,o)),m=vAdd(o,vSc(d,.9));for(let i=0;i<6;i++)PT.add(4,m[0],m[1]-.1,m[2],d[0]*1.5+rr(-.3,.3),.3+rr(0,.4),d[2]*1.5+rr(-.3,.3),.14,1.1,[.55,.55,.52,.35],-.3);}   // muzzle smoke
   const o=CAM.eye,d=vNorm(vSub(CAM.tgt,o));let best=null,bt=1e9;
   for(const c of DEF.cul){if(c.st==='dead')continue;for(let h=.35;h<=1.75;h+=.2){const q=[c.x,c.y+h,c.z],v=vSub(q,o),t=vDot(v,d);if(t<.2)continue;const off=vLen(vSub(v,vSc(d,t)));if(off<.33&&t<bt){bt=t;best=c;}}}
   if(best){best.st='dead';best.dead=0;SFX.hit();for(let i=0;i<12;i++)PT.add(1,best.x,best.y+1.3,best.z,rr(-1.5,1.5),rr(0,2.5),rr(-1.5,1.5),.05,.9,[.45,.04,.03,.95],1);mumble(.5,90,false,.14,true);}
-  else{const p=vAdd(o,vSc(d,6));for(let i=0;i<5;i++)PT.add(5,p[0],p[1],p[2],rr(-1,1),rr(0,1),rr(-1,1),.04,.4,[1,.8,.4,.9],-.2);}}
+  else{const t=rayHit(o,d,40),p=vAdd(o,vSc(d,t));for(let i=0;i<5;i++)PT.add(5,p[0],p[1],p[2],rr(-1,1),rr(0,1),rr(-1,1),.04,.4,[1,.8,.4,.9],-.2);
+    if(t<40)debris(p[0],p[1],p[2],6,'wood',{vx:-d[0]*3,vz:-d[2]*3,sp:2.2,sz:.07});}}
 async function defEnd(){DEF.on=false;S.mode='talk';for(const c of DEF.cul)if(c.st!=='dead'){c.st='dead';c.dead=3;}await wait(1.5);
   const p={pitch:76,vol:.26};lookAt(269,1.5,-28.2);
   await say('Отец Пол','*за дверью* Хватит, Эдмунд! Хватит прятаться за чужаком. Выходи сам.',p);

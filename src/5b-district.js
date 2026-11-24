@@ -211,7 +211,8 @@ function seaCam(t){let e=[VX,-1.4-min(t,18)*1.25,min(t,20)*1.1],g=vLerp([VX,2,e[
   if(VIS.eyesT){const k=kf(t,VIS.eyesT,VIS.eyesT+9);e=vLerp(e,[VX,-31,36],k);g=vLerp(g,[VX,-24,98],k);}
   if(VIS.upT){const k=kf(t,VIS.upT,VIS.upT+4);e=vLerp(e,[VX,-1.6,e[2]],k);g=vLerp(g,[VX,8,e[2]+2],k);}return[e,g];}
 function visionAtmo(M){if(S.vision==='sea'){R.fog=[.01,.07,.07];R.fogD=1/62;R.fogMin=0;R.fogH=.05;R.amb=[.16,.33,.33];R.sunC=[.08,.2,.22];M.on=false;return;}
-  R.fog=[.3,.12,.05];R.fogD=1/120;R.fogMin=.02;R.fogH=.1;R.amb=[.62,.38,.26];R.sunC=[.55,.26,.14];M.den=.55;M.top=9;M.col=[.5,.24,.12];M.maxD=130;}
+  const fl=1+sin(S.t*7)*.06+sin(S.t*17)*.04;   // the whole sky breathes with the fires
+  R.fog=[.3*fl,.12*fl,.05];R.fogD=1/120;R.fogMin=.02;R.fogH=.1;R.amb=[.62*fl,.38*fl,.26];R.sunC=[.55,.26,.14];M.den=.32;M.top=7;M.col=[.3*fl,.12*fl,.05];M.maxD=130;}
 function whisper(){mumble(3.2,46,false,.32,true);noise(3,{f:240,vol:.18,att:.8,to:90});tone(55,3.4,{type:'sawtooth',vol:.12,to:41,lp:300});}
 // first person all the way: he comes up from behind without a cut, the hero turns — the syringe is already raised — and it goes into the neck
 const M_syr=(()=>{const g=new Geo(.012),gl=H('#d8ece6',.25),lq=H('#5fd6a0',.7),mt=H('#9aa0a2',.2);g.at(mRx(PI/2),()=>{   // along +Z of the fist: plunger below, glass and needle above
@@ -279,7 +280,7 @@ function stage2(skip){S.stalk=false;S.curfew=true;S.tailed=false;for(const s of 
 
 // --- per-frame: always (cutscenes too) and in play mode
 function stageTick(dt){
-  if(FOUND.on){FOUND.t+=dt;}cellarTick(dt);act2Tick(dt);act3Tick(dt);
+  if(FOUND.on){FOUND.t+=dt;}dbrTick(dt);auRoom();cellarTick(dt);act2Tick(dt);act3Tick(dt);
   if(DOC.syr)DOC.arm=min(1,DOC.arm+dt*1.3);if(DOC.stab>0&&DOC.stab<1)DOC.stab=min(1,DOC.stab+dt*5);
   if(DOC.show){DOC.mv=0;if(DOC.flee){if(hypot(269-DOC.x,-28.2-DOC.z)>.4)goDir(DOC,269,-28.2,4.6,dt);}else if(DOC.walk&&hypot(DOC.walk[0]-DOC.x,DOC.walk[1]-DOC.z)>.15)goDir(DOC,DOC.walk[0],DOC.walk[1],1.6,dt);}
   if(S.vision){VIS.t+=dt;}

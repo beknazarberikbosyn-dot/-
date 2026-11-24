@@ -198,7 +198,7 @@ function strike(e,d){e.cd=e.kind==='c'?1.5:e.kind==='f'?1.15:1.25;e.atk=.3;SFX.s
   const facing=cos(P.rot-atan2(e.x-P.x,e.z-P.z))>.2;
   if(P.block&&facing){if(e.kind!=='c'){e.stun=e.kind==='f'?.9:1.3;S.st=max(0,S.st-10);SFX.parry();toast('Парировано! Бейте, пока он оглушён.',2);return;}S.st=max(0,S.st-30);damage(18,e);return;}
   damage(e.kind==='c'?34:e.kind==='f'?30:14,e);}
-function damage(n,e){if(S.mode!=='play')return;S.hp-=n;P.hurt=.5;S.shake=max(S.shake,.35);SFX.hurt();if(e){const a=atan2(P.x-e.x,P.z-e.z);moveC(P,sin(a)*.7,cos(a)*.7);}S.lastHurt=S.t;if(S.hp<=0){S.hp=0;die(e);}}
+function damage(n,e){if(S.mode!=='play'||DEV.god)return;S.hp-=n;P.hurt=.5;S.shake=max(S.shake,.35);SFX.hurt();if(e){const a=atan2(P.x-e.x,P.z-e.z);moveC(P,sin(a)*.7,cos(a)*.7);}S.lastHurt=S.t;if(S.hp<=0){S.hp=0;die(e);}}
 function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return;if(S.rifle){fireRifle();return;}const cost=shove?14:9;if(S.st<cost){toast('Нет сил...',1.5);return;}S.st-=cost;P.cd=shove?.6:.42;P.atk=.28;P.shove=shove;SFX.swing();
   let best=null,bd=2.05;for(const e of EN){if(!e.active||e.state==='ko')continue;const d=hypot(e.x-P.x,e.z-P.z);if(d<bd&&cos(P.rot-atan2(e.x-P.x,e.z-P.z))>-.2){bd=d;best=e;}}
   if(!best){P.combo=0;return;}
@@ -246,6 +246,7 @@ $('sSub').onchange=e=>{document.documentElement.style.setProperty('--subsz',e.ta
 function updPlayer(dt){
   // first person: W/S along the view, A/D strafe, arrows ←/→ turn; the joystick works the same way
   let sx=(K.KeyD?1:0)-(K.KeyA?1:0),fw=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0);if(TJ.on&&hypot(TJ.x,TJ.y)>.18){sx=TJ.x;fw=-TJ.y;}
+  if(devFly(dt))return;
   P.rot+=((K.ArrowLeft?1:0)-(K.ArrowRight?1:0))*dt*2.2;CAM.yaw=P.rot;
   const fx=sin(P.rot),fz=cos(P.rot);let mx=fx*fw-fz*sx,mz=fz*fw+fx*sx;const mov=!!(sx||fw);
   P.block=!!(K.KeyK||K.RMB)&&P.atk<=0;S.st=100;S.tired=false;   // no stamina any more
@@ -286,11 +287,11 @@ function hud2d(){const c=hctx,w=c.canvas.width,h=c.canvas.height;c.clearRect(0,0
     if(e.wind>0){c.fillStyle='#fff';c.font='bold 30px Georgia';c.fillText('⚔',x,y-4);continue;}if(e.stun>0){c.fillStyle='#f0c060';c.font='22px Georgia';c.fillText('✶✶',x,y);continue;}
     if(!ch)continue;c.font='bold 30px Georgia';c.lineWidth=5;c.strokeStyle='#0b1416';c.strokeText('!',x,y);c.fillStyle='#ff5a48';c.fillText('!',x,y);}
   if(S.mode==='play'){const T=markTarget();if(T)edgeArrow(c,w,h,T[0],T[1],'#f0c060',()=>{c.fillStyle='#f0c060';c.font='bold 24px Georgia';c.fillText('!',0,1);});}
-  storyHud(c,w,h);}
+  storyHud(c,w,h);devHud(c,w,h);}
 // arrow at the screen edge towards an off-screen world point (x,z)
 function edgeArrow(c,w,h,wx,wz,col,icon){const p=proj(wx,1.5,wz);let x=(p.x-.5),y=(p.y-.5);if(p.w<=0){x=-x;y=-y;}
   if(p.w>0&&abs(x)<.44&&abs(y)<.42)return;const a=atan2(y*h,x*w),rx=w/2-46,ry=h/2-86,k=1/max(abs(cos(a))/rx,abs(sin(a))/ry),px=w/2+cos(a)*k,py=h/2+sin(a)*k;
   c.save();c.translate(px,py);c.fillStyle='rgba(11,20,22,.8)';c.strokeStyle=col;c.lineWidth=2.5;c.beginPath();c.arc(0,0,19,0,7);c.fill();c.stroke();icon();c.rotate(a);c.fillStyle=col;c.beginPath();c.moveTo(31,0);c.lineTo(23,-7);c.lineTo(23,7);c.fill();c.restore();}
 function camSnap(){camGoal();CAM.eye=CAM.ge.slice();CAM.tgt=CAM.gt.slice();S.camBlend=0;}
 function camGoal(){S.fpPlay=false;if(S.camFn){S.hadCam=1;S.camFn();return;}if(S.hadCam){S.hadCam=0;S.camBlend=1.1;CAM.rate=4;}S.fpPlay=true;CAM.fov=1.15;
-  const h=P.lie?.35:S.kneel?.95:S.seated?1.2:S.crouch?1.08:1.62,bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,pt=CAM.pitch+(S.rifle?RIF.kick*.035:0),cp=cos(pt);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(pt)*10,P.z+cos(P.rot)*cp*10];}
+  const h=(P.lie?.35:S.kneel?.95:S.seated?1.2:S.crouch?1.08:1.62)+(DEV.fly?DEV.fy||0:0),bob=P.mv&&!P.lie?sin(P.ph*1)*.035:0,pt=CAM.pitch+(S.rifle?RIF.kick*.035:0),cp=cos(pt);CAM.ge=[P.x,h+bob,P.z];CAM.gt=[P.x+sin(P.rot)*cp*10,h+bob+sin(pt)*10,P.z+cos(P.rot)*cp*10];}

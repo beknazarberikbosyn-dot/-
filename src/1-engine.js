@@ -141,10 +141,15 @@ void main(){vec4 a=uIVP*vec4(vUV*2.-1.,1.,1.);vec3 dir=normalize(a.xyz/a.w-uCam)
  if(t1<=t0){gl_FragColor=vec4(0.);return;}
  float st=(t1-t0)/uSteps,j=hash(gl_FragCoord.xy+fract(uTime*7.1));vec3 acc=vec3(0.);float T=1.;
  for(int i=0;i<14;i++){if(float(i)>=uSteps)break;float t=t0+(float(i)+j)*st;vec3 p=uCam+dir*t;
-  float h=clamp(1.-(p.y-yb)/(uTop-yb),0.,1.);
-  float n1=texture2D(uNz,p.xz*.013+uWind*uTime*.006).r,n2=texture2D(uNz,p.xz*.041+vec2(p.y*.05)-uWind*uTime*.013).g,n3=texture2D(uNz,p.xz*.11+uWind*uTime*.03).b;
+  // domain warp: slow curls so the banks roll instead of sliding; the top surface billows
+  vec2 wp=texture2D(uNz,p.xz*.0045+uWind*uTime*.0025).gb-.5;vec2 pq=p.xz+wp*14.;
+  float n1=texture2D(uNz,pq*.013+uWind*uTime*.006).r,n2=texture2D(uNz,pq*.041+vec2(p.y*.05)-uWind*uTime*.013).g,n3=texture2D(uNz,pq*.11+uWind*uTime*.03).b;
+  float top=uTop+(n1-.5)*uTop*.45;float h=clamp(1.-(p.y-yb)/(top-yb),0.,1.);
   float den=max(0.,n1*.95+n2*.55+n3*.25-.62)*h*h*uDen;
-  if(den>.0005){vec3 lc=uMistC*(1.+uFlash*2.5);for(int k=0;k<${NL};k++){vec3 q=uL[k].xyz-p;float r=uL[k].w*.55;float dd=dot(q,q)/(r*r);lc+=uLC[k]*.5/(1.+dd*9.)*step(dd,1.);}
+  if(den>.0005){vec3 lc=uMistC*(1.+uFlash*2.5)*mix(1.08,.72,h*n2);   // denser, lower parts of a bank sit in their own shade
+   for(int k=0;k<${NL};k++){vec3 q=uL[k].xyz-p;float r=uL[k].w*.6;float dd=dot(q,q)/(r*r);if(dd>1.6)continue;
+    float ph=.55+1.3*pow(max(dot(dir,normalize(q)),0.),5.);   // forward scatter: haloes around lamps and flames seen through the fog
+    lc+=uLC[k]*.4*ph*exp(-dd*3.2);}lc=lc/(1.+dot(lc,vec3(.2)));
    float al=1.-exp(-den*st);acc+=T*al*lc;T*=1.-al;if(T<.03)break;}}
  gl_FragColor=vec4(acc,1.-T);}`;
 // particles: soft points, streaks and additive ribbons
@@ -267,6 +272,9 @@ const AU={ctx:null,vol:.8,ambVol:.7};
 function auInit(){if(AU.ctx)return;const C=window.AudioContext||window.webkitAudioContext;if(!C)return;try{
   const c=AU.ctx=new C();AU.master=c.createGain();AU.mfl=c.createBiquadFilter();AU.mfl.type='lowpass';AU.mfl.frequency.value=20000;AU.master.connect(AU.mfl);AU.mfl.connect(c.destination);
   AU.amb=c.createGain();AU.amb.connect(AU.master);AU.sfx=c.createGain();AU.sfx.connect(AU.master);
+  // shared reverb send: a generated impulse (decaying noise, darker at the tail); auRoom() sets how much of the effects bus goes into it
+  {const L=c.sampleRate*2.6,ir=c.createBuffer(2,L,c.sampleRate);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);let lp=0;for(let i=0;i<L;i++){const k=i/L;lp+=((Math.random()*2-1)-lp)*(.9-k*.75);d[i]=lp*Math.pow(1-k,2.6)*(i<c.sampleRate*.012?.2:1);}}
+   AU.cv=c.createConvolver();AU.cv.buffer=ir;AU.rvb=c.createGain();AU.rvb.gain.value=.15;AU.sfx.connect(AU.rvb);AU.rvb.connect(AU.cv);AU.cv.connect(AU.master);}
   const b=c.createBuffer(1,c.sampleRate*2,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;AU.nb=b;
   const loop=(type,f,q,vol,hz,dest)=>{const s=c.createBufferSource();s.buffer=b;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();g.gain.value=vol;
     const lf=c.createOscillator();lf.frequency.value=hz;const lg=c.createGain();lg.gain.value=vol*.7;lf.connect(lg);lg.connect(g.gain);lf.start();s.connect(fl);fl.connect(g);g.connect(dest||AU.amb);s.start();return{g,fl};};
@@ -276,6 +284,8 @@ function auInit(){if(AU.ctx)return;const C=window.AudioContext||window.webkitAud
   for(const f of[49,49.7,73.6]){const o=c.createOscillator();o.type='sawtooth';o.frequency.value=f;const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=170;const g=c.createGain();g.gain.value=.045;o.connect(fl);fl.connect(g);g.connect(AU.amb);o.start();}
   auVol();}catch(e){AU.ctx=null;}}
 function auVol(){if(!AU.ctx)return;AU.master.gain.value=AU.vol;AU.amb.gain.value=AU.ambVol;}
+// room acoustics: wet reverb in stone halls and the cave, a short dry room indoors, open air outside
+function auRoom(){if(!AU.ctx||!AU.rvb)return;const r=S.inside,w=r==='cave'||r==='rlyeh'?.85:r==='church'||r==='cellar'?.6:r?.28:S.halluc||S.vision?.5:.12;AU.rvb.gain.setTargetAtTime(w,AU.ctx.currentTime,.4);}
 function stormAudio(k,uw){if(!AU.ctx)return;const t=AU.ctx.currentTime;AU.rainL.g.gain.setTargetAtTime(.16*k,t,.5);AU.gust.g.gain.setTargetAtTime(.22*k,t,.5);AU.gust.fl.frequency.setTargetAtTime(260+k*320,t,.8);AU.surf.g.gain.setTargetAtTime(.25*k,t,.6);
   AU.wind.g.gain.setTargetAtTime(.07+.12*k,t,.6);AU.mfl.frequency.setTargetAtTime(uw?420:20000,t,uw?.08:.3);}
 function tone(f,d,o={}){if(!AU.ctx||!isFinite(f)||!isFinite(d)||d<=0||(o.to!=null&&!(o.to>0))||!isFinite(o.delay||0))return;const c=AU.ctx,t=c.currentTime+(o.delay||0),os=c.createOscillator(),g=c.createGain();os.type=o.type||'sine';os.frequency.setValueAtTime(f,t);if(o.to)os.frequency.exponentialRampToValueAtTime(o.to,t+d);
@@ -292,7 +302,13 @@ function mumble(dur,pitch,phone,vol=.16,keep){if(!AU.ctx)return;const c=AU.ctx;i
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+.02);g.gain.setValueAtTime(1,t+len);g.gain.linearRampToValueAtTime(0,t+len+.03);os.connect(fl);fl.connect(g);g.connect(mg);os.start(t);os.stop(t+len+.05);
     t+=len+.03+(Math.random()<.14?.16:Math.random()*.04);}}
 const SFX={
-  step(){noise(.06,{f:300+Math.random()*200,vol:.05});},
+  step(){if(S.inside&&S.inside!=='cave'&&S.inside!=='rlyeh'){tone(95+Math.random()*30,.07,{vol:.07,to:60});noise(.05,{f:900+Math.random()*300,type:'bandpass',q:2,vol:.04});}   // boards
+    else{noise(.09,{f:1800+Math.random()*900,type:'bandpass',q:1.4,vol:.035});noise(.07,{f:260+Math.random()*160,vol:.05,delay:.015});for(let i=0;i<3;i++)noise(.025,{f:3200+Math.random()*2000,type:'highpass',vol:.012,delay:Math.random()*.06});}},   // gravel crunch
+  shot(){noise(.06,{f:6000,type:'highpass',vol:.7,att:.002});noise(.4,{f:2400,to:160,vol:.65,att:.003});tone(62,.45,{vol:.6,to:30,att:.004});tone(130,.12,{type:'square',vol:.12,to:50,lp:900,att:.002});
+    noise(1.6,{f:700,to:90,vol:.16,att:.08,delay:.18});noise(1.2,{f:400,to:70,vol:.08,att:.1,delay:.55});},   // crack, body, then the echo off the houses
+  bolt(){tone(1400,.03,{type:'square',vol:.05,lp:3000});noise(.08,{f:2200,type:'bandpass',q:3,vol:.09,delay:.04});tone(420,.05,{type:'square',vol:.05,lp:1800,delay:.22});noise(.12,{f:1500,type:'bandpass',q:2,vol:.08,delay:.24});},
+  crackle(v=1){for(let i=0,n=2+floor(Math.random()*4);i<n;i++)noise(.02+Math.random()*.03,{f:1500+Math.random()*3500,type:'bandpass',q:3,vol:(.04+Math.random()*.08)*v,delay:Math.random()*.25,att:.002});if(Math.random()<.3)noise(.5,{f:300,to:120,vol:.05*v,att:.2});},
+  stone(v=1){noise(.5,{f:260,to:50,vol:.45*v,att:.005});tone(48,.5,{vol:.4*v,to:28});for(let i=0;i<4;i++)noise(.05,{f:1200+Math.random()*1400,type:'bandpass',q:2,vol:.06*v,delay:.08+Math.random()*.35});},
   hit(){noise(.12,{f:900,to:200,vol:.3});tone(110,.12,{type:'square',vol:.12,to:60});},
   hurt(){noise(.2,{f:500,to:120,vol:.4});tone(70,.25,{vol:.35,to:40});},
   parry(){tone(880,.1,{type:'triangle',vol:.18});noise(.08,{f:3000,type:'highpass',vol:.12});},
@@ -304,12 +320,12 @@ const SFX={
   page(){noise(.25,{f:2500,type:'bandpass',q:1,vol:.06,to:900});},
   thud(){tone(90,.5,{vol:.7,to:30});noise(.3,{f:400,to:80,vol:.6});},
   heart(v=1){tone(58,.14,{vol:.35*v});tone(52,.16,{vol:.28*v,delay:.2});},
-  door(){noise(.3,{f:300,vol:.3,to:100});tone(80,.2,{vol:.3,to:50});},
+  door(){tone(240,.5,{type:'sawtooth',vol:.04,to:150,lp:1100});tone(310,.35,{type:'sawtooth',vol:.025,to:260,lp:1300,delay:.08});noise(.25,{f:300,vol:.28,to:100,delay:.42});tone(80,.2,{vol:.3,to:50,delay:.42});tone(900,.04,{type:'square',vol:.04,lp:2500,delay:.44});},
   splash(){noise(2.2,{f:2500,to:200,vol:.5,att:.05});},
   bigSplash(){noise(3.5,{f:1800,to:120,vol:.8,att:.04});noise(2.5,{f:300,to:60,vol:.9,att:.02});tone(55,1.5,{vol:.5,to:28});},
   rumble(d){noise(d,{f:90,vol:.9,att:1.5,to:60});tone(31,d,{type:'sawtooth',vol:.5,lp:120});},
   thunder(dist=1,delay=0){const v=clamp(1.3-dist*.5,.25,1.1);noise(.25,{f:4000,to:600,vol:.55*v,delay,att:.005});noise(3.2+dist,{f:600,to:45,vol:.95*v,att:.04,delay:delay+.05});noise(2.4,{f:120,to:40,vol:.8*v,att:.3,delay:delay+.3});tone(38,2.6,{type:'sawtooth',vol:.25*v,lp:110,delay:delay+.1});},
-  creak(){tone(180,.4,{type:'sawtooth',vol:.06,to:140,lp:900});},
+  creak(){const f=150+Math.random()*60;tone(f,.55,{type:'sawtooth',vol:.05,to:f*.75,lp:900});tone(f*1.5,.4,{type:'sawtooth',vol:.02,to:f*1.2,lp:1400,delay:.1});},
   bubbles(){for(let i=0;i<8;i++)tone(300+Math.random()*500,.08,{type:'sine',vol:.08,to:600+Math.random()*600,delay:i*.07+Math.random()*.05});},
   roar(dur=5.5,pk=1){if(!AU.ctx)return;for(const[f,v]of[[62,.5],[93,.35],[47,.5],[140,.16],[31,.45]]){tone(f*1.5*pk,dur,{type:'sawtooth',vol:v,to:f*.55*pk,lp:700,att:.4});}noise(dur,{f:1400,to:150,vol:.6,att:.5,type:'bandpass',q:1.2});noise(dur,{f:300,to:70,vol:.9,att:.3});},
 };

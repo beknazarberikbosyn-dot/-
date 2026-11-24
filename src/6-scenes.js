@@ -335,7 +335,7 @@ function frame(now){const dt=min(.05,(now-last)/1000||.016)*(S.ts||1);last=now;
   S.shake=max(0,S.shake-dt*1.4);const sh=S.shakeOn?S.shake*(CAM.fp?.22:.55):0,eye=[CAM.eye[0]+(Math.random()-.5)*sh,CAM.eye[1]+(Math.random()-.5)*sh,CAM.eye[2]+(Math.random()-.5)*sh];
   atmosphere();R.focus=S.focus?S.focus():CAM.fp?CAM.eye:[P.x,0,P.z];drawAll();let up=null;if(CAM.roll){const f=vNorm(vSub(CAM.tgt,eye)),r=vNorm(vCross(f,[0,1,0])),u=vCross(r,f);up=vAdd(vSc(u,cos(CAM.roll)),vSc(r,sin(CAM.roll)));}render(eye,CAM.tgt,CAM.fov,up);hud2d();requestAnimationFrame(frame);}
 // title backdrop
-$('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
+devBoot();$('title').style.display='flex';S.camFn=()=>{CAM.ge=[-23,15,-279];CAM.gt=[-28,0,-292];};S.focus=()=>[-28,0,-289];camSnap();drawFace();requestAnimationFrame(frame);
 // debug / test hooks
 window.DBG={R,S,P,EN,CAM,FIN,PT,STORM,cols,blocked,field,cthPose,waveH,
   // skip the intro and jump to a story stage: 'town', 'pub', 'back', 'cellar', 'alarm', 'stalk', 'doctor', 'play' (the curfew, before the upstairs),
