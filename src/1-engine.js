@@ -119,7 +119,7 @@ void main(){vec3 col;float em=vC.a;vec3 n=normalize(vN);vec3 V=normalize(uCam-vW
   for(int i=0;i<${NL};i++){vec3 d=uL[i].xyz-vW;float ds=length(d);float a=max(0.,1.-ds/uL[i].w);a*=a;vec3 L=d/max(ds,.001);l+=uLC[i]*a*(.45+.55*max(dot(n,L),0.));
    if(spec>0.)sp+=uLC[i]*a*pow(max(dot(reflect(-L,n),V),0.),18.)*spec;}
   l+=uFlash*vec3(.75,.85,1.)*(.35+.65*max(n.y,0.)+.5*pow(1.-max(dot(n,V),0.),2.));sp+=uFlash*spec*vec3(.8,.9,1.)*pow(max(dot(reflect(vec3(0.,-1.,0.),n),V),0.),10.)*1.5;
-  float ll=max(dot(l,vec3(.33)),.001);l*=mix(1.,(floor(ll*6.+.5)/6.)/ll,.55);
+  float ll=max(dot(l,vec3(.33)),.001);l*=mix(1.,(floor(ll*6.+.5)/6.)/ll,.15);
   col=base*l+sp;float lum=dot(col,vec3(.3,.6,.1));
   float h=step(.55,fract((gl_FragCoord.x+gl_FragCoord.y)/7.));float h2=step(.6,fract((gl_FragCoord.x-gl_FragCoord.y)/9.));
   col*=1.-uHatch*(1.-em)*(.34*h*(1.-smoothstep(.05,.2,lum))+.3*h2*(1.-smoothstep(.02,.09,lum)));
@@ -179,7 +179,16 @@ function depthFB(w,h){if(DF.w===w&&DF.h===h)return;DF.w=w;DF.h=h;if(DF.fb){gl.de
   DF.rb=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,DF.rb);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);
   DF.fb=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,DF.fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,DF.tex,0);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,DF.rb);
   DF.ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;gl.bindFramebuffer(gl.FRAMEBUFFER,null);}
-function mesh(g){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,g.v.subarray(0,g.n),gl.STATIC_DRAW);return{b,n:g.n/13};}
+// smooth shading: corners that share a position average their face normals, unless the faces meet at a hard edge (> ~48°),
+// so rounded shapes read as smooth surfaces while box corners, roof ridges and walls keep their crisp edges
+function smoothNormals(v,n){const nv=n/13,qx=new Int32Array(nv),qy=new Int32Array(nv),qz=new Int32Array(nv),G=new Map(),cs=.67;
+  for(let i=0;i<nv;i++){const o=i*13;qx[i]=Math.round(v[o]*500);qy[i]=Math.round(v[o+1]*500);qz[i]=Math.round(v[o+2]*500);const h=(qx[i]*73856093^qy[i]*19349663^qz[i]*83492791)|0;let a=G.get(h);if(!a)G.set(h,a=[]);a.push(i);}
+  const out=new Float32Array(nv*3);
+  for(const a of G.values()){for(const i of a){const o=i*13;let sx=0,sy=0,sz=0;
+      for(const j of a){if(qx[j]!==qx[i]||qy[j]!==qy[i]||qz[j]!==qz[i])continue;const p=j*13;if(v[o+3]*v[p+3]+v[o+4]*v[p+4]+v[o+5]*v[p+5]<cs)continue;sx+=v[p+3];sy+=v[p+4];sz+=v[p+5];}
+      const l=Math.hypot(sx,sy,sz)||1;out[i*3]=sx/l;out[i*3+1]=sy/l;out[i*3+2]=sz/l;}}
+  for(let i=0;i<nv;i++){const o=i*13;v[o+3]=out[i*3];v[o+4]=out[i*3+1];v[o+5]=out[i*3+2];}}
+function mesh(g,flat){if(!flat&&g.n)smoothNormals(g.v,g.n);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,g.v.subarray(0,g.n),gl.STATIC_DRAW);return{b,n:g.n/13};}
 const R={items:[],lights:[],fog:[.075,.15,.165],fogD:1/30,fogMin:0,fogH:.15,focus:[0,0,0],amb:[.36,.47,.5],sunC:[.34,.42,.46],scale:1,outline:true,hatch:true,vp:null,w:1,h:1,
   t:0,wind:[1,.35],wave:0,flash:0,wet:0,rip:[0,0,0,0],mist:{on:true,den:1,top:3.4,col:[.32,.44,.45],steps:10,maxD:90},eye:[0,0,0],uw:0};
 const I4=mT(0,0,0);

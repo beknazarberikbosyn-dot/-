@@ -182,7 +182,26 @@ def above(z): return lambda f: f.calc_center_median().z > z
 def below(z): return lambda f: f.calc_center_median().z < z
 
 # ---------------------------------------------------------------- AO bake + export
+SUBD_CREASE = 52   # degrees: edges sharper than this (and material borders, open borders) stay crisp
+def subsurf(a, levels=1):
+    """Catmull-Clark smoothing of the whole asset: more, smaller polygons and rounded silhouettes; sharp edges and colour borders are creased"""
+    bm = a.bm; bm.normal_update()
+    me = bpy.data.meshes.new('zov_tmp_sub'); bm.to_mesh(me)
+    cr = me.attributes.get('crease_edge') or me.attributes.new('crease_edge', 'FLOAT', 'EDGE')
+    lim = math.radians(SUBD_CREASE); bm.edges.ensure_lookup_table()
+    for e in bm.edges:
+        lf = e.link_faces; k = 0.0
+        if len(lf) != 2: k = 1.0
+        elif lf[0].material_index != lf[1].material_index: k = 1.0
+        elif e.calc_face_angle(0.0) > lim: k = 1.0
+        cr.data[e.index].value = k
+    ob = bpy.data.objects.new('zov_tmp_sub', me); sc = bpy.context.scene; sc.collection.objects.link(ob)
+    md = ob.modifiers.new('sub', 'SUBSURF'); md.levels = levels; md.render_levels = levels; md.use_creases = True; md.boundary_smooth = 'PRESERVE_CORNERS'; md.use_limit_surface = False
+    dg = bpy.context.evaluated_depsgraph_get(); me2 = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    nb = bmesh.new(); nb.from_mesh(me2); bm.free(); a.bm = nb
+    bpy.data.objects.remove(ob); bpy.data.meshes.remove(me); bpy.data.meshes.remove(me2)
 def finalize(a):
+    if a.name in SUBD: subsurf(a)
     bm = a.bm
     bmesh.ops.triangulate(bm, faces=bm.faces)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
@@ -2544,6 +2563,8 @@ def _(a): imp_wing(a, 1)
 def _(a): imp_wing(a, -1)
 CTHULHU = ['cth_torso', 'cth_head', 'cth_eye', 'cth_tent', 'cth_uarm', 'cth_farm', 'cth_thigh', 'cth_palm', 'cth_finger_a', 'cth_finger_b', 'cth_wing_L', 'cth_wing_R', 'imp_body', 'imp_wing_L', 'imp_wing_R']
 
+# faces (head, jaw, eyelids) keep their exact plates: subdividing them swallows the eyes and opens a seam at the jaw; engine smooth normals round them
+SUBD = set(n for n in NATURE + PEOPLE + CTHULHU if not n.endswith(('_head', '_jaw', '_lids')))
 ALL = [('nature.json', NATURE), ('props.json', PROPS+TOWNPROPS), ('buildings.json', BUILDINGS), ('people.json', PEOPLE), ('cthulhu.json', CTHULHU)]
 def build_all():
     out = {}
