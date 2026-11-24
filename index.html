@@ -1959,9 +1959,23 @@ const rockN=(x,z,rad,sy,ry,k=.64)=>{const n=['rock_a','rock_b','rock_c'][floor(a
  for(let k=0;k<22;k++){const a=k*.55,r=.08+k*.035;st(222.2+cos(a)*r,4.1+sin(a)*r,222.2+cos(a+.55)*(r+.035),4.1+sin(a+.55)*(r+.035),OC,.055);}
  LAMPS.push(...CAVE_T.map(([x,z])=>[x+(x<217?.6:x>217?-.6:0),2.6,z+(z<-16?.6:0),6.5,[1,.6,.28]]),[217,1.4,-12.6,4,[1,.75,.4]]);}
 // the cave mouth in the hills north-east of the village (an old quarry): rocks around a black opening, a stone lintel above
-{IG.bx(50,0,-46.2,3.2,3.4,.5,H('#030303'));IG.bx(50,0,-45.7,3.4,.05,1.2,H('#1a1816'));
- for(const[x,z,r,sy]of[[45.2,-46.8,2.6,2.6],[54.8,-46.8,2.6,2.7],[50,-50.2,3.6,2.4],[41.2,-46.4,2.4,1.9],[58.8,-46.4,2.4,2],[37.6,-47.2,2.2,1.6],[62.2,-47.4,2.2,1.5]])rockN(x,z,r,sy,x,.72);
- IG.at(mM(mT(50,3.4,-46.4),mRz(.06)),()=>IG.bx(0,0,0,5.6,1.3,2.2,H('#3e3c38')));IG.at(mM(mT(50,4.5,-46.9),mRy(.35)),()=>IG.bx(0,0,0,4.4,1.5,2.4,H('#46443f')));
+{const lime=['#8a8a80','#7c7d74','#9a988c','#6e7068'],gr=['#4f6b34','#5d7a3c','#46602e'];
+ // the hillside: tilted limestone slabs stacked back into the slope, grass on the brow
+ for(let i=0;i<14;i++){const x=37+i*1.95+rr(-.3,.3),cx=abs(x-50),h=cx<3?0:4.2+rr(-.6,.9)-cx*.04,z=-47.4-rr(0,.6);
+   if(cx>=2.6)IG.at(mM(mT(x,0,z),mRx(-.16+rr(-.05,.05)),mRz(rr(-.08,.08)),mRy(rr(-.15,.15))),()=>IG.bx(0,0,0,2.3,h,1.8+rr(0,.6),H(lime[i%4])));}
+ for(let i=0;i<7;i++){const x=40+i*3.4+rr(-.4,.4);IG.at(mM(mT(x,4.1+rr(0,.5),-48.6),mRx(-.3),mRz(rr(-.12,.12))),()=>IG.bx(0,0,0,3.6,1.4,3.2,H(lime[(i+1)%4])));
+   IG.at(mM(mT(x,5.3+rr(0,.4),-49.4),mRx(-.22),mRz(rr(-.1,.1))),()=>IG.bx(0,0,0,3.9,.45,3.6,H(gr[i%3])));}
+ IG.at(mM(mT(50,6,-52),mRx(-.15)),()=>IG.bx(0,0,0,30,1.2,6,H(gr[0])));
+ // the mouth: a rough arch of angled blocks (no curves) round a dark passage that fades into black
+ for(let i=0;i<=8;i++){const a=PI*i/8,x=50+cos(a)*2.15,y=1.7+sin(a)*1.9;IG.at(mM(mT(x,y-.5,-46.6),mRz(a-PI/2),mRx(rr(-.08,.08))),()=>IG.bx(0,0,0,1.25,1,1.6,H(lime[i%4])));}
+ for(const sx of[-1,1])IG.at(mM(mT(50+sx*2.35,0,-46.6),mRz(sx*.05)),()=>IG.bx(0,0,0,1.1,1.8,1.6,H(lime[sx>0?2:1])));
+ for(let k=0;k<5;k++){const z=-47.6-k*.9,c=['#2c2c28','#211f1c','#171614','#0e0d0c','#070606'][k],w=3.6-k*.25,hh=3.3-k*.22;
+   IG.bx(50-w/2-.2,0,z,.4,hh,.95,H(c));IG.bx(50+w/2+.2,0,z,.4,hh,.95,H(c));IG.bx(50,hh,z,w+.8,.4,.95,H(c));IG.bx(50,0,z,w+.4,.04,.95,H(c));}
+ IG.bx(50,0,-52.2,4,3.6,.2,H('#030303'));
+ // a worn sandy path up to it, a few fallen stones and grass at the foot of the slope
+ for(let i=0;i<6;i++)IG.at(mM(mT(50+sin(i*.7)*.4,.015,-45.4+i*1.3),mRy(rr(-.15,.15))),()=>IG.bx(0,0,0,2.4-i*.08,.03,1.4,H(['#b8ad94','#a89e86'][i%2])));
+ for(let i=0;i<10;i++){const x=40+rr(0,20);if(abs(x-50)<2.8)continue;IG.at(mM(mT(x,0,-45.8+rr(-.4,.6)),mRy(rr(0,3)),mRz(rr(-.3,.3))),()=>IG.bx(0,0,0,rr(.3,.7),rr(.25,.5),rr(.3,.6),H(lime[i%4])));}
+ for(let i=0;i<16;i++){const x=38+rr(0,24);if(abs(x-50)<1.8)continue;IG.at(mM(mT(x,0,-45.6+rr(-.6,1)),mRy(rr(0,3)),mRz(rr(-.25,.25))),()=>IG.bx(0,0,0,.08,rr(.3,.6),.5,H(gr[i%3])));}
  for(const[x,z,ry]of[[44.4,-40.6,.3],[55.8,-39.8,1.1],[57.4,-41.8,.5]]){IG.at(mM(mT(x,0,z),mRy(ry)),()=>{IG.bx(0,0,0,1.6,.8,1,H('#6f7775'));IG.bx(.2,.8,0,1.2,.6,.9,H('#666e6c'));});iCol(x-.9,z-.6,x+.9,z+.6,1.4);}
  col(36,-49,48.3,-45.2,5);col(51.7,-49,64,-45.2,5);col(48.4,-47.2,51.6,-46.2,3);}
 
@@ -2051,11 +2065,11 @@ function drawHalluc(){if(!HL.on)return;const t=S.t,l=HL.lvl;
   const sp=FIN.pose,sm=FIN.M,hl=FIN.headLook;const pose=cthPose(24);Object.assign(pose,{x:HL.pos[0],y:HL.pos[1]+(1-kf(HL.t,0,2.5))*-14,z:HL.pos[2],sc:1.5+l*.12,yaw:HL.yaw,track:1,eyes:1});
   FIN.headLook=[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);HL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;
   const near=HL.fires.map(f=>[hypot(f[0]-P.x,f[1]-P.z),f]).sort((a,b)=>a[0]-b[0]);
-  for(const[d,[x,z,s,ph]]of near)bigFire(x,0,z,s,ph,t,d<40);
+  for(const[d,[x,z,s,ph]]of near)bigFire(x,0,z,s,ph,t,false);
   for(let i=0;i<2&&i<near.length;i++){const f=near[i][1];fireLight(f[0],1.6,f[1],10+f[2]*2,f[3],t);}
   if(Math.random()<.12*l)SFX.crackle(.6+l*.2);
   if(!S.inside)HOUSES.forEach((b,i)=>{const cx=(b[0]+b[2])/2,cz=(b[1]+b[3])/2,d=hypot(cx-P.x,cz-P.z);if(d>70)return;const o=b[4],y=(o.h||3.2)+(o.rh||2.2)*.6;
-    bigFire(cx,y-1,cz,2.2,i*1.7,t,d<55);});}
+    bigFire(cx,y-1,cz,2.2,i*1.7,t,d>25&&d<60);});}
 
 // ---------------------------------------------------------------- the new church
 async function churchDoor(){S.mode='talk';lookAt(-87,1.4,-12);
@@ -2511,7 +2525,7 @@ function bigFire(x,y,z,sc,ph,t,smoke=true){const k=1+sin(t*13+ph)*.12+sin(t*29+p
   for(let j=0;j<2;j++){const a=ph+j*2.1+t*.7,r=.35*sc;draw(M_flame,mM(mT(x+cos(a)*r,y,z+sin(a)*r),mRy(-t*3+j),mS(1.2*sc,(1.5+sin(t*11+j*1.7+ph)*.4)*sc,1.2*sc)),0);}
   draw(M_flame,mM(mT(x,y+.1*sc,z),mRy(-t*4+ph),mS(1.1*sc*k,1.8*sc*(1+sin(t*17+ph)*.25),1.1*sc*k)),0);
   if(Math.random()<.22*sc)PT.add(5,x+rr(-.8,.8)*sc,y+rr(.5,1.5)*sc,z+rr(-.8,.8)*sc,R.wind[0]*.8+rr(-.6,.6),1.6+Math.random()*2.4,R.wind[1]*.8+rr(-.6,.6),.05+Math.random()*.07,1.2+Math.random()*1.4,[1,.45+Math.random()*.35,.12,.95],-.6);
-  if(smoke&&Math.random()<.25*sc)PT.add(4,x+rr(-.5,.5)*sc,y+3.2*sc,z+rr(-.5,.5)*sc,R.wind[0]*1.2,1.2+Math.random(),R.wind[1]*1.2,(.8+Math.random()*.8)*sc,3+Math.random()*2,[.06,.04,.035,.42],-.08);}
+  if(smoke&&Math.random()<.06*sc)PT.add(4,x+rr(-.5,.5)*sc,y+3.2*sc,z+rr(-.5,.5)*sc,R.wind[0]*1.2,1.2+Math.random(),R.wind[1]*1.2,(.8+Math.random()*.8)*sc,3+Math.random()*2,[.06,.04,.035,.18],-.08);}
 function fireLight(x,y,z,r,ph,t){const f=1+sin(t*9+ph)*.12+sin(t*23+ph*3)*.08+(Math.random()-.5)*.1;light(x,y,z,r*f,[.55,.22+.04*sin(t*5+ph),.06]);}
 
 // R'lyeh: glyph pulses, spores rising toward the throne, light breathing with the Sleeper

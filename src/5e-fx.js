@@ -29,7 +29,7 @@ function bigFire(x,y,z,sc,ph,t,smoke=true){const k=1+sin(t*13+ph)*.12+sin(t*29+p
   for(let j=0;j<2;j++){const a=ph+j*2.1+t*.7,r=.35*sc;draw(M_flame,mM(mT(x+cos(a)*r,y,z+sin(a)*r),mRy(-t*3+j),mS(1.2*sc,(1.5+sin(t*11+j*1.7+ph)*.4)*sc,1.2*sc)),0);}
   draw(M_flame,mM(mT(x,y+.1*sc,z),mRy(-t*4+ph),mS(1.1*sc*k,1.8*sc*(1+sin(t*17+ph)*.25),1.1*sc*k)),0);
   if(Math.random()<.22*sc)PT.add(5,x+rr(-.8,.8)*sc,y+rr(.5,1.5)*sc,z+rr(-.8,.8)*sc,R.wind[0]*.8+rr(-.6,.6),1.6+Math.random()*2.4,R.wind[1]*.8+rr(-.6,.6),.05+Math.random()*.07,1.2+Math.random()*1.4,[1,.45+Math.random()*.35,.12,.95],-.6);
-  if(smoke&&Math.random()<.25*sc)PT.add(4,x+rr(-.5,.5)*sc,y+3.2*sc,z+rr(-.5,.5)*sc,R.wind[0]*1.2,1.2+Math.random(),R.wind[1]*1.2,(.8+Math.random()*.8)*sc,3+Math.random()*2,[.06,.04,.035,.42],-.08);}
+  if(smoke&&Math.random()<.06*sc)PT.add(4,x+rr(-.5,.5)*sc,y+3.2*sc,z+rr(-.5,.5)*sc,R.wind[0]*1.2,1.2+Math.random(),R.wind[1]*1.2,(.8+Math.random()*.8)*sc,3+Math.random()*2,[.06,.04,.035,.18],-.08);}
 function fireLight(x,y,z,r,ph,t){const f=1+sin(t*9+ph)*.12+sin(t*23+ph*3)*.08+(Math.random()-.5)*.1;light(x,y,z,r*f,[.55,.22+.04*sin(t*5+ph),.06]);}
 
 // R'lyeh: glyph pulses, spores rising toward the throne, light breathing with the Sleeper
