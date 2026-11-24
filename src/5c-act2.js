@@ -192,9 +192,9 @@ async function halluc(lvl){if(HL.on)return;const wasPlay=S.mode==='play';S.mode=
   if(wasPlay)S.mode='play';}
 function hallTick(dt){if(HL.on){HL.t+=dt;const l=HL.lvl,t=HL.t;S.shake=max(S.shake,.1+l*.06);
     CAM.roll=sin(t*1.7)*.05*l+sin(t*4.3)*.012*l;
-    let f='blur('+(l*.5+.4*sin(t*3)).toFixed(2)+'px) saturate('+(1.4+l*.2)+') contrast('+(1+l*.08)+') hue-rotate('+(sin(t*.9)*l*12).toFixed(1)+'deg)';
+    let f='blur('+(l*.5+.4*sin(t*3)).toFixed(2)+'px) saturate('+(1.05+l*.05)+') contrast('+(1+l*.04)+') hue-rotate('+(sin(t*.9)*l*4).toFixed(1)+'deg)';
     if(l>=3&&Math.random()<.02*l)f+=' invert(1)';cv.style.filter=f;
-    if(Math.random()<.6)PT.add(5,P.x+rr(-6,6),rr(.2,2),P.z+rr(-6,6),rr(-1,1),1.5+Math.random()*2,rr(-1,1),.08+Math.random()*.08,1.6,[1,.5+Math.random()*.3,.15,.9],-.5);
+    if(Math.random()<.25)PT.add(5,P.x+rr(-6,6),rr(.2,2),P.z+rr(-6,6),rr(-1,1),1.5+Math.random()*2,rr(-1,1),.08+Math.random()*.08,1.6,[1,.5+Math.random()*.3,.15,.9],-.5);
     if(Math.random()<.04)tone(400+Math.random()*500,.6,{type:'sawtooth',vol:.04,to:250,lp:1800});return;}
   if(S.dizzy>0){S.dizzy-=dt;const k=min(1,S.dizzy/4),l=S.dizzyLvl||1;CAM.roll=sin(S.t*1.3)*.04*l*k;cv.style.filter=S.dizzy>0?'blur('+(k*l*.35).toFixed(2)+'px) saturate('+(1+k*.3)+')':'';if(S.dizzy<=0)CAM.roll=0;}
   else if(!S.drug&&!SAC.on&&!RL.on&&CAM.roll){CAM.roll=0;}}
@@ -203,10 +203,10 @@ function drawHalluc(){if(!HL.on)return;const t=S.t,l=HL.lvl;
   FIN.headLook=[P.x,1.6,P.z];FIN.pose=pose;FIN.M=cthMats(pose);HL.M=FIN.M;drawCthulhu();FIN.pose=sp;FIN.M=sm;FIN.headLook=hl;
   const near=HL.fires.map(f=>[hypot(f[0]-P.x,f[1]-P.z),f]).sort((a,b)=>a[0]-b[0]);
   for(const[d,[x,z,s,ph]]of near)bigFire(x,0,z,s,ph,t,d<40);
-  for(let i=0;i<3&&i<near.length;i++){const f=near[i][1];fireLight(f[0],1.6,f[1],13+f[2]*3,f[3],t);}
+  for(let i=0;i<2&&i<near.length;i++){const f=near[i][1];fireLight(f[0],1.6,f[1],10+f[2]*2,f[3],t);}
   if(Math.random()<.12*l)SFX.crackle(.6+l*.2);
   if(!S.inside)HOUSES.forEach((b,i)=>{const cx=(b[0]+b[2])/2,cz=(b[1]+b[3])/2,d=hypot(cx-P.x,cz-P.z);if(d>70)return;const o=b[4],y=(o.h||3.2)+(o.rh||2.2)*.6;
-    bigFire(cx,y-1,cz,3.4,i*1.7,t,d<55);if(d<26)fireLight(cx,y+1,cz,20,i,t);});}
+    bigFire(cx,y-1,cz,2.2,i*1.7,t,d<55);});}
 
 // ---------------------------------------------------------------- the new church
 async function churchDoor(){S.mode='talk';lookAt(-87,1.4,-12);

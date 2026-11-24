@@ -26,11 +26,11 @@ function dust(x,y,z,n,s=1,col=[.4,.42,.4,.35]){for(let i=0;i<n;i++)PT.add(4,x+rr
 // a layered fire: wide dark-orange body, bright core licking faster, embers and smoke above
 function bigFire(x,y,z,sc,ph,t,smoke=true){const k=1+sin(t*13+ph)*.12+sin(t*29+ph*2)*.06;
   draw(M_flame,mM(mT(x,y,z),mRy(t*1.6+ph),mS(2.4*sc*k,3*sc*(1+sin(t*7+ph)*.18),2.4*sc*k)),0);
-  for(let j=0;j<3;j++){const a=ph+j*2.1+t*.7,r=.35*sc;draw(M_flame,mM(mT(x+cos(a)*r,y,z+sin(a)*r),mRy(-t*3+j),mS(1.2*sc,(2+sin(t*11+j*1.7+ph)*.6)*sc,1.2*sc)),0);}
+  for(let j=0;j<2;j++){const a=ph+j*2.1+t*.7,r=.35*sc;draw(M_flame,mM(mT(x+cos(a)*r,y,z+sin(a)*r),mRy(-t*3+j),mS(1.2*sc,(1.5+sin(t*11+j*1.7+ph)*.4)*sc,1.2*sc)),0);}
   draw(M_flame,mM(mT(x,y+.1*sc,z),mRy(-t*4+ph),mS(1.1*sc*k,1.8*sc*(1+sin(t*17+ph)*.25),1.1*sc*k)),0);
-  if(Math.random()<.5*sc)PT.add(5,x+rr(-.8,.8)*sc,y+rr(.5,1.5)*sc,z+rr(-.8,.8)*sc,R.wind[0]*.8+rr(-.6,.6),1.6+Math.random()*2.4,R.wind[1]*.8+rr(-.6,.6),.05+Math.random()*.07,1.2+Math.random()*1.4,[1,.45+Math.random()*.35,.12,.95],-.6);
+  if(Math.random()<.22*sc)PT.add(5,x+rr(-.8,.8)*sc,y+rr(.5,1.5)*sc,z+rr(-.8,.8)*sc,R.wind[0]*.8+rr(-.6,.6),1.6+Math.random()*2.4,R.wind[1]*.8+rr(-.6,.6),.05+Math.random()*.07,1.2+Math.random()*1.4,[1,.45+Math.random()*.35,.12,.95],-.6);
   if(smoke&&Math.random()<.25*sc)PT.add(4,x+rr(-.5,.5)*sc,y+3.2*sc,z+rr(-.5,.5)*sc,R.wind[0]*1.2,1.2+Math.random(),R.wind[1]*1.2,(.8+Math.random()*.8)*sc,3+Math.random()*2,[.06,.04,.035,.42],-.08);}
-function fireLight(x,y,z,r,ph,t){const f=1+sin(t*9+ph)*.12+sin(t*23+ph*3)*.08+(Math.random()-.5)*.1;light(x,y,z,r*f,[1,.42+.08*sin(t*5+ph),.12]);}
+function fireLight(x,y,z,r,ph,t){const f=1+sin(t*9+ph)*.12+sin(t*23+ph*3)*.08+(Math.random()-.5)*.1;light(x,y,z,r*f,[.55,.22+.04*sin(t*5+ph),.06]);}
 
 // R'lyeh: glyph pulses, spores rising toward the throne, light breathing with the Sleeper
 function rlGlow(k,t){const br=.5+.5*sin(t*1.1),fz=P.z;
@@ -51,7 +51,7 @@ const DEV_ST=[['Деревня',[['town','Прибытие в деревню'],[
 function devJump(st){devSave();location.hash='dev='+st;location.reload();}
 function devBuild(){if($('dev'))return;const d=document.createElement('div');d.id='dev';
   d.style.cssText='position:fixed;top:12px;right:12px;width:300px;max-height:calc(100vh - 24px);overflow:auto;z-index:60;background:rgba(8,14,15,.93);border:1px solid #5fd6a0;color:#d9cdb0;font:13px/1.35 Georgia,serif;padding:10px 12px;display:none;border-radius:4px';
-  let h='<div style="display:flex;justify-content:space-between;align-items:center"><b style="color:#5fd6a0">Режим разработчика</b><span style="opacity:.6">F2</span></div>';
+  let h='<div style="display:flex;justify-content:space-between;align-items:center"><b style="color:#5fd6a0">Режим разработчика</b><span style="opacity:.6">F2 · ⌥D · ё</span></div>';
   for(const[g,l]of DEV_ST){h+='<div style="margin:8px 0 3px;color:#9fb8ae">'+g+'</div><div style="display:flex;flex-wrap:wrap;gap:4px">';for(const[k,n]of l)h+='<button data-st="'+k+'">'+n+'</button>';h+='</div>';}
   h+='<div style="margin:9px 0 3px;color:#9fb8ae">Игрок</div><label><input type="checkbox" id="dvFly"> Полёт сквозь стены (Пробел — вверх, C — вниз)</label><br><label><input type="checkbox" id="dvGod"> Бессмертие</label><br><label><input type="checkbox" id="dvInfo"> Координаты и этап</label>';
   h+='<div style="margin:6px 0 3px">Скорость игры: <b id="dvTsV"></b></div><div style="display:flex;gap:4px">'+[.25,.5,1,2,4].map(v=>'<button data-ts="'+v+'">×'+v+'</button>').join('')+'</div>';
@@ -64,7 +64,7 @@ function devBuild(){if($('dev'))return;const d=document.createElement('div');d.i
   for(const[id,k]of[['dvFly','fly'],['dvGod','god'],['dvInfo','info']])$(id).onchange=e=>{DEV[k]=e.target.checked;if(k==='fly'&&!DEV.fly)DEV.fy=0;devSync();};devSync();}
 function devSync(){if(!$('dev'))return;$('dvFly').checked=DEV.fly;$('dvGod').checked=DEV.god;$('dvInfo').checked=DEV.info;$('dvTsV').textContent='×'+DEV.ts;S.ts=DEV.ts;devSave();}
 function devToggle(){devBuild();DEV.open=!DEV.open;$('dev').style.display=DEV.open?'block':'none';if(DEV.open&&document.pointerLockElement)document.exitPointerLock();}
-addEventListener('keydown',e=>{if(e.code==='F2'||e.code==='Backquote'){e.preventDefault();devToggle();}},true);
+addEventListener('keydown',e=>{if(e.code==='F2'||e.code==='Backquote'||e.code==='IntlBackslash'||e.altKey&&e.code==='KeyD'){e.preventDefault();devToggle();}},true);
 // fly: move along the full view direction, through walls; space / C for height. Called from updPlayer before the normal walk.
 function devFly(dt){if(!DEV.fly)return false;const sp=(K.ShiftLeft||K.ShiftRight?22:9)*dt,fx=sin(P.rot),fz=cos(P.rot),cp=cos(CAM.pitch),f=[fx*cp,sin(CAM.pitch),fz*cp];
   const fw=(K.KeyW||K.ArrowUp?1:0)-(K.KeyS||K.ArrowDown?1:0),sx=(K.KeyD?1:0)-(K.KeyA?1:0);P.rot+=((K.ArrowLeft?1:0)-(K.ArrowRight?1:0))*dt*2.2;CAM.yaw=P.rot;
