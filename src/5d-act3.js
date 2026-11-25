@@ -102,7 +102,7 @@ function defTick(dt){if(!DEF.on)return;DEF.t+=dt;RIF.cd-=dt;
       DEF.cul.push({w:i,st:'sill',t:0,x:w.x+w.n[0]*.3,z:w.z+w.n[1]*.3,y:.86,rot:atan2(w.n[0],w.n[1]),atk:0,dead:0,ph:rnd()*6});mumble(.8,62+Math.random()*20,false,.12,true);}
     DEF.next=lerp(5.2,2.1,DEF.t/DEF.dur)*(.75+Math.random()*.5);}
   for(const c of DEF.cul){const w=DWIN[c.w];
-    if(c.st==='sill'){c.t+=dt;const k=min(1,c.t/5);c.x=w.x+w.n[0]*(.3+1.1*k);c.z=w.z+w.n[1]*(.3+1.1*k);c.y=k<.85?.86:.86*(1-(k-.85)/.15);if(k>=1){c.st='in';c.y=0;}}
+    if(c.st==='sill'){c.t+=dt;const k=min(1,c.t/5);c.x=w.x+w.n[0]*(.3+1.1*k);c.z=w.z+w.n[1]*(.3+1.1*k);c.y=k<.85?.86:(v=>.86*(1-v*v)+.12*sin(PI*v))((k-.85)/.15);if(k>=1){c.st='in';c.y=0;}}
     else if(c.st==='in'){const dp=hypot(P.x-c.x,P.z-c.z),dd=hypot(AD.x-c.x,AD.z-c.z),toDoc=c.goDoc??(c.goDoc=Math.random()<.45);   // some go for the hero, some for the doctor
       const tx=toDoc?AD.x:P.x,tz=toDoc?AD.z:P.z,dx=tx-c.x,dz=tz-c.z,d=hypot(dx,dz)||.01;c.rot=atan2(dx,dz);c.atk-=dt;c.mv=0;
       if(d>1.2){const s=2.2*dt;if(!moveC(c,dx/d*s,dz/d*s,.3)){c.x+=dx/d*s;c.z+=dz/d*s;}c.mv=1;c.ph+=dt*7;}
@@ -114,7 +114,7 @@ function fireRifle(){if(RIF.cd>0){return;}RIF.cd=.8;RIF.kick=1;RIF.flash=.08;   
   SFX.shot();setTimeout(()=>SFX.bolt(),420);{const o=CAM.eye,d=vNorm(vSub(CAM.tgt,o)),m=vAdd(o,vSc(d,.9));for(let i=0;i<6;i++)PT.add(4,m[0],m[1]-.1,m[2],d[0]*1.5+rr(-.3,.3),.3+rr(0,.4),d[2]*1.5+rr(-.3,.3),.14,1.1,[.55,.55,.52,.35],-.3);}   // muzzle smoke
   const o=CAM.eye,d=vNorm(vSub(CAM.tgt,o));let best=null,bt=1e9;
   for(const c of DEF.cul){if(c.st==='dead')continue;for(let h=.35;h<=1.75;h+=.2){const q=[c.x,c.y+h,c.z],v=vSub(q,o),t=vDot(v,d);if(t<.2)continue;const off=vLen(vSub(v,vSc(d,t)));if(off<.33&&t<bt){bt=t;best=c;}}}
-  if(best){best.st='dead';best.dead=0;SFX.hit();for(let i=0;i<12;i++)PT.add(1,best.x,best.y+1.3,best.z,rr(-1.5,1.5),rr(0,2.5),rr(-1.5,1.5),.05,.9,[.45,.04,.03,.95],1);mumble(.5,90,false,.14,true);}
+  if(best){best.st='dead';best.dead=0;best.fd=atan2(best.x-o[0],best.z-o[2]);SFX.hit();for(let i=0;i<12;i++)PT.add(1,best.x,best.y+1.3,best.z,rr(-1.5,1.5),rr(0,2.5),rr(-1.5,1.5),.05,.9,[.45,.04,.03,.95],1);mumble(.5,90,false,.14,true);}
   else{const t=rayHit(o,d,40),p=vAdd(o,vSc(d,t));for(let i=0;i<5;i++)PT.add(5,p[0],p[1],p[2],rr(-1,1),rr(0,1),rr(-1,1),.04,.4,[1,.8,.4,.9],-.2);
     if(t<40)debris(p[0],p[1],p[2],6,'wood',{vx:-d[0]*3,vz:-d[2]*3,sp:2.2,sz:.07});}}
 async function defEnd(){DEF.on=false;S.mode='talk';for(const c of DEF.cul)if(c.st!=='dead'){c.st='dead';c.dead=3;}await wait(1.5);
@@ -196,7 +196,7 @@ function drawAct3(){const t=S.t;
   if(S.inside==='doc'){for(const[i,w]of DWIN.entries()){const side=w.n[0]!==0,M=mM(mT(w.x+w.n[0]*.02,.97,w.z+w.n[1]*.02),mRy(side?PI/2:0));draw(DEF.broken&&DEF.broken[i]?M_hole:M_pane,M,0);}
     if(A3.chair)draw(M_chair,mM(mT(269,0,-28.75),mRy(PI),mRx(-.42),mT(0,0,0)),.03);
     if(A3.ph==='house'&&AD.show){const wk=AD.pose==='work'&&!AD.mv;drawChar(CHF.doc,AD.x,0,AD.z,AD.rot,{ph:AD.ph,mv:AD.mv,aR:wk?-1.1+sin(t*5)*.25:null,aL:wk?-1.0+sin(t*4+1)*.25:null});}
-    for(const c of DEF.cul){const o={noBlob:c.st==='sill'};if(c.st==='sill'){o.crouch=1;o.aR=-1.5;o.aL=-1.6;}else if(c.st==='in'){o.ph=c.ph;o.mv=c.mv;o.aR=c.swing>0?lerp(.3,-2.4,c.swing/.3):-2.2;o.aL=-1.2;}else{o.lie=true;}
+    for(const c of DEF.cul){const o={noBlob:c.st==='sill',who:c,fall:c.fd!=null?'shot':'collapse',fallDir:c.fd};if(c.st==='sill'){o.crouch=1;o.aR=-1.5;o.aL=-1.6;}else if(c.st==='in'){o.ph=c.ph;o.mv=c.mv;o.aR=c.swing>0?lerp(.3,-2.4,c.swing/.3):-2.2;o.aL=-1.2;}else{o.lie=true;}
       drawChar(CH.c,c.x,c.y,c.z,c.rot,o);}
     if(RIF.flash>0){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e));light(e[0]+f[0]*1.2,e[1]+f[1]*1.2,e[2]+f[2]*1.2,14,[1,.8,.45]);}}
   if(S.inside==='chapel'&&A3.ph==='chapel'){const o={ph:PAUL.ph,aR:PAUL.gun?-1.42:PAUL.syr?lerp(lerp(-.15,-1.5,eas(PAUL.arm)),-.75,eas(PAUL.stab||0)):null,eR:PAUL.gun?.04:PAUL.syr?lerp(.9,.15,eas(PAUL.stab||0)):null,aRz:PAUL.gun?.12:0,armed:PAUL.gun||PAUL.syr,wpn:PAUL.gun?M_rev:M_syr,look:PAUL.faceP?undefined:0,cR:PAUL.gun||PAUL.syr?1.5:null};
