@@ -195,7 +195,7 @@ const chased=()=>EN.some(e=>e.active&&e.state==='chase');
 function roomCp(room){const d=XD[ROOMS[room].door];return[d.x+d.n[0]*1.6,d.z+d.n[1]*1.6];}
 function markTarget(){const m=S.mark;if(!m)return null;const room=m[2]||null;if(room===S.inside)return m;if(!S.inside&&room&&ROOMS[room].door){const d=XD[ROOMS[room].door];return[d.x,d.z];}return null;}
 const setMark=m=>{S.mark=m&&m.n?[m.x+m.n[0]*.95,m.z+m.n[1]*.95]:m;};
-async function goRoom(d){S.mode='talk';SFX.door();await fade(1,380);S.inside=d.room;P.x=d.in[0];P.z=d.in[1];P.rot=d.in[2];S.crouch=false;camSnap();await fade(0,480);S.mode='play';}
+async function goRoom(d){S.mode='talk';if(!await doorOpen(d))SFX.door();await fade(1,380);doorDone();S.inside=d.room;P.x=d.in[0];P.z=d.in[1];P.rot=d.in[2];S.crouch=false;camSnap();await fade(0,480);S.mode='play';}
 async function leaveRoom(d){S.mode='talk';SFX.door();await fade(1,350);S.inside=null;P.x=d.x+d.n[0]*1.4;P.z=d.z+d.n[1]*1.4;P.rot=atan2(d.n[0],d.n[1]);camSnap();await fade(0,450);S.mode='play';}
 function doorOn(d){if(S.inside||FIN.on||d.k==='doc')return false;if(d.k==='pubF')return S.explore&&!S.alarm;if(d.k==='pubB')return S.kicked&&!S.alarm;return d.on?d.on():false;}
 function doorLabel(d){if(d.k==='pubF')return S.kicked?'Дверь паба «Дьяволов риф»':'Войти в паб «Дьяволов риф»';if(d.k==='pubB')return d.lock?'Вскрыть замок чёрного хода отмычками':'Войти через чёрный ход';
@@ -315,9 +315,9 @@ async function kickOut(){S.mode='talk';S.mark=null;pubOwner.x=135.3;pubOwner.z=-
   await say(HERO,'У таких заведений всегда есть чёрный ход. А отмычки — при мне.',VO.hero);
   setObj('Найдите чёрный ход паба — в проулке, с восточной стороны — и вскройте замок отмычками.');setMark(XD.pubB);S.mode='play';}
 async function backRoom(){S.backIn=true;S.mode='talk';await say(HERO,'(шёпотом) Тихо… Хозяин за стеной, в зале. А вот и лестница вниз.',VO.hero);setObj('Спуститесь в подвал.');setMark([129.5,-2.4,'pub']);S.mode='play';}
-addInter(129.5,-2.4,1.5,'Спуститься в подвал',async()=>{S.mode='talk';S.mark=null;SFX.creak();await fade(1,450);S.inside='cellar';P.x=183.6;P.z=-2.3;P.rot=PI/2;camSnap();await fade(0,700);
+addInter(129.5,-2.4,1.5,'Спуститься в подвал',async()=>{S.mode='talk';S.mark=null;SFX.creak();const back=await stairWalk({x:129.5,z0:-3.26,dz:-.52,dy:-.32,n:5,T:2.3});await fade(1,450);back();S.inside='cellar';P.x=183.6;P.z=-2.3;P.rot=PI/2;camSnap();await fade(0,700);
   if(!S.cellarIn){S.cellarIn=true;await say(HERO,'…Господи. Они не врали.',VO.hero);setObj('Осмотрите подвал: 0 / 3');}S.mode='play';},()=>S.inside==='pub'&&S.backIn&&!S.alarm);
-addInter(181.6,-2.5,1.3,'Подняться наверх',async()=>{S.mode='talk';SFX.creak();await fade(1,400);S.inside='pub';P.x=129.5;P.z=-2.2;P.rot=0;camSnap();await fade(0,500);if(S.ownerKO)setMark([129,2,'pub']);S.mode='play';},()=>S.inside==='cellar'&&(!S.alarm||S.ownerKO));
+addInter(181.6,-2.5,1.3,'Подняться наверх',async()=>{S.mode='talk';SFX.creak();const back=await stairWalk({x:181.5,z0:-3.35,dz:-.45,dy:.3,n:6,T:2.3});await fade(1,400);back();S.inside='pub';P.x=129.5;P.z=-2.2;P.rot=0;camSnap();await fade(0,500);if(S.ownerKO)setMark([129,2,'pub']);S.mode='play';},()=>S.inside==='cellar'&&(!S.alarm||S.ownerKO));
 addInter(129,2,1.3,'Выйти через чёрный ход',()=>S.ownerKO?sneakOut():leaveRoom(XD.pubB),()=>S.inside==='pub'&&S.backIn&&(!S.alarm||S.ownerKO)&&!S.stalk);
 
 // --- the cellar: what the four survivors described
@@ -374,7 +374,8 @@ async function alarmSeq(){S.mode='talk';SFX.creak();await wait(.5);SFX.door();pu
   await say(HERO,'(шёпотом) За ним… тело в углу… Оно шевелится.',VO.hero);
   await say('Хозяин паба','Не пытайся меня отвлечь, писака. Старый трюк.',VO.pub);
   while(CF.rise<1)await wait(.1);groan(.4);CF.leap=.001;CF.l0=[fishE.x,fishE.z];while(CF.leap<1)await wait(.05);
-  scream(1.6);SFX.thud();S.shake=.9;crier.state='ko';crier.unarmed=true;crier.rot=fishE.rot+PI;
+  scream(1.6);SFX.thud();S.shake=.9;crier.state='ko';crier.unarmed=true;crier.rot=fishE.rot+PI;crier.fall='push';crier.fallDir=fishE.rot;   // tackled: stumbles back and goes over
+ 
   CF.bat={p:[crier.x,1.1,crier.z],v:[(BAT[0]-crier.x)/.9,4.2,(BAT[1]-crier.z)/.9],a:0,t:0};SFX.swing();gush(crier.x,crier.z,20);
   fishE.state='feed';fishE.t=0;
   await say('Хозяин паба','А-А-А! ПУСТИ! ПУСТИ-И-И!..',{pitch:96,vol:.32,dur:2});await wait(.8);gore();
@@ -396,14 +397,14 @@ function updFish(e,dt){if(e.state!=='chase')return;const dx=P.x-e.x,dz=P.z-e.z,d
   if(e.wind>0){e.wind-=dt;faceTo(e,atan2(dx,dz),dt,10);if(e.wind<=0)strike(e,d);return;}
   if(d<1.45){if(e.cd<=0)e.wind=.42;faceTo(e,atan2(dx,dz),dt,10);return;}goDir(e,P.x,P.z,e.sp,dt);}
 function hitFish(e){if(!S.weapon){SFX.hit();e.stun=max(e.stun,.2);toast('Голыми руками его не остановить — <b>нужна бита!</b>',2.2);return;}
-  SFX.hit();gore();gush(e.x,e.z,6);e.hp-=S.weapon.dmg;e.stun=max(e.stun,.5);moveC(e,sin(P.rot)*.4,cos(P.rot)*.4,.34);if(e.hp<=0){e.state='ko';e.active=true;fishDead();}}
+  SFX.hit();gore();gush(e.x,e.z,6);e.hp-=S.weapon.dmg;e.stun=max(e.stun,.5);moveC(e,sin(P.rot)*.4,cos(P.rot)*.4,.34);if(e.hp<=0){e.state='ko';e.fall='hit';e.fallDir=P.rot;e.active=true;fishDead();}}
 function drawFish(e){const ch=CH.v[e.v],t=S.t;if(!ch)return;
-  if(e.state==='dead'&&!CF.rise)return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:.3,aL:.45});
-  if(e.state==='ko')return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:-.4,aL:.6});
-  if(e.state==='dead')return drawChar(ch,e.x,0,e.z,e.rot,{lieK:1-eas(CF.rise),noBlob:true,aR:-1.6*CF.rise,aL:-1.5*CF.rise,look:0,cR:1.3,cL:1.3});
-  if(e.state==='feed')return drawChar(ch,e.x,0,e.z,e.rot,{crouch:1,aR:-.7+sin(t*9)*.55,aL:-.9+sin(t*9+1.6)*.55,cR:1.2,cL:1.2,look:sin(t*3)*.25});
+  if(e.state==='dead'&&!CF.rise)return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:.3,aL:.45,who:e});
+  if(e.state==='ko')return drawChar(ch,e.x,0,e.z,e.rot,{lie:true,noBlob:true,aR:-.4,aL:.6,who:e,fall:e.fall,fallDir:e.fallDir});
+  if(e.state==='dead')return drawChar(ch,e.x,0,e.z,e.rot,{who:e,lieK:1-eas(CF.rise),noBlob:true,aR:-1.6*CF.rise,aL:-1.5*CF.rise,look:0,cR:1.3,cL:1.3});
+  if(e.state==='feed')return drawChar(ch,e.x,0,e.z,e.rot,{who:e,crouch:1,aR:-.7+sin(t*9)*.55,aL:-.9+sin(t*9+1.6)*.55,cR:1.2,cL:1.2,look:sin(t*3)*.25});
   const up=e.wind>0?-2.6:e.atk>0?lerp(.2,-2.4,e.atk/.3):-1.35+sin(t*7)*.15;
-  drawChar(ch,e.x,0,e.z,e.rot,{ph:e.ph,mv:e.mv,aR:up,aL:up+.1,cR:1.3,cL:1.3,look:0});}
+  drawChar(ch,e.x,0,e.z,e.rot,{who:e,ph:e.ph,mv:e.mv,aR:up,aL:up+.1,cR:1.3,cL:1.3,look:0});}
 function drawCellarFight(){if(!CF.on)return;drawFish(fishE);const b=CF.bat;
   if(b&&!b.taken){const m=segM('wpn_club');if(m)draw(m,b.t<1?mM(mT(...b.p),mRy(b.a*.4),mRx(b.a)):mM(mT(b.p[0],.05,b.p[2]),mRy(.9),mRx(PI/2),mT(0,0,-.45)),.03);}
   if(crier.state==='ko'&&crier.unarmed)draw(M_pool,mM(mT(crier.x,.02,crier.z),mS(1.6,1,1.3)),0,.85);}

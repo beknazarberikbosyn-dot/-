@@ -294,27 +294,27 @@ function credits(){S.mode='credits';$('hud').style.display='none';$('gear').styl
 $('again').onclick=()=>{try{location.reload();}catch(e){}};
 
 // --- frame
-function drawAll(){talkFrame();
+function drawAll(){talkFrame();poseFrame();
   draw(M_ground,null,0,1,1);draw(M_world,null,.035);draw(M_far,null,0);R.items[R.items.length-1].nodepth=1;draw(M_veg,null,0,1,3);draw(M_sea,mT(0,-.55,0),0,1,2);
   for(const l of LAMPS)light(l[0],l[1],l[2],l[3]*(1+sin(S.t*8+l[0])*.03),l[4]);
   for(const e of EN){if(e.kind==='f')continue;if(!e.active&&e.show===false)continue;if(!e.active&&e.grp>3)continue;if(FIN.on)continue;const c=e.kind==='c';
     let aR=c?-1.25:e.state==='chase'?-.7:null;if(e.wind>0)aR=-2.7;if(e.atk>0){e.atk-=.016;aR=lerp(.4,-2.6,e.atk/.3);}
     if(e.flee&&e.state!=='ko'&&e.stun<=0)aR=-2.6+sin(S.t*10)*.35;   // the pub owner waving his arms while he yells
-    const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active&&!e.unarmed,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko'});
+    const m=drawChar(c?CH.c:CH.v[e.v],e.x,0,e.z,e.rot,{armed:c||e.active&&!e.unarmed,ph:e.ph,mv:e.mv,aR,lie:e.state==='ko',who:e,fall:e.fall,fallDir:e.fallDir});
     if(c&&e.state!=='ko')torchFx(m,e.ph);}
   if(S.fpPlay&&P.vis&&!P.lie&&!S.seated)drawFpArms();
   if(P.vis&&!CAM.fp&&!S.fpPlay){let aR=null,aL=null;if(P.atk>0){const t=1-P.atk/.28;if(P.shove){aR=aL=lerp(-.6,-1.6,sin(t*PI));}else aR=lerp(-2.5,.5,t);}else if(P.block){aR=-1.9;aL=-1.7;}
     drawChar(CH.hero,P.x,0,P.z,P.rot,{armed:!!S.weapon,ph:P.ph,mv:P.mv,aR,aL,crouch:S.crouch,lie:P.lie});}
   draw(M_car,mM(mT(CAR.x,0,CAR.z),mRy(CAR.rot)),.04);if(!CAR.parked){const fx=CAR.x+sin(CAR.rot)*7,fz=CAR.z+cos(CAR.rot)*7;light(fx,1.5,fz,15,[1,.9,.6]);light(CAR.x,3,CAR.z,7,[.5,.5,.45]);}
   for(const e of EGGS){if(S.eggs[e.id]||!(e.id==='book'?S.inRoom:S.explore)||FIN.on||S.mode==='finale')continue;draw(M_egg,mM(mT(e.x,e.y+.55+sin(S.t*2.4+e.x)*.07,e.z),mRy(S.t*1.8)),0);}
-  drawStory();drawFinale();}
+  drawStory();doorDraw();drawFinale();}
 // the hero's own arms in first person: swing on attack, raised on block, the weapon in the right hand
 function drawFpArms(){const e=CAM.eye,f=vNorm(vSub(CAM.tgt,e)),r=vNorm(vCross(f,[0,1,0])),up=vCross(r,f),sw=P.mv?sin(P.ph)*.03:0;if(S.tied)return;if(S.rifle){drawFpRifle(e,f,r,up);return;}
   for(const s of[1,-1]){if(S.fpPose&&s>0){let pl=S.fpPose==='palm',sp=vAdd(e,vAdd(vAdd(vSc(r,.3),vSc(up,-.48)),vSc(f,-.05))),tip=vAdd(sp,vAdd(vAdd(vSc(f,pl?.52:.62),vSc(up,pl?.38:.5)),vSc(r,-.14)));
-      if(!pl)tip=vAdd(tip,vSc(r,-.2));S.fpHand=vAdd(tip,vSc(f,.06));fpArm(sp,tip,s,pl?r:up,f,false,pl?.05:.95,vNorm(vAdd(f,vSc(up,pl?-.1:-.25))));continue;}
+      if(!pl)tip=vAdd(tip,vSc(r,-.2));let cu;[tip,cu]=fpSmooth(s,sp,tip,r,up,f,pl?.05:.95);S.fpHand=vAdd(tip,vSc(f,.06));fpArm(sp,tip,s,pl?r:up,f,false,cu,vNorm(vAdd(f,vSc(up,pl?-.1:-.25))));continue;}
     let a=0;if(s>0&&P.atk>0){const t=1-P.atk/.28;a=P.shove?sin(t*PI)*.5:sin(t*PI)*1.1;}if(P.block)a=.55;if(P.shove&&P.atk>0)a=sin((1-P.atk/.28)*PI)*.5;
-    const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.3),vSc(up,-.48+sw)),vSc(f,-.05)));const tip=vAdd(sp,vAdd(vAdd(vSc(f,.48+a*.25),vSc(up,.1+a*.42)),vSc(r,-s*(.06+a*.12))));
-    fpArm(sp,tip,s,up,f,s>0&&!!S.weapon,s>0&&S.weapon?1.5:P.block||P.atk>0?1.3:.45);}}
+    const sp=vAdd(e,vAdd(vAdd(vSc(r,s*.3),vSc(up,-.48+sw)),vSc(f,-.05)));const[tip,cu]=fpSmooth(s,sp,vAdd(sp,vAdd(vAdd(vSc(f,.48+a*.25),vSc(up,.1+a*.42)),vSc(r,-s*(.06+a*.12)))),r,up,f,s>0&&S.weapon?1.5:P.block||P.atk>0?1.3:.45);
+    fpArm(sp,tip,s,up,f,s>0&&!!S.weapon,cu);}}
 function atmosphere(){const q=R.scale,M=R.mist;M.steps=q>=1?10:q>=.8?7:0;M.on=M.steps>0;
   if(S.vision||S.halluc){visionAtmo(M);return;}
   if(S.inside==='rlyeh'){rlAtmo(M);return;}

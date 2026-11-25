@@ -70,40 +70,47 @@ function drawArm(ch,U,s,e,curl,o,ws=1,kz=1){const S_=mS(ws,kz,ws);draw(ch.arm.up
 // relaxed fingers bend as one at the knuckles; past ~50° they are drawn rolled into a fist
 function drawFingers(ch,K,hi,s,curl,S_,o){if(curl>.85&&ch.fist[hi])draw(ch.fist[hi],S_?mM(K,S_):K,o);else draw(ch.fing[hi],S_?mM(K,mRz(-s*curl),S_):mM(K,mRz(-s*curl)),o);}
 function drawLegStraight(ch,U,kn,o){if(!ch.leg)return;if(ch.leg.up)draw(ch.leg.up,U,o);const K=mM(U,mT(0,-RIG.th,0),mRx(kn));draw(ch.leg.lo,K,o);draw(ch.leg.foot,mM(K,mT(0,-RIG.sh,0)),o);}
+// every joint eases toward the requested pose and lying down / getting up are played as falls (poseAnim, src/3b-anim.js)
 function drawChar(ch,x,y,z,rot,p={}){if(!ch.seg)return drawCharOld(ch,x,y,z,rot,p);
-  const o=p.out==null?.03:p.out,mv=p.mv||0,ph=p.ph||0,kz=ch.kz,sd=ch.sd*1.37+(p.seed||0),t=S.t,sw=sin(ph)*mv,legs=!!ch.leg;
-  const lk=p.lie?1:p.lieK||0;let base=mM(mT(x,y,z),mRy(rot));if(lk)base=mM(base,mT(0,.22*lk,0),mRx(-PI/2*lk));
-  let dy=-abs(sw)*.04*kz,lean=.05*mv;
-  if(p.sit&&legs){dy=-.42*kz;lean=.04;}else if(p.crouch){if(legs){dy=-.3*kz;lean=.32;}else base=mM(base,mS(1,.68,1));}
+  const A=poseAnim(ch,x,y,z,rot,p),st=A.st,dt=A.dt,o=p.out==null?.03:p.out,mv=A.mv,ph=A.ph,kz=ch.kz,sd=ch.sd*1.37+(p.seed||0),t=S.t,sw=sin(ph)*mv,legs=!!ch.leg;
+  const lk=A.lk,lying=lk>.5,cr=A.cr,si=legs?A.si:0;x=A.x;y=A.y;z=A.z;rot=A.rot;
+  let base=mM(mT(x,y+A.dy,z),mRy(rot));if(A.sl)base=mM(base,mT(0,0,-A.sl));if(A.th)base=mM(base,mT(0,A.lift,0),mRx(-A.th));
+  let dy=lerp(lerp(-abs(sw)*.04*kz,legs?-.3*kz:-abs(sw)*.04*kz,cr),-.42*kz,si),lean=lerp(lerp(.05*mv,legs?.32:.05*mv,cr),.04,si)+A.lean;
+  if(!legs&&cr>.001)base=mM(base,mS(1,1-.32*cr,1));
   const pel=mM(base,mT(0,dy,0)),hy=ch.hip[1],tw=-sin(ph)*.09*mv,br=sin(t*1.8+sd)*.005;
   const B=mM(pel,mT(0,hy,0),mRx(lean),mRy(tw),mT(0,-hy,0));draw(ch.body,B,o);
   // head: turns to the player when he is close, idles, nods while talking; lower lip, blinking
-  const dC=hypot(x-CAM.eye[0],z-CAM.eye[2]);if(TK.on&&ch!==CH.hero&&!p.lie&&dC<9&&dC<TK.cd){TK.cd=dC;TK.cand={ch,x,z};}
+  const dC=hypot(x-CAM.eye[0],z-CAM.eye[2]);if(TK.on&&ch!==CH.hero&&!lying&&dC<9&&dC<TK.cd){TK.cd=dC;TK.cand={ch,x,z};}
   const talk=p.talk||(TK.cur&&TK.cur.ch===ch&&abs(TK.cur.x-x)+abs(TK.cur.z-z)<1);
   let yaw=p.look!=null?p.look:0,pit=-lean*.7;
-  if(p.look==null&&ch!==CH.hero&&!p.lie){const dx=P.x-x,dz=P.z-z,d=hypot(dx,dz);if(d<7&&d>.3){let a=atan2(dx,dz)-rot-tw;a=((a+PI)%(2*PI)+2*PI)%(2*PI)-PI;if(abs(a)<2.3)yaw=clamp(a,-1.05,1.05)*clamp((7-d)/2.5,0,1)*(1-.65*min(1,mv));}}
-  if(!p.lie){yaw+=sin(t*.41+sd)*.07;pit+=sin(t*.29+sd*1.3)*.035+(talk?sin(t*4.1+sd)*.04:0);}
+  if(p.look==null&&ch!==CH.hero&&!lying){const dx=P.x-x,dz=P.z-z,d=hypot(dx,dz);if(d<7&&d>.3){let a=atan2(dx,dz)-rot-tw;a=((a+PI)%(2*PI)+2*PI)%(2*PI)-PI;if(abs(a)<2.3)yaw=clamp(a,-1.05,1.05)*clamp((7-d)/2.5,0,1)*(1-.65*min(1,mv));}}
+  if(!lying){yaw+=sin(t*.41+sd)*.07;pit+=sin(t*.29+sd*1.3)*.035+(talk?sin(t*4.1+sd)*.04:0);}
+  yaw=spr(st,'hy',yaw,9,dt);pit=spr(st,'hp',pit,10,dt)+A.hp;
   const nk=ch.neck,Hm=mM(B,mT(0,nk+br,0),mRy(yaw),mRx(pit),mT(0,-nk,0)),oH=o*.4;draw(ch.head,Hm,oH);   // thin outline: a 3 cm shell would cross the face from hats and braids
   draw(ch.jaw,talk?mM(Hm,mT(0,-TK.open*.013,-TK.open*.003)):Hm,oH);if(ch.lids&&((t*.29+sd*.37)%1)<.035)draw(ch.lids,Hm,oH);
-  // arms: shoulder swing/raise, automatic elbow bend, wrist, curled fingers; the right fist grips the weapon
-  let grip=null;const sh=ch.sh;
-  for(const s of[-1,1]){const R_=s<0;let a=R_?p.aR:p.aL;if(a==null)a=(R_?1:-1)*sw*(ch.f?.38:.48)+(p.sit?0:sin(t*.9+sd+s)*.025);
+  // arms: shoulder swing/raise, automatic elbow bend, wrist, curled fingers; the right fist grips the weapon. A fall blends in its own arm pose (A.fl)
+  let grip=null;const sh=ch.sh,sit=si>.5;
+  for(const s of[-1,1]){const R_=s<0,K=R_?'R':'L';let a=R_?p.aR:p.aL;if(a==null)a=(R_?1:-1)*sw*(ch.f?.38:.48)+(sit?0:sin(t*.9+sd+s)*.025);
     const armed=R_&&p.armed&&(p.wpn||ch.wpn);let e=R_?p.eR:p.eL;
-    if(e==null)e=.14+max(0,-a)*.45*min(1,mv*2)+(a<-.5&&a>-2.4?.32:0)+(armed?.28:0)+(p.sit?.45:0)+sin(t*1.3+sd+s)*.02;
-    const U=mM(B,mT(s*sh[0],sh[1]+br,0),mRx(a),mRz(((R_?p.aRz:p.aLz)||0)+s*(.06+(ch.f?.03:0))));
+    if(e==null)e=.14+max(0,-a)*.45*min(1,mv*2)+(a<-.5&&a>-2.4?.32:0)+(armed?.28:0)+(sit?.45:0)+sin(t*1.3+sd+s)*.02;
     let c=R_?p.cR:p.cL;if(c==null)c=armed?1.5:p.fist?1.25:.32+sin(t*.7+sd+s)*.06;
+    let az=(R_?p.aRz:p.aLz)||0;
+    if(A.fl>0){const f=A.fl;a=lerp(a,A.fa[R_?0:1],f);e=lerp(e,A.fe,f);az=lerp(az,s*A.fz,f);if(!armed)c=lerp(c,A.fc,f);}
+    a=spr(st,'a'+K,a,A.wA,dt);e=spr(st,'e'+K,e,A.wA,dt);az=spr(st,'z'+K,az,A.wA,dt);c=spr(st,'c'+K,c,14,dt);
+    const U=mM(B,mT(s*sh[0],sh[1]+br,0),mRx(a),mRz(az+s*(.06+(ch.f?.03:0))));
     const W=drawArm(ch,U,s,e,c,o,ch.w,kz);if(R_){grip=W;if(armed){grip=mM(W,mT(.022*ch.w,-.1*kz,0));draw(p.wpn||ch.wpn,grip,o);}}}
-  // legs: two-bone IK onto the ground; the swing foot lifts and rolls heel-to-toe
+  // legs: two-bone IK onto the ground; the swing foot lifts and rolls heel-to-toe; crouching / sitting feet blend in
   if(legs){const hp=ch.hip,l1=RIG.th*kz,l2=RIG.sh*kz,an=RIG.ank*kz,lw=ch.w,S_=mS(lw,kz,lw);
-    for(const s of[-1,1]){const lp=ph+(s<0?0:PI),H0=[s*hp[0],hp[1],0];let f,toe=0;
-      if(p.sit)f=[s*(hp[0]+.03),an,.42*kz];else if(p.crouch)f=[s*(hp[0]+.05),an,(s<0?.2:-.06)*kz];
-      else{const A=.23*mv*kz*(p.stride||1)*(ch.skirt?.6:1),up=max(0,cos(lp));f=[s*(hp[0]+.006),an+up*(ch.skirt?.06:.12)*mv*kz,sin(lp)*A+.012];toe=up*sin(lp)*.45*mv;}
+    for(const s of[-1,1]){const lp=ph+(s<0?0:PI),H0=[s*hp[0],hp[1],0];
+      const AM=.23*mv*kz*(p.stride||1)*(ch.skirt?.6:1),up=max(0,cos(lp));let f=[s*(hp[0]+.006),an+up*(ch.skirt?.06:.12)*mv*kz,sin(lp)*AM+.012],toe=up*sin(lp)*.45*mv;
+      if(cr>.001){f=vLerp(f,[s*(hp[0]+.05),an,(s<0?.2:-.06)*kz],cr);toe*=1-cr;}
+      if(si>.001){f=vLerp(f,[s*(hp[0]+.03),an,.42*kz],si);toe*=1-si;}
       f[1]-=dy;
       const q=ik2(H0,f,l1,l2,[s*hp[0]*1.3,H0[1]-.3,1.6]),kn=q.e,af=q.t,d1=vNorm(vSub(kn,H0)),d2=vNorm(vSub(af,kn));
       if(ch.leg.up)draw(ch.leg.up,mM(pel,mBasis(H0,d1,[0,d1[2],-d1[1]]),S_),o);
       draw(ch.leg.lo,mM(pel,mBasis(kn,d2,[0,d2[2],-d2[1]]),S_),o);
       draw(ch.leg.foot,mM(pel,mT(af[0],af[1],af[2]),mRx(-toe),S_),o);}}
-  if(!p.lie&&!p.noBlob)draw(M_blob,mT(x,.03,z),0,.38);return grip;}
+  if(lk<.35&&!p.noBlob)draw(M_blob,mT(x,.03,z),0,.38*(1-lk/.35));return grip;}
 const CH={hero:partSet('hero',gHero),
   v:[0,1,2,3].map(v=>partSet('vill',()=>gVillager(v),{sh:[[.29,1.47],[.27,1.47],[.25,1.52],[.31,1.47]][v],body:{},arm:'vill_arm',armW:'vill_armW',leg:'vill_leg',armO:{pal:{cloth:H(VCOL[v][0])}},legO:{pal:{trousers:H(VCOL[v][1])}},bodyName:'vill_body_'+v})),
   c:partSet('cult',gCultist,{armW:'cult_armT',noLeg:true,sh:[.3,1.45]})};
@@ -205,10 +212,10 @@ function playerAttack(shove){if(S.mode!=='play'||S.pause||P.cd>0||P.block)return
   if(best.kind==='f'){hitFish(best);return;}
   if(best.kind==='c'){SFX.hit();toast('Бесполезно — он даже не пошатнулся. <b>Бегите!</b>',2.5);if(best.state!=='chase')alertE(best);return;}
   SFX.hit();const a=P.rot;
-  if(shove){if(P.combo>=2&&P.comboT>0){best.state='ko';best.aw=0;toast('Нокаут!',1.8);P.combo=0;S.shake=.2;}else{best.stun=.7;moveC(best,sin(a)*1.1,cos(a)*1.1,.34);}}
+  if(shove){if(P.combo>=2&&P.comboT>0){best.state='ko';best.fall='push';best.fallDir=a;best.aw=0;toast('Нокаут!',1.8);P.combo=0;S.shake=.2;}else{best.stun=.7;moveC(best,sin(a)*1.1,cos(a)*1.1,.34);}}
   else{best.hp-=S.weapon?S.weapon.dmg:1;best.stun=max(best.stun,.38);moveC(best,sin(a)*.35,cos(a)*.35,.34);P.combo++;P.comboT=1.6;
     if(S.weapon&&--S.weapon.dur<=0){toast(S.weapon.name+' — сломано!',2.5);S.weapon=null;}
-    if(best.hp<=0){best.state='ko';best.aw=0;toast('Житель без сознания.',1.8);}}
+    if(best.hp<=0){best.state='ko';best.fall='hit';best.fallDir=a;best.aw=0;toast('Житель без сознания.',1.8);}}
   if(best.state!=='ko'&&best.state!=='chase')alertE(best);}
 async function die(e){if(e&&e.kind==='c'&&S.curfew){S.hp=0;sacrifice();return;}S.mode='dead';S.deaths++;P.lie=true;SFX.thud();toast('Удар… темнота.',3);await fade(1,900);await wait(1.2);
   S.inside=S.cpRoom||null;P.x=S.cp[0];P.z=S.cp[1];P.lie=false;S.hp=75;S.st=100;S.crouch=false;for(const e of EN){if(!e.active||e.kind==='f')continue;if(e.state!=='ko'){e.x=e.hx;e.z=e.hz;e.state='patrol';e.aw=0;e.wind=0;e.stun=0;e.st=0;e.wi=0;}}
